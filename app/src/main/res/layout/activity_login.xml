@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp">
+
+        <ImageView
+            android:layout_width="240dp"
+            android:layout_height="135dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/banner" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="20dp"
+            android:text="Connexion à ton abonnement Xtream"
+            android:textColor="@color/muted"
+            android:textSize="16sp" />
+
+        <LinearLayout
+            android:layout_width="520dp"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <EditText
+                android:id="@+id/et_server"
+                style="@style/Field"
+                android:hint="URL du serveur (ex : http://serveur.com:8080) ou lien M3U"
+                android:imeOptions="actionNext"
+                android:inputType="textUri" />
+
+            <EditText
+                android:id="@+id/et_user"
+                style="@style/Field"
+                android:hint="Nom d'utilisateur"
+                android:imeOptions="actionNext"
+                android:inputType="text" />
+
+            <EditText
+                android:id="@+id/et_pass"
+                style="@style/Field"
+                android:hint="Mot de passe"
+                android:imeOptions="actionDone"
+                android:inputType="textVisiblePassword" />
+
+            <TextView
+                android:id="@+id/btn_login"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/tile_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="Se connecter"
+                android:textColor="@color/accent"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <ProgressBar
+                android:id="@+id/progress"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_gravity="center"
+                android:layout_marginTop="16dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tv_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center"
+                android:textColor="@color/muted"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

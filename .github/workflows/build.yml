@@ -1,0 +1,46 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Prepare APK
+        run: |
+          VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          cp app/build/outputs/apk/release/app-release.apk KoalaTV.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KoalaTV-${{ env.VERSION }}
+          path: KoalaTV.apk
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ env.VERSION }}
+          name: KoalaTV ${{ env.VERSION }}
+          files: KoalaTV.apk
+          make_latest: true

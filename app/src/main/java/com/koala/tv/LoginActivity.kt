@@ -1,0 +1,78 @@
+package com.koala.tv
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.View
+import android.view.inputmethod.EditorInfo
+import android.widget.EditText
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+
+class LoginActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (Prefs.loggedIn) {
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+            return
+        }
+        setContentView(R.layout.activity_login)
+
+        val etServer = findViewById<EditText>(R.id.et_server)
+        val etUser = findViewById<EditText>(R.id.et_user)
+        val etPass = findViewById<EditText>(R.id.et_pass)
+        val btn = findViewById<TextView>(R.id.btn_login)
+        val progress = findViewById<ProgressBar>(R.id.progress)
+        val status = findViewById<TextView>(R.id.tv_status)
+
+        etServer.setText(Prefs.server)
+        etUser.setText(Prefs.user)
+
+        fun submit() {
+            var server = etServer.text.toString().trim()
+            var user = etUser.text.toString().trim()
+            var pass = etPass.text.toString().trim()
+            Xtream.parseM3uLink(server)?.let { (s, u, p) ->
+                server = s; user = u; pass = p
+                etServer.setText(s); etUser.setText(u); etPass.setText(p)
+            }
+            if (server.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                status.text = "Remplis les 3 champs."
+                return
+            }
+            val norm = Xtream.normalizeServer(server)
+            btn.isEnabled = false
+            progress.visibility = View.VISIBLE
+            status.text = "Connexion à $norm…"
+            lifecycleScope.launch {
+                try {
+                    val ui = Xtream.login(norm, user, pass)
+                    Prefs.server = norm
+                    Prefs.user = user
+                    Prefs.pass = pass
+                    Prefs.expiry = ui.s("exp_date")
+                    Cache.clear()
+                    startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
+                    finish()
+                } catch (e: Exception) {
+                    status.text = "Échec : " + (e.message ?: e.javaClass.simpleName)
+                    btn.isEnabled = true
+                    progress.visibility = View.GONE
+                    btn.requestFocus()
+                }
+            }
+        }
+
+        btn.setOnClickListener { submit() }
+        etPass.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                btn.requestFocus(); submit(); true
+            } else false
+        }
+        etServer.requestFocus()
+    }
+}

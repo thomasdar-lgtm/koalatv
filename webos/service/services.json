@@ -1,0 +1,10 @@
+{
+  "id": "com.koala.tv.service",
+  "description": "KoalaTV network service",
+  "services": [
+    {
+      "name": "com.koala.tv.service",
+      "description": "Télécharge les listes Xtream"
+    }
+  ]
+}

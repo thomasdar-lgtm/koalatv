@@ -1,0 +1,14 @@
+{
+  "id": "com.koala.tv",
+  "version": "1.0.0",
+  "vendor": "Koala",
+  "type": "web",
+  "main": "index.html",
+  "title": "KoalaTV",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "iconColor": "#0E1116",
+  "splashBackground": "splash.png",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true
+}

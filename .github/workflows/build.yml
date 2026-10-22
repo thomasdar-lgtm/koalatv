@@ -3,6 +3,10 @@ name: Build APK
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'webos/**'
+      - 'brand/**'
   workflow_dispatch:
 
 permissions:

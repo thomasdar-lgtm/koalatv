@@ -63,3 +63,9 @@ png(icon(256), "docs/icon.png")
 with open(os.path.join(ROOT, "webos/app/koala.svg"), "w", encoding="utf-8") as f:
     f.write(KOALA)
 print("ok webos/app/koala.svg")
+# Logo seul pour l'appli Android (64 dp)
+for folder, px in (("drawable-xhdpi", 128), ("drawable-xxhdpi", 192), ("drawable-xxxhdpi", 256)):
+    full = os.path.join(ROOT, "app/src/main/res", folder, "koala.png")
+    os.makedirs(os.path.dirname(full), exist_ok=True)
+    cairosvg.svg2png(bytestring=KOALA.encode("utf-8"), write_to=full, output_width=px, output_height=px)
+    print("ok", folder, "koala.png")

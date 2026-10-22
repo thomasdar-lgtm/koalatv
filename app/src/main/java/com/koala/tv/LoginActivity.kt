@@ -21,6 +21,13 @@ class LoginActivity : AppCompatActivity() {
             return
         }
         setContentView(R.layout.activity_login)
+        findViewById<TextView>(R.id.brand).text = brandText()
+
+        // Formulaire : 520 dp au maximum, pleine largeur (avec marges) sur téléphone
+        val form = findViewById<View>(R.id.form)
+        val maxW = dp(520)
+        val avail = resources.displayMetrics.widthPixels - dp(40)
+        form.layoutParams = form.layoutParams.apply { width = minOf(maxW, avail) }
 
         val etServer = findViewById<EditText>(R.id.et_server)
         val etUser = findViewById<EditText>(R.id.et_user)
@@ -41,13 +48,13 @@ class LoginActivity : AppCompatActivity() {
                 etServer.setText(s); etUser.setText(u); etPass.setText(p)
             }
             if (server.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                status.text = "Remplis les 3 champs."
+                status.text = "Renseigne les trois champs"
                 return
             }
             val norm = Xtream.normalizeServer(server)
             btn.isEnabled = false
+            status.text = ""
             progress.visibility = View.VISIBLE
-            status.text = "Connexion à $norm…"
             lifecycleScope.launch {
                 try {
                     val ui = Xtream.login(norm, user, pass)
@@ -59,7 +66,7 @@ class LoginActivity : AppCompatActivity() {
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
                 } catch (e: Exception) {
-                    status.text = "Échec : " + (e.message ?: e.javaClass.simpleName)
+                    status.text = e.message ?: "Connexion impossible"
                     btn.isEnabled = true
                     progress.visibility = View.GONE
                     btn.requestFocus()
@@ -70,9 +77,9 @@ class LoginActivity : AppCompatActivity() {
         btn.setOnClickListener { submit() }
         etPass.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                btn.requestFocus(); submit(); true
+                submit(); true
             } else false
         }
-        etServer.requestFocus()
+        if (Prefs.server.isNotEmpty() && Prefs.user.isNotEmpty()) etPass.requestFocus() else etServer.requestFocus()
     }
 }

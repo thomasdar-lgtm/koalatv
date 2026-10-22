@@ -18,12 +18,15 @@ class SeriesActivity : AppCompatActivity() {
     private var seriesName = ""
     private var episodes: List<Episode> = emptyList()
     private var seasons: List<Int> = emptyList()
+    private var seasonIdx = 0
     private lateinit var seasonAdapter: CatAdapter
     private lateinit var epAdapter: EpisodeAdapter
     private lateinit var rvSeasons: RecyclerView
     private lateinit var rvEpisodes: RecyclerView
     private lateinit var progress: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var tvHead: TextView
+    private lateinit var tvCount: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,33 +34,44 @@ class SeriesActivity : AppCompatActivity() {
         seriesId = intent.getStringExtra("id") ?: ""
         seriesName = intent.getStringExtra("name") ?: ""
         val cover = intent.getStringExtra("cover") ?: ""
+        seasonIdx = savedInstanceState?.getInt("season", 0) ?: 0
 
         findViewById<TextView>(R.id.tv_title).text = seriesName
-        if (cover.startsWith("http", true)) findViewById<ImageView>(R.id.iv_cover).load(cover)
+        if (cover.startsWith("http", true)) findViewById<ImageView>(R.id.iv_cover).load(cover) { crossfade(150) }
 
-        rvSeasons = findViewById(R.id.rv_seasons)
-        rvEpisodes = findViewById(R.id.rv_episodes)
+        rvSeasons = findViewById(R.id.rv_cats)
+        rvEpisodes = findViewById(R.id.rv_items)
         progress = findViewById(R.id.progress)
         tvEmpty = findViewById(R.id.tv_empty)
+        tvHead = findViewById(R.id.tv_head)
+        tvCount = findViewById(R.id.tv_count)
 
+        val wide = isWide
         seasonAdapter = CatAdapter(
+            if (wide) R.layout.item_category else R.layout.item_chip,
             onFocus = { pos -> if (pos != seasonAdapter.selected) showSeason(pos) },
             onClick = { pos ->
                 if (pos != seasonAdapter.selected) showSeason(pos)
-                rvEpisodes.post { rvEpisodes.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
+                if (wide) rvEpisodes.post { rvEpisodes.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
             },
         )
-        rvSeasons.layoutManager = LinearLayoutManager(this)
+        rvSeasons.layoutManager = LinearLayoutManager(this, if (wide) RecyclerView.VERTICAL else RecyclerView.HORIZONTAL, false)
         rvSeasons.adapter = seasonAdapter
         rvSeasons.itemAnimator = null
 
         epAdapter = EpisodeAdapter { pos -> playEpisode(pos) }
+        epAdapter.seriesName = seriesName
         rvEpisodes.layoutManager = LinearLayoutManager(this)
         rvEpisodes.adapter = epAdapter
         rvEpisodes.itemAnimator = null
 
         tvEmpty.setOnClickListener { if (episodes.isEmpty()) load() }
         load()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("season", seasonIdx)
     }
 
     override fun onResume() {
@@ -73,35 +87,47 @@ class SeriesActivity : AppCompatActivity() {
                 episodes = Xtream.seriesEpisodes(seriesId)
                 seasons = episodes.map { it.season }.distinct().sorted()
                 if (episodes.isEmpty()) {
-                    tvEmpty.text = "Aucun épisode disponible"
-                    tvEmpty.visibility = View.VISIBLE
+                    showMessage("Aucun épisode disponible.", false)
                 } else {
-                    seasonAdapter.submit(seasons.map { Category(it.toString(), if (it <= 0) "Épisodes" else "Saison $it") })
-                    showSeason(0)
-                    rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(0)?.itemView?.requestFocus() }
+                    seasonAdapter.submit(seasons.map { s ->
+                        Category(s.toString(), if (s <= 0) "Épisodes" else "Saison $s", episodes.count { it.season == s })
+                    })
+                    val start = seasonIdx.coerceIn(0, seasons.size - 1)
+                    showSeason(start)
+                    rvSeasons.scrollToPosition(start)
+                    if (isWide) rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
                 }
             } catch (e: Exception) {
-                tvEmpty.text = "Impossible de charger la série.\n${e.message ?: ""}\n\nOK pour réessayer"
-                tvEmpty.visibility = View.VISIBLE
-                tvEmpty.isFocusable = true
-                tvEmpty.requestFocus()
+                showMessage("Impossible de charger la série.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
             } finally {
                 progress.visibility = View.GONE
             }
         }
     }
 
+    private fun showMessage(msg: String, retry: Boolean) {
+        tvEmpty.text = msg
+        tvEmpty.visibility = View.VISIBLE
+        tvEmpty.isFocusable = retry
+        tvEmpty.isClickable = retry
+        if (retry) tvEmpty.requestFocus()
+    }
+
     private fun showSeason(pos: Int) {
-        if (pos !in seasons.indices) return
+        val s = seasons.getOrNull(pos) ?: return
+        seasonIdx = pos
         seasonAdapter.setSelected(pos)
-        val s = seasons[pos]
-        epAdapter.submit(episodes.filter { it.season == s })
+        val list = episodes.filter { it.season == s }
+        epAdapter.submit(list)
         rvEpisodes.scrollToPosition(0)
+        tvHead.text = if (s <= 0) "Épisodes" else "Saison $s"
+        tvCount.text = plural(list.size, "épisode", "épisodes")
+        if (!isWide) rvSeasons.smoothScrollToPosition(pos)
     }
 
     private fun playEpisode(pos: Int) {
         val list = epAdapter.items.map { e ->
-            val label = if (e.season > 0) "S${e.season}E${e.num}" else "E${e.num}"
+            val label = if (e.season > 0) "S${e.season} É${e.num}" else "É${e.num}"
             PlayItem("$seriesName · $label", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id)
         }
         Nav.play(this, list, pos)

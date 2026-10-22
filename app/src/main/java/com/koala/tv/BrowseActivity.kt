@@ -8,6 +8,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.KeyEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -30,16 +31,27 @@ class BrowseActivity : AppCompatActivity() {
     private lateinit var rvItems: RecyclerView
     private lateinit var progress: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var tvHead: TextView
+    private lateinit var tvCount: TextView
     private lateinit var etSearch: EditText
     private lateinit var catAdapter: CatAdapter
     private lateinit var itemAdapter: ItemAdapter
 
     private var allItems: List<Item> = emptyList()
     private var cats: List<Category> = emptyList()
+    private var catIdx = -1
+    private var restoreCat = -1
     private val handler = Handler(Looper.getMainLooper())
     private var pendingSelect: Runnable? = null
     private var pendingSearch: Runnable? = null
     private var ignoreSearch = false
+
+    private val units: Pair<String, String>
+        get() = when (kind) {
+            Kind.LIVE -> "chaîne" to "chaînes"
+            Kind.MOVIE -> "film" to "films"
+            Kind.SERIES -> "série" to "séries"
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,40 +60,52 @@ class BrowseActivity : AppCompatActivity() {
         } catch (e: Exception) {
             Kind.LIVE
         }
+        restoreCat = savedInstanceState?.getInt("cat", -1) ?: -1
         setContentView(R.layout.activity_browse)
 
         rvCats = findViewById(R.id.rv_cats)
         rvItems = findViewById(R.id.rv_items)
         progress = findViewById(R.id.progress)
         tvEmpty = findViewById(R.id.tv_empty)
+        tvHead = findViewById(R.id.tv_head)
+        tvCount = findViewById(R.id.tv_count)
         etSearch = findViewById(R.id.et_search)
         findViewById<TextView>(R.id.tv_title).text = when (kind) {
-            Kind.LIVE -> "📺 TV en direct"
-            Kind.MOVIE -> "🎬 Films"
-            Kind.SERIES -> "🍿 Séries"
+            Kind.LIVE -> "TV en direct"
+            Kind.MOVIE -> "Films"
+            Kind.SERIES -> "Séries"
         }
 
+        val wide = isWide
         catAdapter = CatAdapter(
+            if (wide) R.layout.item_category else R.layout.item_chip,
             onFocus = { pos -> scheduleSelect(pos) },
             onClick = { pos ->
                 pendingSelect?.let { handler.removeCallbacks(it) }
-                if (pos != catAdapter.selected) selectCategory(pos)
-                focusFirstItem()
+                if (pos != catAdapter.selected || etSearch.text.isNotEmpty()) selectCategory(pos)
+                if (wide) focusFirstItem()
             },
         )
-        rvCats.layoutManager = LinearLayoutManager(this)
+        rvCats.layoutManager = LinearLayoutManager(this, if (wide) RecyclerView.VERTICAL else RecyclerView.HORIZONTAL, false)
         rvCats.adapter = catAdapter
         rvCats.itemAnimator = null
 
         itemAdapter = ItemAdapter(kind, ::openItem, ::toggleFav)
-        rvItems.layoutManager = if (kind == Kind.LIVE) {
-            LinearLayoutManager(this)
-        } else {
-            GridLayoutManager(this, spanCount())
-        }
         rvItems.adapter = itemAdapter
         rvItems.itemAnimator = null
-        rvItems.setHasFixedSize(true)
+        if (kind == Kind.LIVE) {
+            rvItems.layoutManager = LinearLayoutManager(this)
+        } else {
+            val glm = GridLayoutManager(this, 3)
+            rvItems.layoutManager = glm
+            val minW = resources.getDimensionPixelSize(R.dimen.poster_min)
+            rvItems.addOnLayoutChangeListener { v, l, _, r, _, oldL, _, oldR, _ ->
+                if (r - l != oldR - oldL) {
+                    val span = ((v.width - v.paddingLeft - v.paddingRight) / minW).coerceIn(2, 10)
+                    if (glm.spanCount != span) v.post { glm.spanCount = span }
+                }
+            }
+        }
 
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -91,11 +115,13 @@ class BrowseActivity : AppCompatActivity() {
                 pendingSearch?.let { handler.removeCallbacks(it) }
                 val r = Runnable { runSearch(s?.toString() ?: "") }
                 pendingSearch = r
-                handler.postDelayed(r, 400)
+                handler.postDelayed(r, 300)
             }
         })
         etSearch.setOnEditorActionListener { _, _, _ ->
+            pendingSearch?.let { handler.removeCallbacks(it) }
             runSearch(etSearch.text.toString())
+            hideKeyboard()
             focusFirstItem()
             true
         }
@@ -104,10 +130,17 @@ class BrowseActivity : AppCompatActivity() {
         load()
     }
 
-    private fun spanCount(): Int {
-        val dm = resources.displayMetrics
-        val widthDp = dm.widthPixels / dm.density - 330
-        return (widthDp / 150).toInt().coerceIn(2, 8)
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt("cat", catIdx)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (allItems.isNotEmpty()) {
+            itemAdapter.reloadFavs()
+            refreshFavCount()
+        }
     }
 
     private fun load() {
@@ -120,27 +153,28 @@ class BrowseActivity : AppCompatActivity() {
                 allItems = list
                 val counts = HashMap<String, Int>()
                 for (it in list) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
+                val favs = Prefs.favs()
+                val favN = list.count { favs.contains(it.favKey) }
                 val built = ArrayList<Category>()
-                built.add(Category(FAV, "★ Favoris"))
-                built.add(Category(ALL, "Tout (${list.size})"))
+                built.add(Category(FAV, "Favoris", favN))
+                built.add(Category(ALL, "Tout", list.size))
                 for (cat in c) {
                     val n = counts[cat.id] ?: 0
-                    if (n > 0) built.add(Category(cat.id, "${cat.name} ($n)"))
+                    if (n > 0) built.add(Category(cat.id, cat.name, n))
                 }
                 cats = built
                 catAdapter.submit(built)
-                val favs = Prefs.favs()
-                val start = if (list.any { favs.contains(it.favKey) }) 0 else if (built.size > 2) 2 else 1
+                val start = when {
+                    restoreCat in built.indices -> restoreCat
+                    favN > 0 -> 0
+                    built.size > 2 -> 2
+                    else -> 1
+                }
                 selectCategory(start)
                 rvCats.scrollToPosition(start)
-                rvCats.post {
-                    rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus()
-                }
+                if (isWide) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
             } catch (e: Exception) {
-                tvEmpty.text = "Impossible de charger la liste.\n${e.message ?: ""}\n\nOK pour réessayer"
-                tvEmpty.visibility = View.VISIBLE
-                tvEmpty.isFocusable = true
-                tvEmpty.requestFocus()
+                showMessage("Impossible de charger la liste.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
             } finally {
                 progress.visibility = View.GONE
             }
@@ -149,51 +183,72 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun scheduleSelect(pos: Int) {
         pendingSelect?.let { handler.removeCallbacks(it) }
-        if (pos == catAdapter.selected) return
+        if (pos == catAdapter.selected && etSearch.text.isEmpty()) return
         val r = Runnable { selectCategory(pos) }
         pendingSelect = r
-        handler.postDelayed(r, 350)
+        handler.postDelayed(r, 300)
     }
 
     private fun selectCategory(pos: Int) {
-        if (pos !in cats.indices) return
+        val c = cats.getOrNull(pos) ?: return
+        catIdx = pos
         catAdapter.setSelected(pos)
         if (etSearch.text.isNotEmpty()) {
             ignoreSearch = true
             etSearch.setText("")
             ignoreSearch = false
         }
-        val id = cats[pos].id
-        val list = when (id) {
+        val list = when (c.id) {
             FAV -> {
                 val favs = Prefs.favs()
                 allItems.filter { favs.contains(it.favKey) }
             }
             ALL -> allItems
-            else -> allItems.filter { it.categoryId == id }
+            else -> allItems.filter { it.categoryId == c.id }
         }
-        val empty = if (id == FAV) {
-            "Aucun favori.\nAppui long sur OK sur un élément pour l'ajouter."
-        } else "Catégorie vide"
-        showItems(list, empty)
+        val empty = if (c.id == FAV) {
+            "Aucun favori pour le moment.\nAppui long sur une chaîne, un film ou une série pour l'ajouter."
+        } else "Cette catégorie est vide."
+        showItems(list, c.name, empty)
+        if (!isWide) rvCats.smoothScrollToPosition(pos)
     }
 
     private fun runSearch(raw: String) {
-        val q = raw.trim()
+        val q = fold(raw.trim())
         if (q.length < 2) {
-            if (catAdapter.selected >= 0) selectCategory(catAdapter.selected)
+            if (catIdx >= 0) selectCategory(catIdx)
             return
         }
-        val list = allItems.filter { it.name.contains(q, ignoreCase = true) }
-        showItems(list, "Aucun résultat pour « $q »")
+        val list = allItems.filter { fold(it.name).contains(q) }
+        catAdapter.setSelected(-1)
+        showItems(list, "Recherche : ${raw.trim()}", "Aucun résultat")
     }
 
-    private fun showItems(list: List<Item>, emptyMsg: String) {
+    private fun showItems(list: List<Item>, title: String, emptyMsg: String) {
         itemAdapter.submit(list)
         rvItems.scrollToPosition(0)
-        tvEmpty.isFocusable = false
-        tvEmpty.text = emptyMsg
-        tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+        tvHead.text = title
+        tvCount.text = if (list.isEmpty()) "" else plural(list.size, units.first, units.second)
+        if (list.isEmpty()) showMessage(emptyMsg, false) else tvEmpty.visibility = View.GONE
+    }
+
+    private fun showMessage(msg: String, retry: Boolean) {
+        tvEmpty.text = msg
+        tvEmpty.visibility = View.VISIBLE
+        tvEmpty.isFocusable = retry
+        tvEmpty.isClickable = retry
+        if (retry) tvEmpty.requestFocus()
+    }
+
+    private fun refreshFavCount() {
+        val favs = Prefs.favs()
+        val n = allItems.count { favs.contains(it.favKey) }
+        catAdapter.item(0)?.let { if (it.count != n) catAdapter.update(0, it.copy(count = n)) }
+        if (catIdx == 0 && etSearch.text.isEmpty()) {
+            val list = allItems.filter { favs.contains(it.favKey) }
+            if (list.size != itemAdapter.itemCount) showItems(list, cats[0].name, "Aucun favori pour le moment.")
+        }
+        cats = cats.mapIndexed { i, c -> if (i == 0) c.copy(count = n) else c }
     }
 
     private fun focusFirstItem() {
@@ -205,12 +260,15 @@ class BrowseActivity : AppCompatActivity() {
         }
     }
 
+    private fun hideKeyboard() {
+        (getSystemService(INPUT_METHOD_SERVICE) as? InputMethodManager)?.hideSoftInputFromWindow(etSearch.windowToken, 0)
+        etSearch.clearFocus()
+    }
+
     private fun openItem(pos: Int, item: Item) {
         when (kind) {
             Kind.LIVE -> {
-                val play = itemAdapter.items.map {
-                    PlayItem(it.name, Xtream.liveUrl(it.id), true, null, it.id)
-                }
+                val play = itemAdapter.items.map { PlayItem(it.name, Xtream.liveUrl(it.id), true, null, it.id) }
                 Nav.play(this, play, pos)
             }
             Kind.MOVIE -> Nav.play(
@@ -229,13 +287,14 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun toggleFav(pos: Int, item: Item) {
         val added = Prefs.toggleFav(item.favKey)
-        toast(if (added) "★ Ajouté aux favoris" else "Retiré des favoris")
+        toast(if (added) "Ajouté aux favoris" else "Retiré des favoris")
         itemAdapter.refreshFavs(pos)
+        refreshFavCount()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        // Touche Menu de la télécommande = favori sur l'élément sélectionné
-        if (keyCode == KeyEvent.KEYCODE_MENU) {
+        // Touches Menu ou rouge de la télécommande : favori sur l'élément sélectionné
+        if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_PROG_RED) {
             val focused = currentFocus
             if (focused != null && focused.parent == rvItems) {
                 val p = rvItems.getChildAdapterPosition(focused)

@@ -3,13 +3,19 @@ package com.koala.tv
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.view.GestureDetector
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -32,14 +38,17 @@ import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 class PlayerActivity : AppCompatActivity() {
 
     private lateinit var pv: PlayerView
     private lateinit var overlay: View
     private lateinit var ovTitle: TextView
+    private lateinit var ovPos: TextView
     private lateinit var ovEpg: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var gestures: GestureDetector
 
     private var player: ExoPlayer? = null
     private val handler = Handler(Looper.getMainLooper())
@@ -47,11 +56,12 @@ class PlayerActivity : AppCompatActivity() {
     private var retries = 0
     private var lastPos = 0L
     private var epgJob: Job? = null
+    private var swiped = false
 
     private val items: List<PlayItem> get() = Playback.items
     private val current: PlayItem get() = items[index]
 
-    private val hideOverlay = Runnable { overlay.visibility = View.GONE }
+    private val hideOverlay = Runnable { if (!pv.isControllerFullyVisible) overlay.visibility = View.GONE }
     private val saveLoop = object : Runnable {
         override fun run() {
             saveProgress()
@@ -63,6 +73,7 @@ class PlayerActivity : AppCompatActivity() {
         playCurrent(askResume = false)
         if (!current.live && pos > 0) player?.seekTo(pos)
     }
+    private val zapRunnable = Runnable { playCurrent(askResume = false) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -81,9 +92,30 @@ class PlayerActivity : AppCompatActivity() {
         pv = findViewById(R.id.player_view)
         overlay = findViewById(R.id.overlay)
         ovTitle = findViewById(R.id.ov_title)
+        ovPos = findViewById(R.id.ov_pos)
         ovEpg = findViewById(R.id.ov_epg)
         tvStatus = findViewById(R.id.tv_status)
         pv.requestFocus()
+
+        // Infos de la chaîne visibles tant que les commandes sont affichées
+        pv.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
+            if (visibility == View.VISIBLE) showInfo(keep = true)
+            else {
+                handler.removeCallbacks(hideOverlay)
+                handler.postDelayed(hideOverlay, 1500)
+            }
+        })
+
+        // Mobile / tablette : glisser vers le haut = chaîne suivante, vers le bas = précédente
+        gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
+                if (items.isEmpty() || !current.live || items.size < 2) return false
+                if (abs(vy) < 900 || abs(vy) < abs(vx) * 1.5f) return false
+                swiped = true
+                zap(if (vy < 0) 1 else -1)
+                return true
+            }
+        })
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -94,13 +126,28 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (Playback.items.isNotEmpty() && player == null) initPlayer()
+        if (Playback.items.isNotEmpty() && player == null && ::pv.isInitialized) initPlayer()
     }
 
     override fun onStop() {
         saveProgress()
         releasePlayer()
         super.onStop()
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (!::gestures.isInitialized) return super.dispatchTouchEvent(ev)
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) swiped = false
+        gestures.onTouchEvent(ev)
+        if (swiped && ev.actionMasked == MotionEvent.ACTION_UP) {
+            // le glissement ne doit pas aussi afficher / masquer les commandes
+            val cancel = MotionEvent.obtain(ev)
+            cancel.action = MotionEvent.ACTION_CANCEL
+            super.dispatchTouchEvent(cancel)
+            cancel.recycle()
+            return true
+        }
+        return super.dispatchTouchEvent(ev)
     }
 
     private fun initPlayer() {
@@ -137,7 +184,7 @@ class PlayerActivity : AppCompatActivity() {
     private fun releasePlayer() {
         handler.removeCallbacks(saveLoop)
         handler.removeCallbacks(retryRunnable)
-        handler.removeCallbacks(hideOverlay)
+        handler.removeCallbacks(zapRunnable)
         epgJob?.cancel()
         player?.removeListener(listener)
         player?.release()
@@ -165,7 +212,7 @@ class PlayerActivity : AppCompatActivity() {
             p.playWhenReady = false
             AlertDialog.Builder(this)
                 .setTitle(item.title)
-                .setItems(arrayOf("▶ Reprendre à ${fmtTime(saved)}", "⟲ Depuis le début")) { _, which ->
+                .setItems(arrayOf("Reprendre à ${fmtTime(saved)}", "Reprendre au début")) { _, which ->
                     if (which == 1) player?.seekTo(0)
                     player?.playWhenReady = true
                 }
@@ -177,25 +224,44 @@ class PlayerActivity : AppCompatActivity() {
         showInfo()
     }
 
-    private fun showInfo() {
+    private fun showInfo(keep: Boolean = false) {
         val item = current
-        ovTitle.text = if (item.live && items.size > 1) "${index + 1}/${items.size}  ${item.title}" else item.title
-        ovEpg.text = ""
-        ovEpg.visibility = View.GONE
+        ovTitle.text = item.title
+        ovPos.text = if (item.live && items.size > 1) "${index + 1} / ${items.size}" else ""
         overlay.visibility = View.VISIBLE
         handler.removeCallbacks(hideOverlay)
-        handler.postDelayed(hideOverlay, 5_000)
-        epgJob?.cancel()
+        if (!keep) handler.postDelayed(hideOverlay, 5_000)
         val sid = item.streamId
         if (item.live && sid != null) {
-            epgJob = lifecycleScope.launch {
-                val t = Xtream.nowPlaying(sid)
-                if (t.isNotEmpty()) {
-                    ovEpg.text = t
-                    ovEpg.visibility = View.VISIBLE
+            if (epgJob?.isActive != true || ovEpg.tag != sid) {
+                ovEpg.visibility = View.GONE
+                ovEpg.tag = sid
+                epgJob?.cancel()
+                epgJob = lifecycleScope.launch {
+                    val txt = Xtream.nowPlaying(sid)
+                    if (current.streamId == sid && txt.isNotEmpty()) {
+                        ovEpg.text = formatEpg(txt)
+                        ovEpg.visibility = View.VISIBLE
+                    }
                 }
             }
+        } else {
+            ovEpg.visibility = View.GONE
         }
+    }
+
+    /** Met l'heure de chaque programme en vert. */
+    private fun formatEpg(txt: String): CharSequence {
+        val accent = ContextCompat.getColor(this, R.color.accent)
+        val sb = SpannableStringBuilder()
+        txt.lines().forEachIndexed { i, line ->
+            if (i > 0) sb.append('\n')
+            val start = sb.length
+            sb.append(line)
+            val sp = line.indexOf("  ")
+            if (sp in 1..5) sb.setSpan(ForegroundColorSpan(accent), start, start + sp, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        return sb
     }
 
     private val listener = object : Player.Listener {
@@ -206,7 +272,7 @@ class PlayerActivity : AppCompatActivity() {
                     tvStatus.visibility = View.GONE
                 }
                 Player.STATE_ENDED -> {
-                    if (current.live) scheduleRetry("Flux interrompu, reconnexion…") else next()
+                    if (current.live) scheduleRetry() else next()
                 }
                 else -> {}
             }
@@ -219,18 +285,14 @@ class PlayerActivity : AppCompatActivity() {
                 p.prepare()
                 return
             }
-            if (current.live || retries < 3) {
-                scheduleRetry("Problème de flux, nouvelle tentative…")
-            } else {
-                showFatal(error)
-            }
+            if (current.live || retries < 3) scheduleRetry() else showFatal(error)
         }
     }
 
-    private fun scheduleRetry(msg: String) {
+    private fun scheduleRetry() {
         retries++
         val delay = (1_000L * retries).coerceAtMost(5_000L)
-        tvStatus.text = if (retries > 1) "$msg ($retries)" else msg
+        tvStatus.text = if (retries > 2) "Reconnexion en cours ($retries)" else "Reconnexion…"
         tvStatus.visibility = View.VISIBLE
         handler.removeCallbacks(retryRunnable)
         handler.postDelayed(retryRunnable, delay)
@@ -266,6 +328,7 @@ class PlayerActivity : AppCompatActivity() {
         }
     }
 
+    /** Changement de chaîne : le titre s'affiche tout de suite, le flux démarre quand on arrête de zapper. */
     private fun zap(delta: Int) {
         if (items.size <= 1) return
         index = (index + delta + items.size) % items.size
@@ -273,7 +336,11 @@ class PlayerActivity : AppCompatActivity() {
         retries = 0
         lastPos = 0
         handler.removeCallbacks(retryRunnable)
-        playCurrent(askResume = false)
+        tvStatus.visibility = View.GONE
+        player?.stop()
+        showInfo()
+        handler.removeCallbacks(zapRunnable)
+        handler.postDelayed(zapRunnable, 350)
     }
 
     private fun saveProgress() {
@@ -295,8 +362,8 @@ class PlayerActivity : AppCompatActivity() {
         if (event.action == KeyEvent.ACTION_DOWN && ::pv.isInitialized && items.isNotEmpty()) {
             val controls = pv.isControllerFullyVisible
             when (event.keyCode) {
-                KeyEvent.KEYCODE_CHANNEL_UP -> if (current.live) { zap(-1); return true }
-                KeyEvent.KEYCODE_CHANNEL_DOWN -> if (current.live) { zap(1); return true }
+                KeyEvent.KEYCODE_CHANNEL_UP -> if (current.live) { zap(1); return true }
+                KeyEvent.KEYCODE_CHANNEL_DOWN -> if (current.live) { zap(-1); return true }
             }
             if (!controls) {
                 if (current.live) {
@@ -304,7 +371,7 @@ class PlayerActivity : AppCompatActivity() {
                         KeyEvent.KEYCODE_DPAD_UP -> { zap(-1); return true }
                         KeyEvent.KEYCODE_DPAD_DOWN -> { zap(1); return true }
                         KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_INFO -> {
-                            showInfo(); pv.showController(); return true
+                            pv.showController(); return true
                         }
                     }
                 } else {
@@ -321,5 +388,10 @@ class PlayerActivity : AppCompatActivity() {
             }
         }
         return super.dispatchKeyEvent(event)
+    }
+
+    override fun onDestroy() {
+        handler.removeCallbacksAndMessages(null)
+        super.onDestroy()
     }
 }

@@ -18,12 +18,14 @@ class HomeActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java)); finish(); return
         }
         setContentView(R.layout.activity_home)
+        findViewById<TextView>(R.id.brand).text = brandText()
 
         val exp = Prefs.expiry.toLongOrNull()
-        val expTxt = if (exp != null && exp > 0) {
-            "expire le " + SimpleDateFormat("dd/MM/yyyy", Locale.FRANCE).format(Date(exp * 1000))
-        } else "sans date d'expiration"
-        findViewById<TextView>(R.id.tv_account).text = "Compte ${Prefs.user} · $expTxt\nv${appVersion()}"
+        var account = Prefs.user
+        if (exp != null && exp > 0) {
+            account += " · expire le " + SimpleDateFormat("dd/MM/yyyy", Locale.FRANCE).format(Date(exp * 1000))
+        }
+        findViewById<TextView>(R.id.tv_account).text = account
 
         fun open(k: Kind) = startActivity(Intent(this, BrowseActivity::class.java).putExtra("kind", k.name))
 
@@ -35,7 +37,7 @@ class HomeActivity : AppCompatActivity() {
         movies.setOnClickListener { open(Kind.MOVIE) }
         series.setOnClickListener { open(Kind.SERIES) }
         settings.setOnClickListener { showSettings() }
-        listOf(live, movies, series, settings).forEach { it.focusZoom(1.06f) }
+        listOf(live, movies, series, settings).forEach { it.focusZoom(1.05f) }
         live.requestFocus()
     }
 
@@ -47,13 +49,13 @@ class HomeActivity : AppCompatActivity() {
 
     private fun showSettings() {
         val labels = arrayOf(
-            "Format du direct : " + if (Prefs.liveFormat == "ts") "MPEG-TS (recommandé)" else "HLS (m3u8)",
-            "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC…)" else "intégré (recommandé)",
-            "Recharger les listes de chaînes / films",
+            "Format du direct : " + if (Prefs.liveFormat == "ts") "MPEG-TS (recommandé)" else "HLS",
+            "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC)" else "intégré (recommandé)",
+            "Actualiser les listes",
             "Se déconnecter",
         )
         AlertDialog.Builder(this)
-            .setTitle("Réglages")
+            .setTitle("Réglages · v${appVersion()}")
             .setItems(labels) { _, which ->
                 when (which) {
                     0 -> {
@@ -66,17 +68,18 @@ class HomeActivity : AppCompatActivity() {
                     }
                     2 -> {
                         Cache.clear()
-                        toast("Les listes seront rechargées")
+                        toast("Listes actualisées")
                     }
                     3 -> AlertDialog.Builder(this)
-                        .setMessage("Se déconnecter de ce compte ?")
-                        .setPositiveButton("Oui") { _, _ ->
-                            Prefs.logout()
+                        .setTitle("Se déconnecter ?")
+                        .setMessage("Tes favoris et reprises de lecture sont conservés.")
+                        .setPositiveButton("Se déconnecter") { _, _ ->
+                            Prefs.pass = ""
                             Cache.clear()
                             startActivity(Intent(this, LoginActivity::class.java))
                             finish()
                         }
-                        .setNegativeButton("Non", null)
+                        .setNegativeButton("Annuler", null)
                         .show()
                 }
             }

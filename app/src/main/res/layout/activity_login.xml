@@ -4,83 +4,126 @@
     android:layout_height="match_parent"
     android:fillViewport="true">
 
-    <LinearLayout
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="32dp">
-
-        <ImageView
-            android:layout_width="240dp"
-            android:layout_height="135dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/banner" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="20dp"
-            android:text="Connexion à ton abonnement Xtream"
-            android:textColor="@color/muted"
-            android:textSize="16sp" />
+        android:layout_height="wrap_content">
 
         <LinearLayout
+            android:id="@+id/form"
             android:layout_width="520dp"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:paddingTop="32dp"
+            android:paddingBottom="32dp">
 
-            <EditText
-                android:id="@+id/et_server"
-                style="@style/Field"
-                android:hint="URL du serveur (ex : http://serveur.com:8080) ou lien M3U"
-                android:imeOptions="actionNext"
-                android:inputType="textUri" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginBottom="36dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
-            <EditText
-                android:id="@+id/et_user"
-                style="@style/Field"
-                android:hint="Nom d'utilisateur"
-                android:imeOptions="actionNext"
-                android:inputType="text" />
+                <ImageView
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/koala" />
 
-            <EditText
-                android:id="@+id/et_pass"
-                style="@style/Field"
-                android:hint="Mot de passe"
-                android:imeOptions="actionDone"
-                android:inputType="textVisiblePassword" />
+                <TextView
+                    android:id="@+id/brand"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:fontFamily="@font/inter_bold"
+                    android:letterSpacing="-0.03"
+                    android:textColor="@color/text"
+                    android:textSize="40sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/FieldBox"
+                android:addStatesFromChildren="true">
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="Serveur ou lien M3U" />
+
+                <EditText
+                    android:id="@+id/et_server"
+                    style="@style/FieldInput"
+                    android:hint="http://serveur.com:8080"
+                    android:imeOptions="actionNext|flagNoExtractUi"
+                    android:inputType="textUri" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/FieldBox"
+                android:addStatesFromChildren="true">
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="Identifiant" />
+
+                <EditText
+                    android:id="@+id/et_user"
+                    style="@style/FieldInput"
+                    android:imeOptions="actionNext|flagNoExtractUi"
+                    android:inputType="textNoSuggestions" />
+            </LinearLayout>
+
+            <LinearLayout
+                style="@style/FieldBox"
+                android:addStatesFromChildren="true">
+
+                <TextView
+                    style="@style/FieldLabel"
+                    android:text="Mot de passe" />
+
+                <EditText
+                    android:id="@+id/et_pass"
+                    style="@style/FieldInput"
+                    android:imeOptions="actionDone|flagNoExtractUi"
+                    android:inputType="textVisiblePassword|textNoSuggestions" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/btn_login"
                 android:layout_width="match_parent"
-                android:layout_height="56dp"
-                android:layout_marginTop="8dp"
-                android:background="@drawable/tile_bg"
+                android:layout_height="58dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/button_bg"
                 android:clickable="true"
                 android:focusable="true"
+                android:fontFamily="@font/inter_bold"
                 android:gravity="center"
                 android:text="Se connecter"
-                android:textColor="@color/accent"
-                android:textSize="20sp"
-                android:textStyle="bold" />
+                android:textColor="@color/button_text"
+                android:textSize="19sp" />
 
-            <ProgressBar
-                android:id="@+id/progress"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_gravity="center"
-                android:layout_marginTop="16dp"
-                android:visibility="gone" />
-
-            <TextView
-                android:id="@+id/tv_status"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:textColor="@color/muted"
-                android:textSize="15sp" />
+                android:layout_height="64dp"
+                android:layout_marginTop="12dp">
+
+                <ProgressBar
+                    android:id="@+id/progress"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="center"
+                    android:indeterminateTint="@color/accent"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tv_status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:gravity="center"
+                    android:textColor="@color/error"
+                    android:textSize="15sp" />
+            </FrameLayout>
         </LinearLayout>
-    </LinearLayout>
+    </FrameLayout>
 </ScrollView>

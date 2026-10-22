@@ -1,15 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/tv_name"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_marginVertical="2dp"
-    android:background="@drawable/focus_bg"
+    android:layout_height="52dp"
+    android:layout_marginTop="2dp"
+    android:layout_marginBottom="2dp"
+    android:background="@drawable/cat_bg"
     android:clickable="true"
-    android:ellipsize="end"
-    android:focusable="true"
-    android:paddingHorizontal="14dp"
-    android:paddingVertical="12dp"
-    android:singleLine="true"
-    android:textColor="@color/text"
-    android:textSize="16sp" />
+    android:focusable="true">
+
+    <View
+        android:id="@+id/v_bar"
+        android:layout_width="3dp"
+        android:layout_height="22dp"
+        android:layout_gravity="center_vertical"
+        android:background="@drawable/select_bar"
+        android:visibility="invisible" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:duplicateParentState="true"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/tv_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:duplicateParentState="true"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/cat_text"
+            android:textSize="16sp" />
+
+        <TextView
+            android:id="@+id/tv_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:textColor="@color/faint"
+            android:textSize="13sp" />
+    </LinearLayout>
+</FrameLayout>

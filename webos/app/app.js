@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.0.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -760,14 +760,14 @@
       m.textContent = txt;
       cls(m, 'on', !!txt);
     },
-    pickCat: function (i, stayInCats) {
+    pickCat: function (i, stayInCats, keepSearch) {
       clearTimeout(this.selTimer);
       var c = this.catList[i];
       if (!c) return;
       this.catIdx = i;
       this.cats.idx = i;
       this.cats.select(i);
-      if (this.query) { this.query = ''; this.search.value = ''; }
+      if (!keepSearch && this.query) { this.query = ''; this.search.value = ''; }
       var list = [], k;
       if (c.id === '*all') list = this.all;
       else if (c.id === '*fav') { for (k = 0; k < this.all.length; k++) if (isFav(this.all[k])) list.push(this.all[k]); }
@@ -787,7 +787,7 @@
       var q = fold(str(raw));
       this.query = q;
       if (q.length < 2) {
-        this.pickCat(this.catIdx, true);
+        this.pickCat(this.catIdx, true, true);
         return;
       }
       var out = [];

@@ -189,11 +189,11 @@ class BrowseActivity : AppCompatActivity() {
         handler.postDelayed(r, 300)
     }
 
-    private fun selectCategory(pos: Int) {
+    private fun selectCategory(pos: Int, clearSearch: Boolean = true) {
         val c = cats.getOrNull(pos) ?: return
         catIdx = pos
         catAdapter.setSelected(pos)
-        if (etSearch.text.isNotEmpty()) {
+        if (clearSearch && etSearch.text.isNotEmpty()) {
             ignoreSearch = true
             etSearch.setText("")
             ignoreSearch = false
@@ -216,7 +216,7 @@ class BrowseActivity : AppCompatActivity() {
     private fun runSearch(raw: String) {
         val q = fold(raw.trim())
         if (q.length < 2) {
-            if (catIdx >= 0) selectCategory(catIdx)
+            if (catIdx >= 0) selectCategory(catIdx, clearSearch = false)
             return
         }
         val list = allItems.filter { fold(it.name).contains(q) }

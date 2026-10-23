@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.13.0';
+  var VERSION = '1.14.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -277,6 +277,39 @@
       var plain = this.xor(code, bytes), s = '';
       for (i = 0; i < plain.length; i++) s += String.fromCharCode(plain[i]);
       return JSON.parse(decodeURIComponent(escape(s)));
+    },
+    /* Envoi des identifiants de cette TV vers le code affiché sur un autre appareil */
+    clean: function (raw) {
+      var c = String(raw || '').toUpperCase().replace(/[\s\-]/g, '');
+      if (c.length !== 8) return null;
+      for (var i = 0; i < 8; i++) if (this.ABC.indexOf(c.charAt(i)) < 0) return null;
+      return c;
+    },
+    send: function (code, cb) {
+      var plain = unescape(encodeURIComponent(JSON.stringify({ s: P.server, u: P.user, p: P.pass }))), bytes = [], i;
+      for (i = 0; i < plain.length; i++) bytes.push(plain.charCodeAt(i));
+      var enc = this.xor(code, bytes), hex = '';
+      for (i = 0; i < enc.length; i++) hex += ('0' + enc[i].toString(16)).slice(-2);
+      try {
+        var x = new XMLHttpRequest();
+        x.open('POST', this.url(code) + '?x-http-method-override=PUT', true);
+        x.setRequestHeader('Content-Type', 'text/plain');
+        x.onload = function () { cb(x.status >= 200 && x.status < 300); };
+        x.onerror = function () { cb(false); };
+        x.send(JSON.stringify({ d: hex, at: Date.now() }));
+      } catch (e) { cb(false); }
+    },
+    /* Attend que l'autre appareil ait récupéré l'envoi (il l'efface) ; sinon on l'efface au bout d'une minute */
+    follow: function (code, cb) {
+      var self = this, tries = 0;
+      function check() {
+        getJson(self.url(code), function (err, rec) {
+          if (!err && rec === null) return cb(true);
+          if (++tries >= 20) { self.remove(code); return cb(false); }
+          setTimeout(check, 3000);
+        });
+      }
+      setTimeout(check, 3000);
     },
     remove: function (code) {
       try {
@@ -1181,6 +1214,7 @@
       Sync.pullFavs();
       Sync.pullSeen();
       if (this.backToCats !== undefined) { var i = this.backToCats; delete this.backToCats; this.catChooser(i); }
+      else if (this.backToSettings !== undefined) { var j = this.backToSettings; delete this.backToSettings; this.settings(j); }
     },
     pullHistory: function () {
       var self = this;
@@ -1358,6 +1392,7 @@
           }
         },
         { label: 'Catégories visibles', fn: function () { self.catChooser(0); } },
+        { label: 'Connecter un appareil', fn: function () { self.backToSettings = 3; go('pairsend'); } },
         {
           label: 'Se déconnecter',
           fn: function () {
@@ -1366,8 +1401,8 @@
                 label: 'Se déconnecter',
                 fn: function () { setP('pass', ''); Lists.clear(); reset('login'); }
               },
-              { label: 'Annuler', fn: function () { self.settings(3); } }
-            ], function () { self.settings(3); });
+              { label: 'Annuler', fn: function () { self.settings(4); } }
+            ], function () { self.settings(4); });
           }
         },
         { label: 'Fermer' }
@@ -1491,6 +1526,56 @@
     return '<div class="poster"><div class="img">' + imgTag(it.icon) + (isFav(it) ? STAR : '') +
       '</div><div class="n">' + esc(it.name) + '</div></div>';
   }
+
+  /* ---------- Connecter un appareil (envoi du code depuis la TV) ---------- */
+
+  screens.pairsend = {
+    el: $('s-pairsend'),
+    idx: 0,
+    init: function () {
+      var self = this;
+      this.input = $('ps-code');
+      this.input.addEventListener('blur', function () { cls(self.input.parentNode, 'editing', false); });
+      $('ps-btn').addEventListener('click', function () { self.idx = 1; self.paint(); self.send(); });
+      this.input.parentNode.addEventListener('click', function () { self.idx = 0; self.paint(); self.edit(); });
+    },
+    enter: function () {
+      this.input.value = '';
+      this.idx = 0;
+      this.status('', false);
+      this.paint();
+      var self = this;
+      setTimeout(function () { if (cur === self) self.edit(); }, 50);
+    },
+    paint: function () {
+      cls(this.input.parentNode, 'focus', this.idx === 0);
+      cls($('ps-btn'), 'focus', this.idx === 1);
+    },
+    status: function (msg, err) { var s = $('ps-status'); s.textContent = msg; cls(s, 'err', !!err); },
+    edit: function () { cls(this.input.parentNode, 'editing', true); this.input.focus(); },
+    inputDone: function (input, c) {
+      if (c === K.OK || c === K.DOWN) { this.idx = 1; this.paint(); if (c === K.OK) this.send(); }
+    },
+    send: function () {
+      var self = this, code = Pair.clean(this.input.value);
+      if (!code) { this.status('Code incorrect : 8 caractères, comme affiché sur l\'autre appareil', true); return; }
+      this.status('Envoi des identifiants…', false);
+      Pair.send(code, function (ok) {
+        if (!ok) { self.status('Envoi impossible, vérifie la connexion', true); return; }
+        self.status('En attente de l\'autre appareil…', false);
+        Pair.follow(code, function (done) {
+          if (done) { toast('Appareil connecté'); if (cur === self) back(); }
+          else self.status('L\'appareil n\'a pas répondu, vérifie le code', true);
+        });
+      });
+    },
+    key: function (c) {
+      if (c === K.UP && this.idx > 0) { this.idx = 0; this.paint(); return true; }
+      if (c === K.DOWN && this.idx < 1) { this.idx = 1; this.paint(); return true; }
+      if (c === K.OK) { if (this.idx === 0) this.edit(); else this.send(); return true; }
+      return true;
+    }
+  };
 
   /* ---------- Recherche globale (chaînes, films et séries) ---------- */
 

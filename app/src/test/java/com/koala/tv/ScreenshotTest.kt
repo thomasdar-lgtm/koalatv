@@ -49,6 +49,7 @@ class ScreenshotTest {
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k))
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, k))
                 }
+                a.findViewById<android.view.View>(R.id.tile_live).requestFocus()
             }
             repeat(6) {
                 shadowOf(Looper.getMainLooper()).idle()

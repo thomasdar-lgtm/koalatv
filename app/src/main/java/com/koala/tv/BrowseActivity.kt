@@ -133,6 +133,20 @@ class BrowseActivity : AppCompatActivity() {
             true
         }
 
+        // télécommande : bas, ou droite en fin de saisie, mènent aux résultats sans effacer la recherche
+        etSearch.setOnKeyListener { _, code, ev ->
+            if (ev.action != KeyEvent.ACTION_DOWN || etSearch.text.isEmpty()) return@setOnKeyListener false
+            val atEnd = etSearch.selectionStart == etSearch.text.length && etSearch.selectionEnd == etSearch.text.length
+            if (code == KeyEvent.KEYCODE_DPAD_DOWN || (code == KeyEvent.KEYCODE_DPAD_RIGHT && atEnd)) {
+                pendingSearch?.let { handler.removeCallbacks(it) }
+                runSearch(etSearch.text.toString())
+                if (itemAdapter.itemCount == 0) return@setOnKeyListener false
+                hideKeyboard()
+                focusFirstItem()
+                true
+            } else false
+        }
+
         tvEmpty.setOnClickListener { if (allItems.isEmpty()) load() }
         if (kind == Kind.LIVE) {
             findViewById<View>(R.id.btn_guide).apply {

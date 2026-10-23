@@ -26,6 +26,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
@@ -205,7 +206,7 @@ class PlayerActivity : AppCompatActivity() {
             .setAudioAttributes(AudioAttributes.DEFAULT, true)
             .build()
         p.addListener(listener)
-        pv.player = p
+        pv.player = episodeControls(p)
         player = p
         // commandes système (image dans l'image, casque Bluetooth, télécommandes)
         session = try {
@@ -223,6 +224,39 @@ class PlayerActivity : AppCompatActivity() {
         }
         handler.removeCallbacks(saveLoop)
         handler.postDelayed(saveLoop, 10_000)
+    }
+
+    /** Boutons « épisode précédent / suivant » des commandes, actifs seulement entre deux épisodes d'une saison. */
+    private fun episodeControls(p: ExoPlayer): Player = object : ForwardingPlayer(p) {
+        private fun can(d: Int) = !current.live && items.size > 1 && index + d in items.indices
+        override fun getAvailableCommands(): Player.Commands {
+            val b = super.getAvailableCommands().buildUpon()
+            if (can(1)) b.addAll(Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            else b.removeAll(Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
+            if (can(-1)) b.addAll(Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            else b.removeAll(Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
+            return b.build()
+        }
+        override fun isCommandAvailable(command: Int) = availableCommands.contains(command)
+        override fun seekToNext() = goEpisode(1)
+        override fun seekToNextMediaItem() = goEpisode(1)
+        override fun seekToPrevious() = goEpisode(-1)
+        override fun seekToPreviousMediaItem() = goEpisode(-1)
+        override fun hasNextMediaItem() = can(1)
+        override fun hasPreviousMediaItem() = can(-1)
+    }
+
+    /** Épisode choisi à la main : la progression de l'épisode en cours est gardée. */
+    private fun goEpisode(d: Int) {
+        val i = index + d
+        if (current.live || i !in items.indices) return
+        saveProgress()
+        index = i
+        Playback.index = i
+        retries = 0
+        lastPos = 0
+        handler.removeCallbacks(retryRunnable)
+        playCurrent(askResume = true)
     }
 
     private fun releasePlayer() {

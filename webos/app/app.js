@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.11.1';
+  var VERSION = '1.12.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -670,6 +670,8 @@
     open: false, opts: [], idx: 0, onCancel: null,
     show: function (title, msg, opts, onCancel, idx) {
       this.open = true;
+      // OK n'est pris en compte qu'après relâchement de la touche (appui long qui a ouvert ce menu)
+      this.armed = false;
       this.opts = opts;
       this.idx = idx || 0;
       this.onCancel = onCancel || null;
@@ -700,7 +702,7 @@
     key: function (c) {
       if (c === K.UP && this.idx > 0) { this.idx--; this.paint(); }
       else if (c === K.DOWN && this.idx < this.opts.length - 1) { this.idx++; this.paint(); }
-      else if (c === K.OK) this.pick(this.idx);
+      else if (c === K.OK) { if (this.armed) this.pick(this.idx); }
       else if (c === K.BACK || c === K.ESC || c === K.BKSP) this.cancel();
     }
   };
@@ -1027,7 +1029,14 @@
       if (this.rIdx >= l.length) this.rIdx = Math.max(0, l.length - 1);
       if (!l.length && this.zone === 'resume') this.zone = 'tiles';
     },
+    keyup: function (c) {
+      if (c !== K.OK || !this.okTimer) return;
+      clearTimeout(this.okTimer);
+      this.okTimer = null;
+      if (this.zone === 'resume') this.resumeItem();
+    },
     paint: function () {
+      cls(this.el, 'resume-on', this.zone === 'resume');
       for (var i = 0; i < this.tiles.length; i++) cls(this.tiles[i], 'focus', this.zone === 'tiles' && i === this.idx);
       var cards = $('h-row').children;
       for (i = 0; i < cards.length; i++) cls(cards[i], 'focus', this.zone === 'resume' && i === this.rIdx);
@@ -1044,7 +1053,11 @@
         if (c === K.LEFT && this.rIdx > 0) { this.rIdx--; this.paint(); }
         else if (c === K.RIGHT && this.rIdx < n - 1) { this.rIdx++; this.paint(); }
         else if (c === K.DOWN) { this.zone = 'tiles'; this.paint(); }
-        else if (c === K.OK) this.resumeItem();
+        else if (c === K.OK) {
+          // appui court : reprendre ; appui long : retirer
+          var self = this;
+          if (!this.okTimer) this.okTimer = setTimeout(function () { self.okTimer = null; self.forget(); }, 650);
+        }
         else if (c === K.RED) this.forget();
         return true;
       }
@@ -1210,7 +1223,7 @@
       g = '<span class="g">' + hm(p.s) + ' – ' + hm(p.e) + ' · ' + esc(p.t) + '</span><span class="gb"><i style="width:' + pct.toFixed(1) + '%"></i></span>';
     }
     return '<div class="row"><span class="logo">' + imgTag(it.icon) + '</span><span class="tx"><span class="n">' + esc(it.name) +
-      (it.archive > 0 ? '<em class="rp">Replay</em>' : '') + '</span>' +
+      (it.archive > 0 ? '<em class="tagrp">Replay</em>' : '') + '</span>' +
       g + '</span>' + (isFav(it) ? STAR : '') + '</div>';
   }
   function renderPoster(it) {
@@ -1241,7 +1254,7 @@
       var self = this;
       this.search = $('b-search');
       this.cats = new VList($('b-cats'), {
-        rowH: 3.1,
+        rowH: 2.55,
         render: renderCat,
         onPointer: function () { self.setZone('cats'); },
         onOk: function (i) { self.pickCat(i); }
@@ -1437,7 +1450,8 @@
     inputDone: function (input, c) {
       clearTimeout(this.searchTimer);
       this.runSearch(this.search.value);
-      if ((c === K.OK || c === K.DOWN) && this.items.items.length) this.setZone(c === K.OK ? 'items' : 'cats');
+      // la recherche reste affichée : OK, bas ou droite mènent aux résultats
+      if ((c === K.OK || c === K.DOWN || c === K.RIGHT) && this.items.items.length) this.setZone('items');
       else this.setZone(c === K.DOWN ? 'cats' : 'search');
     },
     back: function () {
@@ -1470,7 +1484,7 @@
       }
       if (this.zone === 'search') {
         if (c === K.OK) this.editSearch();
-        else if (c === K.DOWN) this.setZone('cats');
+        else if (c === K.DOWN) this.setZone(this.query && this.items.items.length ? 'items' : 'cats');
         else if (c === K.RIGHT && this.items.items.length) this.setZone('items');
         return true;
       }
@@ -1500,7 +1514,7 @@
       if (c === K.LEFT) { if (!this.items.move(-1, 0)) this.setZone('cats'); return true; }
       if (c === K.RIGHT) { this.items.move(1, 0); return true; }
       if (c === K.UP) {
-        if (!this.items.move(0, -1) && this.kind === 'live') this.setZone('gbtn');
+        if (!this.items.move(0, -1)) this.setZone(this.query ? 'search' : this.kind === 'live' ? 'gbtn' : 'items');
         return true;
       }
       if (c === K.DOWN) { this.items.move(0, 1); return true; }
@@ -1533,7 +1547,7 @@
     init: function () {
       var self = this;
       this.sList = new VList($('sr-seasons'), {
-        rowH: 3.1,
+        rowH: 2.55,
         render: renderCat,
         onPointer: function () { self.setZone('seasons'); },
         onOk: function (i) { self.pickSeason(i); self.setZone('eps'); }
@@ -1952,6 +1966,18 @@
         cls($('p-pause'), 'on', false);
       });
       v.addEventListener('waiting', function () { if (self.active) spinner(true); });
+      v.addEventListener('play', function () { self.paintCtl(); });
+      v.addEventListener('pause', function () { self.paintCtl(); });
+      // boutons à la souris (télécommande à pointeur)
+      $('p-ctl').onclick = function (e) {
+        var n = e.target;
+        while (n && n.getAttribute && n.getAttribute('data-a') === null) n = n.parentNode;
+        if (!n || !n.getAttribute) return;
+        var a = n.getAttribute('data-a');
+        for (var k = 0; k < self.ACT.length; k++) if (self.ACT[k] === a) self.cIdx = k;
+        self.ctl = true;
+        self.act(a);
+      };
       v.addEventListener('loadedmetadata', function () {
         if (self.startAt > 0) {
           try { v.currentTime = self.startAt; } catch (e) { /* ignoré */ }
@@ -1978,6 +2004,54 @@
       });
     },
     cur: function () { return this.list[this.i]; },
+    ACT: ['prev', 'back', 'play', 'fwd', 'next', 'audio', 'subs'],
+    ctl: false,
+    cIdx: 2,
+    /* Boutons visibles / utilisables selon le contenu et la position dans la saison */
+    usable: function (a) {
+      if (a === 'prev') return this.list.length > 1 && this.i > 0;
+      if (a === 'next') return this.list.length > 1 && this.i < this.list.length - 1;
+      return true;
+    },
+    paintCtl: function () {
+      var n = $('p-ctl').children, multi = this.list.length > 1;
+      for (var k = 0; k < n.length; k++) {
+        var a = this.ACT[k], el = n[k];
+        cls(el, 'hide', (a === 'prev' || a === 'next') && !multi);
+        cls(el, 'off', !this.usable(a));
+        cls(el, 'focus', k === this.cIdx);
+      }
+      cls($('p-info'), 'ctl-on', this.ctl);
+      cls($('p-info'), 'paused', this.v.paused);
+    },
+    moveCtl: function (d) {
+      var k = this.cIdx;
+      for (var step = 0; step < this.ACT.length; step++) {
+        k += d;
+        if (k < 0 || k >= this.ACT.length) return;
+        if (this.usable(this.ACT[k])) { this.cIdx = k; break; }
+      }
+      this.showInfo(this.v.paused);
+    },
+    act: function (a) {
+      if (!this.usable(a)) return;
+      if (a === 'play') this.togglePause();
+      else if (a === 'back') this.seek(-10);
+      else if (a === 'fwd') this.seek(30);
+      else if (a === 'prev') this.goTo(this.i - 1);
+      else if (a === 'next') this.goTo(this.i + 1);
+      else if (a === 'audio') { this.cycleAudio(); this.showInfo(this.v.paused); }
+      else if (a === 'subs') { this.cycleSubs(); this.showInfo(this.v.paused); }
+    },
+    /* Épisode précédent / suivant choisi à la main : la progression de l'épisode en cours est gardée */
+    goTo: function (i) {
+      if (i < 0 || i >= this.list.length || i === this.i) return;
+      this.saveProgress();
+      this.stopVideo();
+      this.i = i;
+      if (!this.usable(this.ACT[this.cIdx])) this.cIdx = 2;
+      this.start(true);
+    },
     enter: function (p) {
       this.list = p.list;
       this.i = p.index || 0;
@@ -1986,6 +2060,8 @@
       this.prevI = -1;
       this.digits = '';
       this.okTimer = null;
+      this.ctl = false;
+      this.cIdx = 2;
       this.active = true;
       this.start(true);
       var self = this;
@@ -1999,6 +2075,8 @@
       this.stopVideo();
       this.status('');
       cls($('p-info'), 'on', false);
+      this.ctl = false;
+      cls($('p-info'), 'ctl-on', false);
       cls($('p-pause'), 'on', false);
       cls($('p-num'), 'on', false);
       clearTimeout(this.okTimer);
@@ -2168,7 +2246,7 @@
     showInfo: function (keep) {
       var self = this, it = this.cur();
       $('p-title').textContent = it.title;
-      $('p-pos').textContent = !it.live ? '' : it.num > 0 ? 'Chaîne ' + it.num : this.list.length > 1 ? (this.i + 1) + ' / ' + this.list.length : '';
+      $('p-pos').textContent = !it.live ? (this.list.length > 1 ? 'Épisode ' + (this.i + 1) + ' / ' + this.list.length : '') : it.num > 0 ? 'Chaîne ' + it.num : this.list.length > 1 ? (this.i + 1) + ' / ' + this.list.length : '';
       cls($('p-vod'), 'on', !it.live);
       if (!it.live) this.paintProgress();
       var epg = $('p-epg');
@@ -2188,8 +2266,15 @@
         }, 500);
       }
       cls($('p-info'), 'on', true);
+      this.paintCtl();
       clearTimeout(this.timers.info);
-      if (!keep) this.timers.info = setTimeout(function () { cls($('p-info'), 'on', false); }, 5000);
+      if (!keep) this.timers.info = setTimeout(function () { self.hideInfo(); }, 5000);
+    },
+    hideInfo: function () {
+      clearTimeout(this.timers.info);
+      cls($('p-info'), 'on', false);
+      this.ctl = false;
+      this.paintCtl();
     },
     togglePause: function () {
       var v = this.v;
@@ -2260,15 +2345,30 @@
         else if (c === K.INFO || c === K.LEFT || c === K.RIGHT) this.showInfo();
         return true;
       }
-      if (c === K.OK || c === K.PLAY || c === K.PAUSE) {
+      // Films et séries : sans les boutons, gauche/droite reculent/avancent ; OK ou haut affichent les boutons
+      if (c === K.PLAY || c === K.PAUSE) {
         if (c === K.PLAY && !this.v.paused) this.showInfo();
         else if (c === K.PAUSE && this.v.paused) this.showInfo(true);
         else this.togglePause();
-      } else if (c === K.LEFT) this.seek(-10);
-      else if (c === K.RIGHT) this.seek(30);
+      } else if (c === K.OK) {
+        if (e && e.repeat) return true;
+        if (this.ctl) this.act(this.ACT[this.cIdx]);
+        else { this.ctl = true; this.cIdx = 2; this.togglePause(); }
+      } else if (c === K.LEFT || c === K.RIGHT) {
+        if (this.ctl) this.moveCtl(c === K.LEFT ? -1 : 1);
+        else this.seek(c === K.LEFT ? -10 : 30);
+      } else if (c === K.UP || c === K.INFO) {
+        this.ctl = true;
+        if (!this.usable(this.ACT[this.cIdx])) this.cIdx = 2;
+        this.showInfo(this.v.paused);
+      } else if (c === K.DOWN) {
+        if (this.ctl && !this.v.paused) this.hideInfo();
+        else { this.ctl = false; this.showInfo(this.v.paused); }
+      }
+      else if (c === K.CH_UP) this.act('next');
+      else if (c === K.CH_DOWN) this.act('prev');
       else if (c === K.RW) this.seek(-60);
       else if (c === K.FF) this.seek(60);
-      else if (c === K.UP || c === K.DOWN || c === K.INFO) this.showInfo(this.v.paused);
       return true;
     }
   };
@@ -2281,7 +2381,9 @@
     var c = e.keyCode || e.which, t = e.target;
     var typing = t && t.tagName === 'INPUT' && document.activeElement === t;
     if (typing) {
-      if (c === K.OK || c === K.UP || c === K.DOWN || isBack(c)) {
+      // droite en fin de saisie : on sort du champ (vers les résultats)
+      var atEnd = c === K.RIGHT && t.selectionStart === t.value.length && t.selectionEnd === t.value.length;
+      if (c === K.OK || c === K.UP || c === K.DOWN || atEnd || isBack(c)) {
         e.preventDefault();
         t.blur();
         if (cur && cur.inputDone) cur.inputDone(t, c);
@@ -2298,7 +2400,8 @@
   }, true);
 
   document.addEventListener('keyup', function (e) {
-    if (!Dialog.open && cur && cur.keyup) cur.keyup(e.keyCode || e.which);
+    if (Dialog.open) { Dialog.armed = true; return; }
+    if (cur && cur.keyup) cur.keyup(e.keyCode || e.which);
   }, true);
 
   window.addEventListener('resize', function () {
@@ -2333,5 +2436,5 @@
   for (var name in screens) if (screens.hasOwnProperty(name) && screens[name].init) screens[name].init();
   reset(loggedIn() ? 'home' : 'login');
 
-  window.KoalaTV = { version: VERSION, P: P, X: X, Lists: Lists, Hidden: Hidden, Sync: Sync, screens: screens, K: K };
+  window.KoalaTV = { version: VERSION, P: P, X: X, Lists: Lists, Hidden: Hidden, go: go, Sync: Sync, screens: screens, K: K };
 })();

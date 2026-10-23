@@ -42,6 +42,19 @@ class ScreenshotTest {
             shadowOf(Looper.getMainLooper()).idle()
             Thread.sleep(150)
         }
+        if (remote) {
+            // une vraie touche de télécommande : sortie du mode tactile, comme sur le boîtier
+            sc.onActivity { a ->
+                for (k in intArrayOf(android.view.KeyEvent.KEYCODE_DPAD_LEFT)) {
+                    a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k))
+                    a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, k))
+                }
+            }
+            repeat(6) {
+                shadowOf(Looper.getMainLooper()).idle()
+                Thread.sleep(150)
+            }
+        }
         sc.onActivity { a ->
             val v = a.window.decorView
             val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)

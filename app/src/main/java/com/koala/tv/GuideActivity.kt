@@ -28,7 +28,7 @@ object Guide {
 }
 
 /** Guide TV en grille : chaînes en lignes, programmes sur l'axe du temps. */
-class GuideActivity : AppCompatActivity() {
+class GuideActivity : BaseActivity() {
 
     private val win = GuideWindow()
     private val channels get() = Guide.channels

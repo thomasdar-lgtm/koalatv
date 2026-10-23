@@ -30,7 +30,7 @@
             android:id="@+id/tiles_row"
             android:layout_width="match_parent"
             android:layout_height="@dimen/tile_row"
-            android:layout_gravity="center"
+            android:layout_gravity="top"
             android:clipChildren="false"
             android:clipToPadding="false"
             android:orientation="horizontal"

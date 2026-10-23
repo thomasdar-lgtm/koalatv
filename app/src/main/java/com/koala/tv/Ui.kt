@@ -148,3 +148,28 @@ fun androidx.activity.ComponentActivity.voiceInput(btn: android.view.View?, et: 
         }
     }
 }
+
+/**
+ * Base des écrans. Sur TV, l'affichage est calculé d'après la largeur réelle de l'écran (960 unités),
+ * comme sur l'appli LG : même rendu quel que soit le réglage de densité du boîtier.
+ */
+open class BaseActivity : androidx.appcompat.app.AppCompatActivity() {
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(tvScaled(base))
+    }
+}
+
+fun tvScaled(base: Context): Context {
+    if (!base.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)) return base
+    val dm = base.resources.displayMetrics
+    val long = maxOf(dm.widthPixels, dm.heightPixels)
+    val short = minOf(dm.widthPixels, dm.heightPixels)
+    if (long <= 0) return base
+    val dpi = (long * 160f / 960f).toInt().coerceAtLeast(80)
+    val cfg = android.content.res.Configuration(base.resources.configuration)
+    cfg.densityDpi = dpi
+    cfg.screenWidthDp = (long * 160f / dpi).toInt()
+    cfg.screenHeightDp = (short * 160f / dpi).toInt()
+    cfg.smallestScreenWidthDp = cfg.screenHeightDp
+    return base.createConfigurationContext(cfg)
+}

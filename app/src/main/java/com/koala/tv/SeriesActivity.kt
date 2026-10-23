@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import kotlinx.coroutines.launch
 
-class SeriesActivity : AppCompatActivity() {
+class SeriesActivity : BaseActivity() {
 
     private var seriesId = ""
     private var seriesName = ""

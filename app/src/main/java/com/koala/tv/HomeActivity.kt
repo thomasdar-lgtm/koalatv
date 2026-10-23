@@ -14,7 +14,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : BaseActivity() {
 
     companion object {
         private var accountRefreshed = false
@@ -73,28 +73,32 @@ class HomeActivity : AppCompatActivity() {
             adapter = resumeAdapter
             itemAnimator = null
         }
-        // TV / tablette : les tuiles se réduisent pour laisser la place à la rangée « Reprendre »
-        val area = findViewById<View?>(R.id.tiles_area)
-        val row = findViewById<View?>(R.id.tiles_row)
-        if (area != null && row != null) {
-            val maxH = resources.getDimensionPixelSize(R.dimen.tile_row)
-            area.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
-                if (bottom - top != oldBottom - oldTop) {
-                    val h = minOf(maxH, bottom - top - dp(24)).coerceAtLeast(dp(120))
-                    if (row.layoutParams.height != h) row.post { row.layoutParams = row.layoutParams.apply { height = h } }
-                }
-            }
-        }
-
-        // Accueil défilant : les tuiles remplissent le premier écran, « Ajoutés récemment » est en dessous
+        // Taille des tuiles calculée d'après l'écran : elles remplissent le premier écran sous « Reprendre »,
+        // sans jamais déborder ; « Ajoutés récemment » est en dessous (la page défile)
         val scroll = findViewById<android.widget.ScrollView?>(R.id.home_scroll)
         val tilesArea = findViewById<View?>(R.id.tiles_area)
+        val row = findViewById<View?>(R.id.tiles_row)
         if (scroll != null && tilesArea != null) {
             val content = scroll.getChildAt(0)
-            val fit = {
-                val h = scroll.height - tilesArea.top - content.paddingBottom
-                if (scroll.height > 0 && h > dp(140) && kotlin.math.abs(tilesArea.layoutParams.height - h) > 2) {
+            val fit = fit@{
+                if (scroll.height <= 0) return@fit
+                val avail = scroll.height - tilesArea.top - content.paddingBottom
+                var h = avail
+                if (row != null) {
+                    // TV / tablette : 4 tuiles côte à côte, hauteur idéale = image (au format de l'icône) + libellé
+                    val rowW = tilesArea.width - row.paddingStart - row.paddingEnd
+                    val tileW = (rowW - 3 * dp(20)) / 4
+                    val label = (live as android.view.ViewGroup).getChildAt(1)
+                    val labelH = label.height + (label.layoutParams as android.view.ViewGroup.MarginLayoutParams).topMargin
+                    val ideal = ((tileW - dp(10)) * 470f / 494f).toInt() + dp(10) + labelH + dp(8)
+                    h = minOf(ideal, avail)
+                }
+                h = h.coerceAtLeast(dp(120))
+                if (kotlin.math.abs(tilesArea.layoutParams.height - h) > 2) {
                     tilesArea.post { tilesArea.layoutParams = tilesArea.layoutParams.apply { height = h } }
+                }
+                if (row != null && kotlin.math.abs(row.layoutParams.height - h) > 2) {
+                    row.post { row.layoutParams = row.layoutParams.apply { height = h } }
                 }
             }
             scroll.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }
@@ -107,6 +111,16 @@ class HomeActivity : AppCompatActivity() {
                     if (has) scroll.smoothScrollTo(0, 0)
                 }
             }
+        }
+        // les flèches gauche / droite ne quittent pas la rangée de tuiles (pas de saut vers « Ajoutés récemment »)
+        if (row != null) {
+            live.nextFocusLeftId = live.id
+            settings.nextFocusRightId = settings.id
+        } else {
+            live.nextFocusLeftId = live.id
+            series.nextFocusLeftId = series.id
+            movies.nextFocusRightId = movies.id
+            settings.nextFocusRightId = settings.id
         }
         findViewById<RecyclerView?>(R.id.rv_recent)?.let { rv ->
             recentAdapter = RecentAdapter(dp(if (isWide) 132 else 112)) { Nav.openDetails(this, it) }

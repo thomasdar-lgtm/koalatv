@@ -12,7 +12,7 @@ import coil.load
 import kotlinx.coroutines.launch
 
 /** Fiche d'un film : affiche, résumé, durée, note, puis lecture. */
-class MovieActivity : AppCompatActivity() {
+class MovieActivity : BaseActivity() {
 
     private var id = ""
     private var name = ""

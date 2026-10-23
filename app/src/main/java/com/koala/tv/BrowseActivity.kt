@@ -19,7 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
-class BrowseActivity : AppCompatActivity() {
+class BrowseActivity : BaseActivity() {
 
     companion object {
         private const val FAV = "__fav"

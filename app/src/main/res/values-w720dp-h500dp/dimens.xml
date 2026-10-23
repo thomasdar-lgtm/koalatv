@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="tile_row">280dp</dimen>
+    <dimen name="brand_logo">50dp</dimen>
+    <dimen name="brand_text">30sp</dimen>
 </resources>

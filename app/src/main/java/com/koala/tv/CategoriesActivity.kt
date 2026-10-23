@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
 /** Choix des catégories visibles ou masquées (réglage partagé entre les appareils). */
-class CategoriesActivity : AppCompatActivity() {
+class CategoriesActivity : BaseActivity() {
 
     private lateinit var kind: Kind
     private var cats: List<Category> = emptyList()

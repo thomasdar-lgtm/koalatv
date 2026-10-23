@@ -20,7 +20,7 @@ import coil.load
 import kotlinx.coroutines.launch
 
 /** Recherche globale : chaînes, films et séries en une seule recherche. */
-class SearchActivity : AppCompatActivity() {
+class SearchActivity : BaseActivity() {
 
     private var pool: List<Item> = emptyList()
     private val adapter = Adapter()

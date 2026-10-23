@@ -38,7 +38,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_tile_live" />
+                <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_live" />
                 <TextView style="@style/TileLabel" android:text="TV en direct" />
             </LinearLayout>
 
@@ -50,7 +50,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_tile_movies" />
+                <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_movies" />
                 <TextView style="@style/TileLabel" android:text="Films" />
             </LinearLayout>
 
@@ -62,7 +62,7 @@
                 android:layout_marginEnd="20dp"
                 android:layout_weight="1">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_tile_series" />
+                <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_series" />
                 <TextView style="@style/TileLabel" android:text="Séries" />
             </LinearLayout>
 
@@ -73,7 +73,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_tile_settings" />
+                <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_settings" />
                 <TextView style="@style/TileLabel" android:text="Réglages" />
             </LinearLayout>
         </LinearLayout>

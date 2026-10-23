@@ -5,6 +5,8 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 SS = 4  # suréchantillonnage pour des bords lisses
+SIZE = (494, 470)  # largeur, hauteur communes
+RADIUS = 0.223  # rayon des coins / largeur
 
 
 def measure(a):
@@ -44,11 +46,8 @@ def cut(src, dst):
         [(L + inset) * SS, (T + inset) * SS, (R - inset) * SS, (B - inset) * SS], radius=r * SS, fill=255)
     m = m.resize((w, h), Image.LANCZOS)
     im.putalpha(m)
-    c = im.crop((L, T, R, B))
-    s = max(c.size)
-    out = Image.new('RGBA', (s, s), (0, 0, 0, 0))
-    out.paste(c, ((s - c.width) // 2, (s - c.height) // 2))
-    out.save(dst)
+    # recadré au plus juste, même format pour les 4 icônes (écart d'origine < 2 %)
+    im.crop((L, T, R, B)).resize(SIZE, Image.LANCZOS).save(dst)
     return L, T, R, B, r
 
 

@@ -71,6 +71,6 @@ save(icon(256), "docs/icon.png")
 # Icônes des tuiles de l'accueil (détourées par brand/cut_icons.py)
 for name in ("live", "movies", "series", "settings"):
     src = Image.open(os.path.join(ROOT, "brand", "icons", name + ".png")).convert("RGBA")
-    for folder, px in (("drawable-xhdpi", 192), ("drawable-xxhdpi", 288), ("drawable-xxxhdpi", 384)):
-        save(src.resize((px, px), Image.LANCZOS), f"app/src/main/res/{folder}/ic_tile_{name}.png")
-    save(src.resize((256, 256), Image.LANCZOS), f"webos/app/tile_{name}.png")
+    for folder, px in (("drawable-xhdpi", 360), ("drawable-xxhdpi", 494), ("drawable-xxxhdpi", 494)):
+        save(src.resize((px, round(px * src.height / src.width)), Image.LANCZOS), f"app/src/main/res/{folder}/ic_tile_{name}.png")
+    save(src.resize((400, round(400 * src.height / src.width)), Image.LANCZOS), f"webos/app/tile_{name}.png")

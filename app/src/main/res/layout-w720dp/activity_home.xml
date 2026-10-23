@@ -42,8 +42,8 @@
                     android:layout_marginBottom="6dp"
                     android:layout_weight="1">
 
-                    <ImageView style="@style/TileIcon" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/ic_tile_live" />
-                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="TV en direct" />
+                    <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_live" />
+                    <TextView style="@style/TileLabel" android:textSize="16sp" android:text="TV en direct" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -55,8 +55,8 @@
                     android:layout_marginBottom="6dp"
                     android:layout_weight="1">
 
-                    <ImageView style="@style/TileIcon" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/ic_tile_movies" />
-                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Films" />
+                    <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_movies" />
+                    <TextView style="@style/TileLabel" android:textSize="16sp" android:text="Films" />
                 </LinearLayout>
             </LinearLayout>
 
@@ -75,8 +75,8 @@
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1">
 
-                    <ImageView style="@style/TileIcon" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/ic_tile_series" />
-                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Séries" />
+                    <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_series" />
+                    <TextView style="@style/TileLabel" android:textSize="16sp" android:text="Séries" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -88,8 +88,8 @@
                     android:layout_marginTop="6dp"
                     android:layout_weight="1">
 
-                    <ImageView style="@style/TileIcon" android:layout_width="52dp" android:layout_height="52dp" android:src="@drawable/ic_tile_settings" />
-                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Réglages" />
+                    <com.koala.tv.TileImage style="@style/TileIcon" android:src="@drawable/ic_tile_settings" />
+                    <TextView style="@style/TileLabel" android:textSize="16sp" android:text="Réglages" />
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

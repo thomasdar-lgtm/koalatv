@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="wide">false</bool>
-    <dimen name="tile_icon">64dp</dimen>
-    <dimen name="tile_gap">14dp</dimen>
+    <dimen name="tile_gap">8dp</dimen>
     <dimen name="tile_text">17sp</dimen>
     <dimen name="page_pad">16dp</dimen>
     <dimen name="poster_min">108dp</dimen>

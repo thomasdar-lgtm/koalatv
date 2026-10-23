@@ -61,3 +61,57 @@ fun androidx.activity.ComponentActivity.setupBack(action: () -> Unit = { onBackP
     b.visibility = android.view.View.VISIBLE
     b.setOnClickListener { action() }
 }
+
+/**
+ * Tuile de l'accueil : l'icône occupe toute la place disponible en gardant ses proportions,
+ * avec un liseré qui épouse ses coins arrondis quand la tuile est sélectionnée.
+ */
+class TileImage @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null) :
+    androidx.appcompat.widget.AppCompatImageView(context, attrs) {
+
+    private val ring = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+        style = android.graphics.Paint.Style.STROKE
+        strokeWidth = context.dp(3).toFloat()
+        color = ContextCompat.getColor(context, R.color.accent)
+    }
+    private val gap = context.dp(5)
+    private val rect = android.graphics.RectF()
+
+    init {
+        scaleType = ScaleType.FIT_XY
+        setPadding(gap, gap, gap, gap)
+        isDuplicateParentStateEnabled = true
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val d = drawable
+        if (d == null || d.intrinsicWidth <= 0 || d.intrinsicHeight <= 0) {
+            super.onMeasure(widthMeasureSpec, heightMeasureSpec); return
+        }
+        val ratio = d.intrinsicWidth.toFloat() / d.intrinsicHeight
+        val maxW = MeasureSpec.getSize(widthMeasureSpec) - 2 * gap
+        val maxH = if (MeasureSpec.getMode(heightMeasureSpec) == MeasureSpec.UNSPECIFIED) Int.MAX_VALUE
+        else MeasureSpec.getSize(heightMeasureSpec) - 2 * gap
+        var w = maxW
+        var h = (w / ratio).toInt()
+        if (h > maxH) {
+            h = maxH; w = (h * ratio).toInt()
+        }
+        setMeasuredDimension(w.coerceAtLeast(0) + 2 * gap, h.coerceAtLeast(0) + 2 * gap)
+    }
+
+    override fun drawableStateChanged() {
+        super.drawableStateChanged()
+        imageAlpha = if (isPressed) 215 else 255
+        invalidate()
+    }
+
+    override fun onDraw(canvas: android.graphics.Canvas) {
+        super.onDraw(canvas)
+        if (!drawableState.contains(android.R.attr.state_focused)) return
+        val s = ring.strokeWidth / 2
+        rect.set(s, s, width - s, height - s)
+        val r = (width - 2 * gap) * 0.223f + gap - s
+        canvas.drawRoundRect(rect, r, r, ring)
+    }
+}

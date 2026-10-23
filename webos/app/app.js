@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.3.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -42,6 +42,7 @@
     var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
     return h ? h + ':' + pad2(m) + ':' + pad2(s) : m + ':' + pad2(s);
   }
+  function hm(sec) { var d = new Date(sec * 1000); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
   function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' '); }
   function plural(n, one, many) { return fmtNum(n) + ' ' + (n > 1 ? many : one); }
 
@@ -228,10 +229,10 @@
         var out = [];
         if (!err && j && j.epg_listings && j.epg_listings.length) {
           for (var i = 0; i < j.epg_listings.length; i++) {
-            var e = j.epg_listings[i], t = str(b64(str(e.title))), ts = parseInt(e.start_timestamp, 10);
-            if (!t) continue;
-            var d = ts ? new Date(ts * 1000) : null;
-            out.push({ h: d ? pad2(d.getHours()) + ':' + pad2(d.getMinutes()) : '', t: t });
+            var e = j.epg_listings[i], t = str(b64(str(e.title))), ts = parseInt(e.start_timestamp, 10),
+              te = parseInt(e.stop_timestamp || e.end_timestamp, 10);
+            if (!t || (te && te * 1000 <= Date.now())) continue;
+            out.push({ h: ts ? hm(ts) : '', t: t, s: ts || 0, e: te || 0 });
           }
         }
         cb(out);
@@ -901,9 +902,48 @@
   function renderCat(c) {
     return '<div class="cat"><span class="n">' + esc(c.name) + '</span><span class="c">' + fmtNum(c.n) + '</span></div>';
   }
+  /* Programme en cours des chaînes visibles : chargé à la demande, 4 à la fois, gardé jusqu'à la fin du programme */
+  var Epg = {
+    cache: {}, queue: [], running: 0, onLoaded: null,
+    now: function (id) {
+      var c = this.cache[id], t = Date.now() / 1000;
+      if (c && t < c.until) return c.p && c.p.e > t ? c.p : null;
+      if (!c || !c.loading) {
+        for (var i = 0; i < this.queue.length; i++) if (this.queue[i] === id) return null;
+        this.queue.push(id);
+        if (this.queue.length > 40) this.queue.shift(); // seules les dernières lignes affichées comptent
+        this.pump();
+      }
+      return null;
+    },
+    pump: function () {
+      var self = this;
+      while (this.running < 4 && this.queue.length) {
+        var id = this.queue.pop();
+        this.cache[id] = { loading: true, until: 0 };
+        this.running++;
+        (function (id) {
+          X.epg(id, function (rows) {
+            self.running--;
+            var t = Date.now() / 1000, p = null;
+            for (var i = 0; i < rows.length; i++) if (rows[i].s <= t && rows[i].e > t) { p = rows[i]; break; }
+            self.cache[id] = { p: p, until: p ? p.e : (rows.length && rows[0].s > t ? rows[0].s : t + 1800) };
+            if (self.onLoaded) self.onLoaded(id);
+            self.pump();
+          });
+        })(id);
+      }
+    }
+  };
+
   function renderRow(it) {
-    return '<div class="row"><span class="logo">' + imgTag(it.icon) + '</span><span class="n">' + esc(it.name) + '</span>' +
-      (isFav(it) ? STAR : '') + '</div>';
+    var p = Epg.now(it.id), g = '';
+    if (p) {
+      var pct = Math.max(0, Math.min(100, (Date.now() / 1000 - p.s) / (p.e - p.s) * 100));
+      g = '<span class="g">' + hm(p.s) + ' – ' + hm(p.e) + ' · ' + esc(p.t) + '</span><span class="gb"><i style="width:' + pct.toFixed(1) + '%"></i></span>';
+    }
+    return '<div class="row"><span class="logo">' + imgTag(it.icon) + '</span><span class="tx"><span class="n">' + esc(it.name) + '</span>' +
+      g + '</span>' + (isFav(it) ? STAR : '') + '</div>';
   }
   function renderPoster(it) {
     return '<div class="poster"><div class="img">' + imgTag(it.icon) + (isFav(it) ? STAR : '') +
@@ -937,7 +977,7 @@
         onOk: function (i) { self.pickCat(i); }
       });
       this.items = new VList($('b-items'), {
-        rowH: 4.6,
+        rowH: 5.2,
         render: renderRow,
         onPointer: function () { self.setZone('items'); },
         onOk: function () { self.open(); }
@@ -1603,6 +1643,18 @@
     if (cur === screens.browse) { screens.browse.cats.redraw(); screens.browse.items.redraw(); }
     if (cur === screens.series) { screens.series.sList.redraw(); screens.series.eList.redraw(); }
   });
+
+  Epg.onLoaded = function (id) {
+    var b = screens.browse;
+    if (cur !== b || b.kind !== 'live') return;
+    for (var k in b.items.nodes) {
+      if (b.items.nodes.hasOwnProperty(k) && b.items.items[k] && b.items.items[k].id === id) b.items.refresh(+k);
+    }
+  };
+  setInterval(function () {
+    var b = screens.browse;
+    if (cur === b && b.kind === 'live') for (var k in b.items.nodes) if (b.items.nodes.hasOwnProperty(k)) b.items.refresh(+k);
+  }, 60000);
 
   Lists.onUpdated = function (kind) {
     var b = screens.browse;

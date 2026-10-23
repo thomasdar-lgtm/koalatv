@@ -6,11 +6,20 @@ import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
+
+    private lateinit var updateBar: View
+    private lateinit var updateText: TextView
+    private lateinit var updateAction: TextView
+    private var release: Updater.Release? = null
+    private var downloading = false
+    private var waitingPermission = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,14 +47,72 @@ class HomeActivity : AppCompatActivity() {
         series.setOnClickListener { open(Kind.SERIES) }
         settings.setOnClickListener { showSettings() }
         listOf(live, movies, series, settings).forEach { it.focusZoom(1.05f) }
+
+        updateBar = findViewById(R.id.update_bar)
+        updateText = findViewById(R.id.update_text)
+        updateAction = findViewById(R.id.update_action)
+        updateBar.setOnClickListener { startUpdate() }
+
         live.requestFocus()
         Lists.warmAll()
     }
 
-    private fun appVersion(): String = try {
-        packageManager.getPackageInfo(packageName, 0).versionName ?: ""
-    } catch (e: Exception) {
-        ""
+    override fun onResume() {
+        super.onResume()
+        if (!::updateBar.isInitialized) return
+        if (waitingPermission) {
+            waitingPermission = false
+            startUpdate()
+        } else if (!downloading) {
+            checkUpdate(force = false)
+        }
+    }
+
+    private fun checkUpdate(force: Boolean) {
+        lifecycleScope.launch {
+            val rel = try {
+                Updater.check(this@HomeActivity, force)
+            } catch (e: Exception) {
+                if (force) toast("Vérification impossible, réessaie plus tard")
+                return@launch
+            }
+            release = rel
+            if (rel == null) {
+                updateBar.visibility = View.GONE
+                if (force) toast("Tu as la dernière version (${Updater.currentVersion(this@HomeActivity)})")
+            } else {
+                showBar("Nouvelle version ${rel.version} disponible", "Installer")
+            }
+        }
+    }
+
+    private fun showBar(text: String, action: String) {
+        updateText.text = text
+        updateAction.text = action
+        updateBar.visibility = View.VISIBLE
+    }
+
+    private fun startUpdate() {
+        val rel = release ?: return
+        if (downloading) return
+        if (!Updater.ensureAllowed(this)) {
+            waitingPermission = true
+            toast("Autorise KoalaTV à installer des applis, puis reviens")
+            return
+        }
+        downloading = true
+        showBar("Téléchargement de la version ${rel.version}…", "0 %")
+        lifecycleScope.launch {
+            try {
+                val apk = Updater.download(this@HomeActivity, rel) { pct -> updateAction.text = "$pct %" }
+                showBar("Version ${rel.version} prête", "Installer")
+                Updater.install(this@HomeActivity, apk)
+            } catch (e: Exception) {
+                showBar("Échec du téléchargement de la version ${rel.version}", "Réessayer")
+            } finally {
+                downloading = false
+            }
+        }
     }
 
     private fun showSettings() {
@@ -53,10 +120,11 @@ class HomeActivity : AppCompatActivity() {
             "Format du direct : " + if (Prefs.liveFormat == "ts") "MPEG-TS (recommandé)" else "HLS",
             "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC)" else "intégré (recommandé)",
             "Actualiser les listes",
+            "Rechercher une mise à jour",
             "Se déconnecter",
         )
         AlertDialog.Builder(this)
-            .setTitle("Réglages · v${appVersion()}")
+            .setTitle("Réglages · v${Updater.currentVersion(this)}")
             .setItems(labels) { _, which ->
                 when (which) {
                     0 -> {
@@ -71,7 +139,8 @@ class HomeActivity : AppCompatActivity() {
                         toast("Actualisation des listes…")
                         Lists.refreshAll { ok -> toast(if (ok) "Listes à jour" else "Actualisation impossible, réessaie plus tard") }
                     }
-                    3 -> AlertDialog.Builder(this)
+                    3 -> checkUpdate(force = true)
+                    4 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->

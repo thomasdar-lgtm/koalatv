@@ -53,6 +53,18 @@ object Prefs {
         get() = sp.getBoolean("ext", false)
         set(v) = sp.edit().putBoolean("ext", v).apply()
 
+    var lastUpdateCheck: Long
+        get() = sp.getLong("upd_check", 0L)
+        set(v) = sp.edit().putLong("upd_check", v).apply()
+
+    /** Dernière version trouvée sur GitHub (version|url|taille). */
+    var pendingUpdate: Updater.Release?
+        get() {
+            val p = str("upd_rel").split('|')
+            return if (p.size == 3) Updater.Release(p[0], p[1], p[2].toLongOrNull() ?: 0L) else null
+        }
+        set(v) = put("upd_rel", if (v == null) "" else "${v.version}|${v.apkUrl}|${v.size}")
+
     val loggedIn: Boolean
         get() = server.isNotEmpty() && user.isNotEmpty() && pass.isNotEmpty()
 

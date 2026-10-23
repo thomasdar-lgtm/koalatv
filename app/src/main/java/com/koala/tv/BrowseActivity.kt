@@ -192,7 +192,7 @@ class BrowseActivity : AppCompatActivity() {
         val prevId = cats.getOrNull(catIdx)?.id
         lastData = data
         allItems = list
-        pool = list.filter { !Parental.blocked(kind, it.categoryId) }
+        pool = list.filter { !Hidden.isHidden(kind, it.categoryId) }
         val counts = HashMap<String, Int>()
         for (it in list) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
         val favs = Prefs.favs()
@@ -202,8 +202,8 @@ class BrowseActivity : AppCompatActivity() {
         built.add(Category(ALL, "Tout", pool.size))
         for (cat in data.cats) {
             val n = counts[cat.id] ?: 0
-            if (n == 0 || Parental.state(kind, cat.id) == Parental.State.HIDDEN) continue
-            built.add(Category(cat.id, cat.name, n, Parental.locked(kind, cat.id)))
+            if (n == 0 || Hidden.isHidden(kind, cat.id)) continue
+            built.add(Category(cat.id, cat.name, n))
         }
         cats = built
         catAdapter.submit(built)
@@ -234,16 +234,6 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun selectCategory(pos: Int, clearSearch: Boolean = true, keepScroll: Boolean = false) {
         val c = cats.getOrNull(pos) ?: return
-        if (c.locked && Parental.blocked(kind, c.id)) {
-            // catégorie verrouillée : code parental, puis on reconstruit les listes déverrouillées
-            Parental.ask(this) {
-                val d = lastData ?: return@ask
-                apply(d, initial = false)
-                val idx = cats.indexOfFirst { it.id == c.id }
-                if (idx >= 0) selectCategory(idx, clearSearch, keepScroll)
-            }
-            return
-        }
         catIdx = pos
         catAdapter.setSelected(pos)
         if (clearSearch && etSearch.text.isNotEmpty()) {

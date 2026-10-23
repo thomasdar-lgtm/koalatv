@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.9.1';
+  var VERSION = '1.10.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -13,7 +13,6 @@
 
   var STAR = '<svg class="fav" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></svg>';
   var STAR_S = '<svg class="st" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></svg>';
-  var LOCK = '<svg class="lk" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="1.5"/><path d="M8.5 10.5v-3a3.5 3.5 0 0 1 7 0v3"/></svg>';
 
   /* ---------- Outils ---------- */
 
@@ -177,6 +176,23 @@
     push: function (e) {
       this.put('e/' + e.k, { t: e.t, u: e.u, i: e.i, p: e.p, d: e.d, at: e.a, sid: e.sid, sn: e.sn });
     },
+    /* Catégories masquées : clé Firebase sans . $ # [ ] / : */
+    catPath: function (k) { return 'c/' + k.replace(/[.$#\[\]\/:]/g, '_'); },
+    pushCat: function (k, s) { this.put(this.catPath(k), { k: k, h: s.h, at: s.at }); },
+    pullCats: function (cb) {
+      var self = this;
+      if (!this.enabled()) return;
+      getJson(this.url('c'), function (err, remote) {
+        if (err) return;
+        remote = remote || {};
+        var changed = Hidden.merge(remote), seen = {}, p, k;
+        for (p in remote) if (remote.hasOwnProperty(p) && remote[p] && remote[p].k) seen[remote[p].k] = remote[p].at;
+        for (k in Hidden.states) {
+          if (Hidden.states.hasOwnProperty(k) && !(seen[k] >= Hidden.states[k].at)) self.pushCat(k, Hidden.states[k]);
+        }
+        if (changed && cb) cb();
+      });
+    },
     pull: function (cb) {
       var self = this;
       if (!this.enabled()) return;
@@ -196,132 +212,44 @@
 
   function liveItem(it) { return { title: it.name, url: X.url('live', it.id), live: true, id: it.id, num: it.num || 0, icon: it.icon }; }
 
-  /* ---------- Code parental : catégories masquées ('h') ou verrouillées ('l') ---------- */
+  /* ---------- Catégories masquées, partagées entre les appareils (le changement le plus récent gagne) ---------- */
 
-  var Parental = {
-    states: load('cats', {}),
-    unlocked: false,
-    state: function (kind, id) { return this.states[kind + ':' + id] || 'v'; },
-    set: function (kind, id, st) {
-      if (st === 'v') delete this.states[kind + ':' + id]; else this.states[kind + ':' + id] = st;
-      save('cats', this.states);
+  var Hidden = {
+    states: load('hcats', null),
+    init: function () {
+      if (this.states) return;
+      // ancien réglage (code parental) : seules les catégories masquées sont reprises
+      var old = load('cats', {}), k;
+      this.states = {};
+      for (k in old) if (old.hasOwnProperty(k) && old[k] === 'h') this.states[k] = { h: true, at: 1 };
+      save('hcats', this.states);
+      save('cats', {});
+      save('pcode', '');
     },
-    hasCode: function () { return !!load('pcode', ''); },
-    hash: function (code) {
-      var h = 2166136261, t = 'koalatv:' + code;
-      for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = (h * 16777619) >>> 0; }
-      return h.toString(16);
+    isHidden: function (kind, id) { var s = this.states[kind + ':' + id]; return !!(s && s.h); },
+    set: function (kind, id, hidden) {
+      var k = kind + ':' + id, s = { h: hidden, at: Date.now() };
+      this.states[k] = s;
+      save('hcats', this.states);
+      Sync.pushCat(k, s);
     },
-    check: function (code) { return this.hasCode() && this.hash(code) === load('pcode', ''); },
-    setCode: function (code) { save('pcode', code ? this.hash(code) : ''); this.unlocked = !code; },
-    blocked: function (kind, id) {
-      var st = this.state(kind, id);
-      return st === 'h' || (st === 'l' && this.hasCode() && !this.unlocked);
-    },
-    locked: function (kind, id) { return this.hasCode() && this.state(kind, id) === 'l'; },
-    ask: function (cb) {
-      var self = this;
-      if (!this.hasCode() || this.unlocked) return cb();
-      Pin.show('Code parental', function (code) {
-        if (self.check(code)) { self.unlocked = true; cb(); } else toast('Code incorrect');
-      });
-    },
-    create: function (cb) {
-      var self = this;
-      Pin.show('Nouveau code parental', function (a) {
-        Pin.show('Confirme le code', function (b) {
-          if (a !== b) { toast('Les deux codes sont différents'); return; }
-          self.setCode(a);
-          self.unlocked = true;
-          toast('Code parental enregistré');
-          if (cb) cb();
-        });
-      });
-    },
-    settings: function () {
-      var self = this;
-      if (!this.hasCode()) { this.create(); return; }
-      Pin.show('Code parental actuel', function (code) {
-        if (!self.check(code)) { toast('Code incorrect'); return; }
-        self.unlocked = true;
-        Dialog.show('Code parental', '', [
-          { label: 'Changer le code', fn: function () { self.create(); } },
-          { label: 'Supprimer le code', fn: function () { self.setCode(''); toast('Code parental supprimé'); } },
-          { label: 'Fermer' }
-        ]);
-      });
-    }
-  };
-
-  /* Clavier à 4 chiffres : flèches + OK, ou touches numériques de la télécommande */
-  var Pin = {
-    open: false, code: '', idx: 0, cb: null,
-    KEYS: ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'ok'],
-    show: function (title, cb) {
-      var self = this;
-      this.open = true;
-      this.code = '';
-      this.idx = 0;
-      this.cb = cb;
-      $('pin-title').textContent = title;
-      var h = '';
-      for (var i = 0; i < this.KEYS.length; i++) {
-        var k = this.KEYS[i];
-        h += '<div class="pk" data-k="' + i + '">' + (k === 'del'
-          ? '<svg viewBox="0 0 24 24"><path d="M9 6h10.5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H9l-5.5-6z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/></svg>'
-          : k === 'ok' ? 'OK' : k) + '</div>';
+    /** Fusion avec l'état partagé ; renvoie true si quelque chose a changé. */
+    merge: function (remote) {
+      var changed = false, p, v, l;
+      for (p in remote) {
+        if (!remote.hasOwnProperty(p)) continue;
+        v = remote[p];
+        if (!v || !v.k || !(v.at > 0)) continue;
+        l = this.states[v.k];
+        if (l && l.at >= v.at) continue;
+        if (!!(l && l.h) !== !!v.h) changed = true;
+        this.states[v.k] = { h: !!v.h, at: v.at };
       }
-      $('pin-keys').innerHTML = h;
-      $('pin-keys').onclick = function (e) {
-        var n = e.target;
-        while (n && n.getAttribute && n.getAttribute('data-k') === null) n = n.parentNode;
-        if (n && n.getAttribute) { self.idx = parseInt(n.getAttribute('data-k'), 10); self.press(); }
-      };
-      cls($('pin'), 'on', true);
-      this.paint();
-    },
-    paint: function () {
-      var d = '';
-      for (var i = 0; i < 4; i++) d += '<span class="' + (i < this.code.length ? 'on' : '') + '"></span>';
-      $('pin-dots').innerHTML = d;
-      var n = $('pin-keys').children;
-      for (i = 0; i < n.length; i++) n[i].className = 'pk' + (i === this.idx ? ' focus' : '');
-    },
-    close: function () { this.open = false; cls($('pin'), 'on', false); },
-    type: function (d) {
-      var self = this;
-      if (this.code.length >= 4) return;
-      this.code += d;
-      this.paint();
-      if (this.code.length === 4) setTimeout(function () { self.submit(); }, 180);
-    },
-    submit: function () {
-      if (!this.open) return;
-      var cb = this.cb, code = this.code;
-      if (code.length !== 4) { toast('Le code fait 4 chiffres'); return; }
-      this.close();
-      if (cb) cb(code);
-    },
-    press: function () {
-      var k = this.KEYS[this.idx];
-      if (k === 'del') { this.code = this.code.slice(0, -1); this.paint(); }
-      else if (k === 'ok') this.submit();
-      else this.type(k);
-    },
-    key: function (c) {
-      var r = Math.floor(this.idx / 3), col = this.idx % 3;
-      if (c >= 48 && c <= 57) this.type(String(c - 48));
-      else if (c >= 96 && c <= 105) this.type(String(c - 96));
-      else if (c === K.LEFT && col > 0) this.idx--;
-      else if (c === K.RIGHT && col < 2) this.idx++;
-      else if (c === K.UP && r > 0) this.idx -= 3;
-      else if (c === K.DOWN && r < 3) this.idx += 3;
-      else if (c === K.OK) { this.press(); return; }
-      else if (c === K.BACK || c === K.ESC) { this.close(); return; }
-      else if (c === K.BKSP) { this.code = this.code.slice(0, -1); }
-      this.paint();
+      save('hcats', this.states);
+      return changed;
     }
   };
+  Hidden.init();
 
   /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
   function episodeList(sid, sname, icon, eps) {
@@ -1074,8 +1002,14 @@
       Lists.warmAll();
       if (!this.accountDone) { this.accountDone = true; X.refreshAccount(); }
       this.pullHistory();
+      Sync.pullCats();
     },
-    resume: function () { this.drawResume(); this.paint(); this.pullHistory(); },
+    resume: function () {
+      this.drawResume();
+      this.paint();
+      this.pullHistory();
+      if (this.backToCats !== undefined) { var i = this.backToCats; delete this.backToCats; this.catChooser(i); }
+    },
     pullHistory: function () {
       var self = this;
       Sync.pull(function () { if (cur === self) { self.drawResume(); self.paint(); } });
@@ -1153,6 +1087,17 @@
       if (this.idx === 3) this.settings(0);
       else go('browse', { kind: ['live', 'movie', 'series'][this.idx] });
     },
+    /* Choix du type de catégories ; le retour ramène aux réglages, et le retour de l'écran des catégories ramène ici */
+    catChooser: function (idx) {
+      var self = this;
+      function open(kind, i) { self.backToCats = i; go('catset', { kind: kind }); }
+      Dialog.show('Catégories visibles', '', [
+        { label: 'TV en direct', fn: function () { open('live', 0); } },
+        { label: 'Films', fn: function () { open('movie', 1); } },
+        { label: 'Séries', fn: function () { open('series', 2); } },
+        { label: 'Retour', fn: function () { self.settings(2); } }
+      ], function () { self.settings(2); }, idx);
+    },
     settings: function (idx) {
       var self = this;
       Dialog.show('Réglages', '', [
@@ -1167,23 +1112,7 @@
             Lists.refreshAll(function (ok) { toast(ok ? 'Listes à jour' : 'Actualisation impossible, réessaie plus tard'); });
           }
         },
-        {
-          label: 'Catégories visibles',
-          fn: function () {
-            Parental.ask(function () {
-              Dialog.show('Catégories visibles', '', [
-                { label: 'TV en direct', fn: function () { go('catset', { kind: 'live' }); } },
-                { label: 'Films', fn: function () { go('catset', { kind: 'movie' }); } },
-                { label: 'Séries', fn: function () { go('catset', { kind: 'series' }); } },
-                { label: 'Fermer' }
-              ]);
-            });
-          }
-        },
-        {
-          label: 'Code parental : ' + (Parental.hasCode() ? 'activé' : 'désactivé'),
-          fn: function () { Parental.settings(); }
-        },
+        { label: 'Catégories visibles', fn: function () { self.catChooser(0); } },
         {
           label: 'Se déconnecter',
           fn: function () {
@@ -1192,8 +1121,8 @@
                 label: 'Se déconnecter',
                 fn: function () { setP('pass', ''); Lists.clear(); reset('login'); }
               },
-              { label: 'Annuler' }
-            ]);
+              { label: 'Annuler', fn: function () { self.settings(3); } }
+            ], function () { self.settings(3); });
           }
         },
         { label: 'Fermer' }
@@ -1215,7 +1144,7 @@
   }
 
   function renderCat(c) {
-    return '<div class="cat"><span class="n">' + esc(c.name) + '</span>' + (c.locked ? LOCK : '') +
+    return '<div class="cat"><span class="n">' + esc(c.name) + '</span>' +
       '<span class="c">' + (c.label !== undefined ? esc(c.label) : fmtNum(c.n)) + '</span></div>';
   }
   /* Programme en cours des chaînes visibles : chargé à la demande, 4 à la fois, gardé jusqu'à la fin du programme */
@@ -1364,8 +1293,8 @@
       var counts = {}, list = [], favN = 0, i, prev = this.catList[this.catIdx], pool = [], kind = this.kind;
       for (i = 0; i < items.length; i++) {
         counts[items[i].cat] = (counts[items[i].cat] || 0) + 1;
-        // éléments affichables : sans les catégories masquées ni verrouillées (tant que le code n'est pas saisi)
-        if (!Parental.blocked(kind, items[i].cat)) {
+        // éléments affichables : sans les catégories masquées
+        if (!Hidden.isHidden(kind, items[i].cat)) {
           pool.push(items[i]);
           if (isFav(items[i])) favN++;
         }
@@ -1373,8 +1302,8 @@
       list.push({ id: '*fav', name: 'Favoris', n: favN });
       list.push({ id: '*all', name: 'Tout', n: pool.length });
       for (i = 0; i < cats.length; i++) {
-        if (!counts[cats[i].id] || Parental.state(kind, cats[i].id) === 'h') continue;
-        list.push({ id: cats[i].id, name: cats[i].name, n: counts[cats[i].id], locked: Parental.locked(kind, cats[i].id) });
+        if (!counts[cats[i].id] || Hidden.isHidden(kind, cats[i].id)) continue;
+        list.push({ id: cats[i].id, name: cats[i].name, n: counts[cats[i].id] });
       }
       this.data = { cats: cats, items: items };
       this.all = items;
@@ -1426,16 +1355,8 @@
     },
     pickCat: function (i, stayInCats, keepSearch, keepTop) {
       clearTimeout(this.selTimer);
-      var c = this.catList[i], self = this;
+      var c = this.catList[i];
       if (!c) return;
-      if (c.locked && Parental.blocked(this.kind, c.id)) {
-        // catégorie verrouillée : code parental, puis on reconstruit les listes déverrouillées
-        Parental.ask(function () {
-          self.build(self.data.cats, self.data.items, true);
-          for (var k = 0; k < self.catList.length; k++) if (self.catList[k].id === c.id) self.pickCat(k, stayInCats);
-        });
-        return;
-      }
       this.catIdx = i;
       this.cats.idx = i;
       this.cats.select(i);
@@ -1872,9 +1793,7 @@
     }
   };
 
-  /* ---------- Catégories visibles / verrouillées / masquées ---------- */
-
-  var STATE_LABEL = { v: 'Visible', l: 'Verrouillée', h: 'Masquée' };
+  /* ---------- Catégories visibles / masquées ---------- */
 
   screens.catset = {
     el: $('s-catset'),
@@ -1883,11 +1802,11 @@
       this.list = new VList($('cs-list'), {
         rowH: 3.4,
         render: function (c) {
-          var st = Parental.state(self.kind, c.id);
-          return '<div class="cat cs-' + st + '"><span class="n">' + esc(c.name) + '</span>' + (st === 'l' ? LOCK : '') +
-            '<span class="c">' + STATE_LABEL[st] + '</span></div>';
+          var h = Hidden.isHidden(self.kind, c.id);
+          return '<div class="cat' + (h ? ' cs-h' : '') + '"><span class="n">' + esc(c.name) + '</span>' +
+            '<span class="c">' + (h ? 'Masquée' : 'Visible') + '</span></div>';
         },
-        onOk: function (i) { self.cycle(i); }
+        onOk: function (i) { self.toggle(i); }
       });
     },
     enter: function (p) {
@@ -1897,6 +1816,7 @@
       this.list.set([]);
       this.list.focus(true);
       spinner(true);
+      Sync.pullCats(function () { if (cur === self) self.list.redraw(); });
       Lists.get(p.kind, function (err, data) {
         spinner(false);
         if (err) { toast('Impossible de charger les catégories'); return; }
@@ -1907,23 +1827,17 @@
       });
     },
     leave: function () { spinner(false); },
-    cycle: function (i) {
-      var self = this, c = this.list.items[i];
+    toggle: function (i) {
+      var c = this.list.items[i];
       if (!c) return;
-      var next = { v: 'l', l: 'h', h: 'v' }[Parental.state(this.kind, c.id)];
-      if (next === 'l' && !Parental.hasCode()) {
-        // verrouiller demande un code : on le crée d'abord
-        Parental.create(function () { Parental.set(self.kind, c.id, 'l'); self.list.refresh(i); });
-        return;
-      }
-      Parental.set(this.kind, c.id, next);
+      Hidden.set(this.kind, c.id, !Hidden.isHidden(this.kind, c.id));
       this.list.refresh(i);
     },
     key: function (c) {
       if (c === K.UP) this.list.move(0, -1);
       else if (c === K.DOWN) this.list.move(0, 1);
       else if (c === K.CH_UP || c === K.CH_DOWN) this.list.page(c === K.CH_UP ? -1 : 1);
-      else if (c === K.OK) this.cycle(this.list.idx);
+      else if (c === K.OK) this.toggle(this.list.idx);
       return true;
     }
   };
@@ -2222,7 +2136,7 @@
       Lists.get('live', function (err, data) {
         if (err || !self.active) return;
         var all = [], at = -1, k;
-        for (k = 0; k < data.items.length; k++) if (data.items[k].num > 0 && !Parental.blocked('live', data.items[k].cat)) all.push(data.items[k]);
+        for (k = 0; k < data.items.length; k++) if (data.items[k].num > 0 && !Hidden.isHidden('live', data.items[k].cat)) all.push(data.items[k]);
         all.sort(function (a, b) { return a.num - b.num; });
         for (k = 0; k < all.length; k++) if (all[k].num === n) at = k;
         if (at < 0) { toast('Chaîne ' + n + ' introuvable'); return; }
@@ -2374,7 +2288,6 @@
       }
       return;
     }
-    if (Pin.open) { e.preventDefault(); Pin.key(c); return; }
     if (Dialog.open) { e.preventDefault(); Dialog.key(c); return; }
     if (isBack(c) || c === K.BKSP) {
       e.preventDefault();
@@ -2420,5 +2333,5 @@
   for (var name in screens) if (screens.hasOwnProperty(name) && screens[name].init) screens[name].init();
   reset(loggedIn() ? 'home' : 'login');
 
-  window.KoalaTV = { version: VERSION, P: P, X: X, Lists: Lists, Parental: Parental, Sync: Sync, screens: screens, K: K };
+  window.KoalaTV = { version: VERSION, P: P, X: X, Lists: Lists, Hidden: Hidden, Sync: Sync, screens: screens, K: K };
 })();

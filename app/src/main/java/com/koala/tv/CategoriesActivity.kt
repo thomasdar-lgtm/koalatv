@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
-/** Choix des catégories visibles, verrouillées (code parental) ou masquées. */
+/** Choix des catégories visibles ou masquées (réglage partagé entre les appareils). */
 class CategoriesActivity : AppCompatActivity() {
 
     private lateinit var kind: Kind
@@ -33,7 +33,7 @@ class CategoriesActivity : AppCompatActivity() {
             Kind.SERIES -> "Séries"
         }
         findViewById<TextView>(R.id.tv_hint).text =
-            "Chaque appui change l'état : visible, verrouillée (code parental), masquée."
+            "Appuie sur une catégorie pour la masquer ou l'afficher."
 
         adapter = Adapter()
         findViewById<RecyclerView>(R.id.rv_items).apply {
@@ -43,6 +43,7 @@ class CategoriesActivity : AppCompatActivity() {
         }
         lifecycleScope.launch {
             try {
+                Sync.pullCats()
                 val d = Lists.get(kind)
                 val counts = HashMap<String, Int>()
                 for (it in d.items) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
@@ -59,22 +60,9 @@ class CategoriesActivity : AppCompatActivity() {
         }
     }
 
-    private fun cycle(pos: Int) {
+    private fun toggle(pos: Int) {
         val c = cats.getOrNull(pos) ?: return
-        val next = when (Parental.state(kind, c.id)) {
-            Parental.State.VISIBLE -> Parental.State.LOCKED
-            Parental.State.LOCKED -> Parental.State.HIDDEN
-            Parental.State.HIDDEN -> Parental.State.VISIBLE
-        }
-        if (next == Parental.State.LOCKED && !Parental.hasCode) {
-            // verrouiller demande un code : on le crée d'abord
-            Parental.create(this) {
-                Parental.setState(kind, c.id, next)
-                adapter.notifyItemChanged(pos)
-            }
-            return
-        }
-        Parental.setState(kind, c.id, next)
+        Hidden.set(kind, c.id, !Hidden.isHidden(kind, c.id))
         adapter.notifyItemChanged(pos)
     }
 
@@ -82,7 +70,6 @@ class CategoriesActivity : AppCompatActivity() {
         inner class VH(v: View) : RecyclerView.ViewHolder(v) {
             val name: TextView = v.findViewById(R.id.tv_name)
             val state: TextView = v.findViewById(R.id.tv_count)
-            val lock: View = v.findViewById(R.id.iv_lock)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
@@ -92,24 +79,19 @@ class CategoriesActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, position: Int) {
             val c = cats[position]
-            val s = Parental.state(kind, c.id)
+            val hidden = Hidden.isHidden(kind, c.id)
             h.name.text = c.name
-            h.name.alpha = if (s == Parental.State.HIDDEN) 0.45f else 1f
-            h.lock.visibility = if (s == Parental.State.LOCKED) View.VISIBLE else View.GONE
-            h.state.text = when (s) {
-                Parental.State.VISIBLE -> "Visible"
-                Parental.State.LOCKED -> "Verrouillée"
-                Parental.State.HIDDEN -> "Masquée"
-            }
+            h.name.alpha = if (hidden) 0.45f else 1f
+            h.state.text = if (hidden) "Masquée" else "Visible"
             h.state.setTextColor(
                 ContextCompat.getColor(
                     this@CategoriesActivity,
-                    if (s == Parental.State.VISIBLE) R.color.faint else R.color.accent,
+                    if (hidden) R.color.accent else R.color.faint,
                 ),
             )
             h.itemView.setOnClickListener {
                 val p = h.bindingAdapterPosition
-                if (p != RecyclerView.NO_POSITION) cycle(p)
+                if (p != RecyclerView.NO_POSITION) toggle(p)
             }
         }
     }

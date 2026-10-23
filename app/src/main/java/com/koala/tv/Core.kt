@@ -16,7 +16,7 @@ class App : Application() {
         Prefs.init(this)
         Lists.init(this)
         History.init(this)
-        Parental.init(this)
+        Hidden.init(this)
     }
 }
 

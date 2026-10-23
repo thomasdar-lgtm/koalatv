@@ -26,6 +26,8 @@ class HomeActivity : AppCompatActivity() {
     private var release: Updater.Release? = null
     private var downloading = false
     private var waitingPermission = false
+    /** Retour depuis l'écran des catégories : on rouvre le menu d'où l'on venait. */
+    private var reopenCategories = false
     private lateinit var resumeBox: View
     private lateinit var resumeAdapter: ResumeAdapter
 
@@ -94,8 +96,13 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
         if (!::updateBar.isInitialized) return
         refreshResume()
-        // historique partagé avec les autres appareils
+        // historique et catégories masquées partagés avec les autres appareils
         lifecycleScope.launch { if (Sync.pull()) refreshResume() }
+        lifecycleScope.launch { Sync.pullCats() }
+        if (reopenCategories) {
+            reopenCategories = false
+            chooseCategories()
+        }
         if (waitingPermission) {
             waitingPermission = false
             startUpdate()
@@ -197,9 +204,11 @@ class HomeActivity : AppCompatActivity() {
         AlertDialog.Builder(this)
             .setTitle("Catégories visibles")
             .setItems(arrayOf("TV en direct", "Films", "Séries")) { _, which ->
+                reopenCategories = true
                 startActivity(Intent(this, CategoriesActivity::class.java).putExtra("kind", Kind.values()[which].name))
             }
-            .setNegativeButton("Fermer", null)
+            .setNegativeButton("Retour") { _, _ -> showSettings() }
+            .setOnCancelListener { showSettings() }
             .show()
     }
 
@@ -209,7 +218,6 @@ class HomeActivity : AppCompatActivity() {
             "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC)" else "intégré (recommandé)",
             "Actualiser les listes",
             "Catégories visibles",
-            "Code parental : " + if (Parental.hasCode) "activé" else "désactivé",
             "Rechercher une mise à jour",
             "Se déconnecter",
         )
@@ -229,10 +237,9 @@ class HomeActivity : AppCompatActivity() {
                         toast("Actualisation des listes…")
                         Lists.refreshAll { ok -> toast(if (ok) "Listes à jour" else "Actualisation impossible, réessaie plus tard") }
                     }
-                    3 -> Parental.ask(this) { chooseCategories() }
-                    4 -> Parental.settings(this)
-                    5 -> checkUpdate(force = true)
-                    6 -> AlertDialog.Builder(this)
+                    3 -> chooseCategories()
+                    4 -> checkUpdate(force = true)
+                    5 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->
@@ -241,7 +248,8 @@ class HomeActivity : AppCompatActivity() {
                             startActivity(Intent(this, LoginActivity::class.java))
                             finish()
                         }
-                        .setNegativeButton("Annuler", null)
+                        .setNegativeButton("Annuler") { _, _ -> showSettings() }
+                        .setOnCancelListener { showSettings() }
                         .show()
                 }
             }

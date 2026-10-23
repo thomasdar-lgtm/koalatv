@@ -55,6 +55,37 @@ object Sync {
 
     fun pushGone(key: String, at: Long) = put("e/$key", JSONObject().put("gone", true).put("at", at).toString())
 
+    /** Clé Firebase d'une catégorie (les caractères . $ # [ ] / y sont interdits). */
+    private fun catPath(k: String) = "c/" + k.replace(Regex("[.$#\\[\\]/:]"), "_")
+
+    fun pushCat(k: String, hidden: Boolean, at: Long) =
+        put(catPath(k), JSONObject().put("k", k).put("h", hidden).put("at", at).toString())
+
+    /** Récupère les catégories masquées partagées. Renvoie true si les listes doivent être reconstruites. */
+    suspend fun pullCats(): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext false
+        try {
+            val body = Xtream.http.newCall(Request.Builder().url(url("c")).build()).execute().use { r ->
+                if (!r.isSuccessful) return@withContext false
+                r.body?.string() ?: return@withContext false
+            }
+            val o = if (body.trim() == "null") JSONObject() else JSONObject(body)
+            val remote = HashMap<String, Pair<Boolean, Long>>()
+            for (p in o.keys()) {
+                val v = o.optJSONObject(p) ?: continue
+                val k = v.optString("k")
+                val at = v.optLong("at")
+                if (k.isEmpty() || at <= 0) continue
+                remote[k] = v.optBoolean("h") to at
+            }
+            val changed = Hidden.merge(remote)
+            for ((k, v) in Hidden.all()) if ((remote[k]?.second ?: 0L) < v.second) pushCat(k, v.first, v.second)
+            changed
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     /** Récupère l'historique partagé et le fusionne. Renvoie true si l'affichage doit être rafraîchi. */
     suspend fun pull(): Boolean = withContext(Dispatchers.IO) {
         if (!enabled) return@withContext false

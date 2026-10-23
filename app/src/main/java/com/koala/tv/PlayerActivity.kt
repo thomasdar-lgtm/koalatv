@@ -493,7 +493,7 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         // pas dans la catégorie en cours : on cherche dans toutes les chaînes
-        val all = Lists.peek(Kind.LIVE)?.items?.filter { it.num > 0 && !Parental.blocked(Kind.LIVE, it.categoryId) }?.sortedBy { it.num }
+        val all = Lists.peek(Kind.LIVE)?.items?.filter { it.num > 0 && !Hidden.isHidden(Kind.LIVE, it.categoryId) }?.sortedBy { it.num }
         val at = all?.indexOfFirst { it.num == n } ?: -1
         if (all == null || at < 0) {
             toast("Chaîne $n introuvable")

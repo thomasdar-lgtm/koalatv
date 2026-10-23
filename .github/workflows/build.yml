@@ -66,6 +66,9 @@ jobs:
             echo "ecriture: $(curl -s -m 20 -X PUT -d '{"at":1}' "$DB/h/ci-check/e/ping.json")"
             echo "lecture: $(curl -s -m 20 "$DB/h/ci-check/e.json")"
             echo "liste racine (doit etre refusee): $(curl -s -m 20 "$DB/h.json")"
+            echo "ecriture facon TV LG: $(curl -s -m 20 -X POST -H 'Content-Type: text/plain' -d '{"at":2}' "$DB/h/ci-check/e/tv.json?x-http-method-override=PUT")"
+            echo "lecture apres TV: $(curl -s -m 20 "$DB/h/ci-check/e.json")"
+            echo "CORS: $(curl -s -m 20 -I -H 'Origin: null' "$DB/h/ci-check/e.json" | grep -i access-control-allow-origin)"
             echo "nettoyage: $(curl -s -m 20 -X DELETE "$DB/h/ci-check.json")"
           } > /tmp/report/firebase.txt 2>&1 || true
           cd /tmp/report

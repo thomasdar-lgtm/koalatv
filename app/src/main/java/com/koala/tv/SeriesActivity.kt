@@ -16,6 +16,7 @@ class SeriesActivity : AppCompatActivity() {
 
     private var seriesId = ""
     private var seriesName = ""
+    private var cover = ""
     private var episodes: List<Episode> = emptyList()
     private var seasons: List<Int> = emptyList()
     private var seasonIdx = 0
@@ -33,7 +34,7 @@ class SeriesActivity : AppCompatActivity() {
         setContentView(R.layout.activity_series)
         seriesId = intent.getStringExtra("id") ?: ""
         seriesName = intent.getStringExtra("name") ?: ""
-        val cover = intent.getStringExtra("cover") ?: ""
+        cover = intent.getStringExtra("cover") ?: ""
         seasonIdx = savedInstanceState?.getInt("season", 0) ?: 0
 
         findViewById<TextView>(R.id.tv_title).text = seriesName
@@ -126,10 +127,6 @@ class SeriesActivity : AppCompatActivity() {
     }
 
     private fun playEpisode(pos: Int) {
-        val list = epAdapter.items.map { e ->
-            val label = if (e.season > 0) "S${e.season} É${e.num}" else "É${e.num}"
-            PlayItem("$seriesName · $label", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id)
-        }
-        Nav.play(this, list, pos)
+        Nav.play(this, episodePlayList(seriesId, seriesName, cover, epAdapter.items), pos)
     }
 }

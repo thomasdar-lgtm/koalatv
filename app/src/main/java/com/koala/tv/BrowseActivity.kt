@@ -288,7 +288,7 @@ class BrowseActivity : AppCompatActivity() {
             }
             Kind.MOVIE -> Nav.play(
                 this,
-                listOf(PlayItem(item.name, Xtream.movieUrl(item.id, item.ext), false, "m${item.id}", item.id)),
+                listOf(PlayItem(item.name, Xtream.movieUrl(item.id, item.ext), false, "m${item.id}", item.id, item.icon)),
                 0,
             )
             Kind.SERIES -> startActivity(

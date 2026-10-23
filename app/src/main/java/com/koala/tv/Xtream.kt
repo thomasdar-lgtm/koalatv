@@ -54,7 +54,17 @@ data class PlayItem(
     val live: Boolean,
     val resumeKey: String?,
     val streamId: String?,
+    val icon: String = "",
+    val seriesId: String = "",
+    val seriesName: String = "",
 )
+
+/** Liste de lecture d'une saison : les épisodes s'enchaînent. */
+fun episodePlayList(seriesId: String, seriesName: String, cover: String, eps: List<Episode>): List<PlayItem> =
+    eps.map { e ->
+        val label = if (e.season > 0) "S${e.season} É${e.num}" else "É${e.num}"
+        PlayItem("$seriesName · $label", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id, cover, seriesId, seriesName)
+    }
 
 /** Lit une valeur JSON en texte, en gérant les null / nombres renvoyés par certains panels. */
 fun JSONObject.s(k: String): String {

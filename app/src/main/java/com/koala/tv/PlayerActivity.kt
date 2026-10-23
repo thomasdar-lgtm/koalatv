@@ -318,7 +318,10 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun next() {
-        current.resumeKey?.let { Prefs.setPos(it, 0) }
+        current.resumeKey?.let {
+            Prefs.setPos(it, 0)
+            History.remove(it)
+        }
         if (index < items.size - 1) {
             index++
             Playback.index = index
@@ -355,8 +358,14 @@ class PlayerActivity : AppCompatActivity() {
         val key = item.resumeKey ?: return
         val dur = p.duration
         when {
-            dur > 0 && pos >= dur - 120_000 -> Prefs.setPos(key, 0)
-            pos > 30_000 -> Prefs.setPos(key, pos)
+            dur > 0 && pos >= dur - 120_000 -> {
+                Prefs.setPos(key, 0)
+                History.remove(key)
+            }
+            pos > 30_000 -> {
+                Prefs.setPos(key, pos)
+                History.update(item, pos, dur)
+            }
         }
     }
 

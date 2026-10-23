@@ -175,3 +175,57 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         }
     }
 }
+
+/** Cartes de la rangée « Reprendre ». */
+class ResumeAdapter(
+    private val onClick: (History.Entry) -> Unit,
+    private val onLong: (History.Entry) -> Unit,
+) : RecyclerView.Adapter<ResumeAdapter.VH>() {
+
+    var items: List<History.Entry> = emptyList()
+        private set
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val img: ImageView = v.findViewById(R.id.iv)
+        val name: TextView = v.findViewById(R.id.tv_name)
+        val bar: android.widget.ProgressBar = v.findViewById(R.id.pb)
+        val left: TextView = v.findViewById(R.id.tv_left)
+    }
+
+    fun submit(l: List<History.Entry>) {
+        items = l
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_resume, parent, false)
+        v.focusZoom(1.04f)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(h: VH, position: Int) {
+        val e = items[position]
+        h.name.text = e.title
+        h.bar.progress = e.progress
+        val m = e.remainingMin
+        h.left.text = when {
+            m >= 60 -> "Reste ${m / 60} h ${String.format("%02d", m % 60)}"
+            m > 0 -> "Reste $m min"
+            else -> "Reprendre à ${fmtTime(e.pos)}"
+        }
+        if (e.icon.startsWith("http", true)) h.img.load(e.icon) { crossfade(150) } else {
+            h.img.dispose(); h.img.setImageDrawable(null)
+        }
+        h.itemView.setOnClickListener {
+            val p = h.bindingAdapterPosition
+            if (p != RecyclerView.NO_POSITION) onClick(items[p])
+        }
+        h.itemView.setOnLongClickListener {
+            val p = h.bindingAdapterPosition
+            if (p != RecyclerView.NO_POSITION) onLong(items[p])
+            true
+        }
+    }
+}

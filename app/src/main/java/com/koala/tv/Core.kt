@@ -15,6 +15,7 @@ class App : Application() {
         super.onCreate()
         Prefs.init(this)
         Lists.init(this)
+        History.init(this)
     }
 }
 

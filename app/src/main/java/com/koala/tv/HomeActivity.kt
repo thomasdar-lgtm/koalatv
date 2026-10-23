@@ -7,6 +7,8 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -20,6 +22,8 @@ class HomeActivity : AppCompatActivity() {
     private var release: Updater.Release? = null
     private var downloading = false
     private var waitingPermission = false
+    private lateinit var resumeBox: View
+    private lateinit var resumeAdapter: ResumeAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +57,26 @@ class HomeActivity : AppCompatActivity() {
         updateAction = findViewById(R.id.update_action)
         updateBar.setOnClickListener { startUpdate() }
 
+        resumeBox = findViewById(R.id.resume_box)
+        resumeAdapter = ResumeAdapter(::resume, ::forget)
+        findViewById<RecyclerView>(R.id.rv_resume).apply {
+            layoutManager = LinearLayoutManager(this@HomeActivity, RecyclerView.HORIZONTAL, false)
+            adapter = resumeAdapter
+            itemAnimator = null
+        }
+        // TV / tablette : les tuiles se réduisent pour laisser la place à la rangée « Reprendre »
+        val area = findViewById<View?>(R.id.tiles_area)
+        val row = findViewById<View?>(R.id.tiles_row)
+        if (area != null && row != null) {
+            val maxH = resources.getDimensionPixelSize(R.dimen.tile_row)
+            area.addOnLayoutChangeListener { _, _, top, _, bottom, _, oldTop, _, oldBottom ->
+                if (bottom - top != oldBottom - oldTop) {
+                    val h = minOf(maxH, bottom - top - dp(24)).coerceAtLeast(dp(120))
+                    if (row.layoutParams.height != h) row.post { row.layoutParams = row.layoutParams.apply { height = h } }
+                }
+            }
+        }
+
         live.requestFocus()
         Lists.warmAll()
     }
@@ -60,12 +84,55 @@ class HomeActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         if (!::updateBar.isInitialized) return
+        refreshResume()
         if (waitingPermission) {
             waitingPermission = false
             startUpdate()
         } else if (!downloading) {
             checkUpdate(force = false)
         }
+    }
+
+    private fun refreshResume() {
+        val l = History.all()
+        resumeAdapter.submit(l)
+        resumeBox.visibility = if (l.isEmpty()) View.GONE else View.VISIBLE
+    }
+
+    private fun resume(e: History.Entry) {
+        if (e.seriesId.isEmpty()) {
+            Nav.play(this, listOf(PlayItem(e.title, e.url, false, e.key, e.key.removePrefix("m"), e.icon)), 0)
+            return
+        }
+        // Épisode : on recharge la saison pour enchaîner les épisodes suivants
+        lifecycleScope.launch {
+            val eps = try {
+                Xtream.seriesEpisodes(e.seriesId)
+            } catch (ex: Exception) {
+                emptyList()
+            }
+            val epId = e.key.removePrefix("e")
+            val ep = eps.firstOrNull { it.id == epId }
+            if (ep == null) {
+                Nav.play(this@HomeActivity, listOf(PlayItem(e.title, e.url, false, e.key, epId, e.icon, e.seriesId, e.seriesName)), 0)
+                return@launch
+            }
+            val season = eps.filter { it.season == ep.season }
+            Nav.play(this@HomeActivity, episodePlayList(e.seriesId, e.seriesName, e.icon, season), season.indexOf(ep))
+        }
+    }
+
+    private fun forget(e: History.Entry) {
+        AlertDialog.Builder(this)
+            .setTitle(e.title)
+            .setItems(arrayOf("Retirer de « Reprendre »", "Annuler")) { _, which ->
+                if (which == 0) {
+                    History.remove(e.key)
+                    Prefs.setPos(e.key, 0)
+                    refreshResume()
+                }
+            }
+            .show()
     }
 
     private fun checkUpdate(force: Boolean) {

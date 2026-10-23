@@ -11,12 +11,16 @@
 
     <include layout="@layout/view_update" />
 
+    <include layout="@layout/view_resume" />
+
     <FrameLayout
+        android:id="@+id/tiles_area"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1">
 
         <LinearLayout
+            android:id="@+id/tiles_row"
             android:layout_width="match_parent"
             android:layout_height="@dimen/tile_row"
             android:layout_gravity="center"

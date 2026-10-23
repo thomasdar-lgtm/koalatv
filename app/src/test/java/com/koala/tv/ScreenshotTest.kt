@@ -51,13 +51,13 @@ class ScreenshotTest {
     }
 
     @Test
-    @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi-television")
+    @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-television-xhdpi")
     fun homeTvResume() {
         login(tv = true, resume = true); shoot("home_tv_resume")
     }
 
     @Test
-    @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-xhdpi-television")
+    @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-television-xhdpi")
     fun homeTv() {
         login(tv = true, resume = false); shoot("home_tv")
     }

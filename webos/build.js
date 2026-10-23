@@ -4,7 +4,7 @@ var fs = require('fs'), path = require('path'), crypto = require('crypto'), cp =
 
 var ROOT = path.join(__dirname, '..');
 var DOCS = path.join(ROOT, 'docs');
-var BASE = 'https://thomasdar-lgtm.github.io/koalatv/';
+var BASE = 'https://raw.githubusercontent.com/thomasdar-lgtm/koalatv/main/docs/';
 var ares = process.argv[2] || 'ares-package';
 
 var info = JSON.parse(fs.readFileSync(path.join(__dirname, 'app', 'appinfo.json'), 'utf8'));

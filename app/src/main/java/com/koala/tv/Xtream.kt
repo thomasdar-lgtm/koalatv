@@ -60,7 +60,10 @@ data class PlayItem(
     val icon: String = "",
     val seriesId: String = "",
     val seriesName: String = "",
+    val num: Int = 0,
 )
+
+fun liveItem(it: Item) = PlayItem(it.name, Xtream.liveUrl(it.id), true, null, it.id, it.icon, num = it.num)
 
 /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
 fun episodePlayList(seriesId: String, seriesName: String, cover: String, eps: List<Episode>): List<PlayItem> =

@@ -71,6 +71,24 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/tv_number"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="28dp"
+        android:background="@drawable/status_bg"
+        android:fontFamily="@font/inter_bold"
+        android:minWidth="96dp"
+        android:gravity="center"
+        android:paddingStart="22dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="22dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/accent"
+        android:textSize="40sp"
+        android:visibility="gone" />
+
+    <TextView
         android:id="@+id/tv_status"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

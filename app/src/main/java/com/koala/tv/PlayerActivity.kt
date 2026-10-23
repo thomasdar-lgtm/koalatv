@@ -48,6 +48,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var ovPos: TextView
     private lateinit var ovEpg: TextView
     private lateinit var tvStatus: TextView
+    private lateinit var tvNumber: TextView
     private lateinit var gestures: GestureDetector
 
     private var player: ExoPlayer? = null
@@ -57,6 +58,12 @@ class PlayerActivity : AppCompatActivity() {
     private var lastPos = 0L
     private var epgJob: Job? = null
     private var swiped = false
+    private var prevList: List<PlayItem>? = null
+    private var prevIndex = -1
+    private var digits = ""
+    private var okDown = false
+    private var okLong = false
+    private val digitsRunnable = Runnable { commitDigits() }
 
     private val items: List<PlayItem> get() = Playback.items
     private val current: PlayItem get() = items[index]
@@ -95,6 +102,7 @@ class PlayerActivity : AppCompatActivity() {
         ovPos = findViewById(R.id.ov_pos)
         ovEpg = findViewById(R.id.ov_epg)
         tvStatus = findViewById(R.id.tv_status)
+        tvNumber = findViewById(R.id.tv_number)
         pv.requestFocus()
 
         // Infos de la chaîne visibles tant que les commandes sont affichées
@@ -108,6 +116,12 @@ class PlayerActivity : AppCompatActivity() {
 
         // Mobile / tablette : glisser vers le haut = chaîne suivante, vers le bas = précédente
         gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDoubleTap(e: MotionEvent): Boolean {
+                if (items.isEmpty() || !current.live) return false
+                previousChannel()
+                return true
+            }
+
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
                 if (items.isEmpty() || !current.live || items.size < 2) return false
                 if (abs(vy) < 900 || abs(vy) < abs(vx) * 1.5f) return false
@@ -229,7 +243,12 @@ class PlayerActivity : AppCompatActivity() {
     private fun showInfo(keep: Boolean = false) {
         val item = current
         ovTitle.text = item.title
-        ovPos.text = if (item.live && items.size > 1) "${index + 1} / ${items.size}" else ""
+        ovPos.text = when {
+            !item.live -> ""
+            item.num > 0 -> "Chaîne ${item.num}"
+            items.size > 1 -> "${index + 1} / ${items.size}"
+            else -> ""
+        }
         overlay.visibility = View.VISIBLE
         handler.removeCallbacks(hideOverlay)
         if (!keep) handler.postDelayed(hideOverlay, 5_000)
@@ -334,9 +353,12 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     /** Changement de chaîne : le titre s'affiche tout de suite, le flux démarre quand on arrête de zapper. */
-    private fun zap(delta: Int) {
-        if (items.size <= 1) return
-        index = (index + delta + items.size) % items.size
+    private fun switchTo(list: List<PlayItem>, i: Int) {
+        if (list.isEmpty() || (list === items && i == index)) return
+        prevList = items
+        prevIndex = index
+        Playback.items = list
+        index = i.coerceIn(0, list.size - 1)
         Playback.index = index
         retries = 0
         lastPos = 0
@@ -346,6 +368,52 @@ class PlayerActivity : AppCompatActivity() {
         showInfo()
         handler.removeCallbacks(zapRunnable)
         handler.postDelayed(zapRunnable, 350)
+    }
+
+    private fun zap(delta: Int) {
+        if (items.size <= 1) return
+        switchTo(items, (index + delta + items.size) % items.size)
+    }
+
+    /** Retour à la chaîne regardée juste avant. */
+    private fun previousChannel() {
+        val l = prevList
+        if (l == null || prevIndex !in l.indices) {
+            toast("Pas encore de chaîne précédente")
+            return
+        }
+        switchTo(l, prevIndex)
+    }
+
+    /** Saisie d'un numéro de chaîne à la télécommande. */
+    private fun typeDigit(d: Int) {
+        if (digits.length >= 4) digits = ""
+        digits += d
+        tvNumber.text = digits
+        tvNumber.visibility = View.VISIBLE
+        handler.removeCallbacks(digitsRunnable)
+        handler.postDelayed(digitsRunnable, 2000)
+    }
+
+    private fun commitDigits() {
+        handler.removeCallbacks(digitsRunnable)
+        val n = digits.toIntOrNull()
+        digits = ""
+        tvNumber.visibility = View.GONE
+        if (n == null || n <= 0) return
+        val here = items.indexOfFirst { it.num == n }
+        if (here >= 0) {
+            switchTo(items, here)
+            return
+        }
+        // pas dans la catégorie en cours : on cherche dans toutes les chaînes
+        val all = Lists.peek(Kind.LIVE)?.items?.filter { it.num > 0 }?.sortedBy { it.num }
+        val at = all?.indexOfFirst { it.num == n } ?: -1
+        if (all == null || at < 0) {
+            toast("Chaîne $n introuvable")
+            return
+        }
+        switchTo(all.map { liveItem(it) }, at)
     }
 
     private fun saveProgress() {
@@ -376,14 +444,30 @@ class PlayerActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_CHANNEL_UP -> if (current.live) { zap(1); return true }
                 KeyEvent.KEYCODE_CHANNEL_DOWN -> if (current.live) { zap(-1); return true }
             }
+            if (current.live) {
+                val d = digitOf(event.keyCode)
+                if (d >= 0) { typeDigit(d); return true }
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_LAST_CHANNEL, KeyEvent.KEYCODE_PROG_BLUE -> { previousChannel(); return true }
+                }
+            }
             if (!controls) {
                 if (current.live) {
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_UP -> { zap(-1); return true }
                         KeyEvent.KEYCODE_DPAD_DOWN -> { zap(1); return true }
-                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_INFO -> {
-                            pv.showController(); return true
+                        KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
+                            // appui court : commandes (ou valide le numéro) · appui long : chaîne précédente
+                            if (event.repeatCount == 0) {
+                                okDown = true
+                                okLong = false
+                            } else if (okDown && !okLong) {
+                                okLong = true
+                                previousChannel()
+                            }
+                            return true
                         }
+                        KeyEvent.KEYCODE_INFO -> { pv.showController(); return true }
                     }
                 } else {
                     val p = player
@@ -398,7 +482,22 @@ class PlayerActivity : AppCompatActivity() {
                 }
             }
         }
+        if (event.action == KeyEvent.ACTION_UP && okDown &&
+            (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER)
+        ) {
+            okDown = false
+            if (!okLong) {
+                if (digits.isNotEmpty()) commitDigits() else pv.showController()
+            }
+            return true
+        }
         return super.dispatchKeyEvent(event)
+    }
+
+    private fun digitOf(code: Int): Int = when (code) {
+        in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 -> code - KeyEvent.KEYCODE_0
+        in KeyEvent.KEYCODE_NUMPAD_0..KeyEvent.KEYCODE_NUMPAD_9 -> code - KeyEvent.KEYCODE_NUMPAD_0
+        else -> -1
     }
 
     override fun onDestroy() {

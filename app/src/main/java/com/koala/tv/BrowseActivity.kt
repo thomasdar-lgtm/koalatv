@@ -296,7 +296,7 @@ class BrowseActivity : AppCompatActivity() {
     private fun openItem(pos: Int, item: Item) {
         when (kind) {
             Kind.LIVE -> {
-                val play = itemAdapter.items.map { PlayItem(it.name, Xtream.liveUrl(it.id), true, null, it.id) }
+                val play = itemAdapter.items.map { liveItem(it) }
                 Nav.play(this, play, pos)
             }
             Kind.MOVIE -> Nav.play(

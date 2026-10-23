@@ -40,6 +40,8 @@ class GuideActivity : AppCompatActivity() {
     private lateinit var adapter: RowAdapter
     private val handler = Handler(Looper.getMainLooper())
     private val day = SimpleDateFormat("EEEE d", Locale.FRANCE)
+    /** Début le plus ancien : jusqu'à 7 jours en arrière si des chaînes ont du replay. */
+    private var minStart = 0L
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -56,6 +58,8 @@ class GuideActivity : AppCompatActivity() {
         setContentView(R.layout.activity_guide)
         win.span = if (isWide) 3 * 3600L else 90 * 60L
         win.start = floor30(Epg.nowSec())
+        val days = channels.maxOf { it.archive }.coerceIn(0, 7)
+        minStart = floor30(Epg.nowSec() - days * 86400L)
         selRow = Guide.startIndex.coerceIn(0, channels.size - 1)
         selTime = Epg.nowSec()
 
@@ -100,9 +104,23 @@ class GuideActivity : AppCompatActivity() {
         adapter.notifyItemRangeChanged(0, channels.size, PAYLOAD)
     }
 
+    /** Programmes d'une ligne : passé compris pour les chaînes avec replay. */
+    private fun rowPrograms(row: Int): List<Program>? {
+        val ch = channels[row]
+        if (ch.archive <= 0) return Epg.programs(ch.id)
+        val from = Epg.nowSec() - ch.archive * 86400L
+        return Epg.full(ch.id)?.filter { it.end > from }
+    }
+
+    private fun canReplay(row: Int, p: Program): Boolean {
+        val ch = channels[row]
+        val now = Epg.nowSec()
+        return ch.archive > 0 && p.end <= now && p.start >= now - ch.archive * 86400L
+    }
+
     /** Programme sélectionné dans une ligne : celui qui couvre l'heure choisie, sinon le suivant. */
     private fun selectedIn(row: Int): Program? {
-        val list = Epg.programs(channels[row].id) ?: return null
+        val list = rowPrograms(row) ?: return null
         return list.firstOrNull { it.start <= selTime && it.end > selTime }
             ?: list.firstOrNull { it.start > selTime }
             ?: list.lastOrNull()
@@ -115,9 +133,10 @@ class GuideActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.tv_title).text = p?.title ?: ch.name
         val tvWhen = findViewById<TextView>(R.id.tv_when)
         tvWhen.text = if (p == null) {
-            if (Epg.programs(ch.id) == null) "Chargement du programme…" else "Pas de programme pour cette chaîne"
+            if (rowPrograms(selRow) == null) "Chargement du programme…" else "Pas de programme pour cette chaîne"
         } else {
             val state = when {
+                p.end <= now -> if (canReplay(selRow, p)) "Replay · OK pour regarder" else "terminé"
                 p.start <= now -> "en cours · reste ${((p.end - now) / 60).coerceAtLeast(1)} min"
                 else -> "dans ${((p.start - now) / 60).coerceAtLeast(1)} min"
             }
@@ -145,26 +164,34 @@ class GuideActivity : AppCompatActivity() {
     }
 
     private fun moveProg(d: Int) {
-        val list = Epg.programs(channels[selRow].id).orEmpty()
+        val list = rowPrograms(selRow).orEmpty()
         val cur = selectedIn(selRow)
         val idx = if (cur == null) -1 else list.indexOf(cur)
         val next = list.getOrNull(idx + d)
-        val nowFloor = floor30(Epg.nowSec())
+        val now = Epg.nowSec()
         if (next == null) {
             // ligne vide ou bout de la liste : on fait défiler le temps par demi-heure
-            val s = (win.start + d * 1800L).coerceAtLeast(nowFloor)
+            val s = (win.start + d * 1800L).coerceAtLeast(minStart)
             if (s == win.start) return
             win.start = s
-            selTime = maxOf(Epg.nowSec(), s)
+            selTime = if (d < 0) s + 60 else maxOf(now, s)
         } else {
-            selTime = maxOf(next.start, Epg.nowSec())
+            selTime = if (next.start <= now && next.end > now) now else next.start
             if (next.start >= win.end - 1800) win.start = floor30(next.start) - 1800
-            if (next.end <= win.start || next.start < win.start && d < 0) win.start = maxOf(nowFloor, floor30(next.start))
+            if (next.end <= win.start || (next.start < win.start && d < 0)) win.start = maxOf(minStart, floor30(next.start))
         }
         updateDetails()
     }
 
     private fun play(row: Int) {
+        val p = if (row == selRow) selectedIn(row) else null
+        if (p != null && canReplay(row, p)) {
+            val ch = channels[row]
+            val min = ((p.end - p.start + 59) / 60).toInt()
+            val item = PlayItem("${ch.name} · ${p.title}", Xtream.catchupUrl(ch.id, p.start, min), false, null, ch.id, ch.icon)
+            Nav.play(this, listOf(item), 0)
+            return
+        }
         Nav.play(this, channels.map { liveItem(it) }, row)
     }
 
@@ -221,7 +248,7 @@ class GuideActivity : AppCompatActivity() {
                         if (row == selRow && prog != null && prog == selectedIn(row)) {
                             play(row) // deuxième appui sur le même programme : lecture
                         } else {
-                            if (prog != null) selTime = maxOf(prog.start, Epg.nowSec())
+                            if (prog != null) selTime = if (prog.start <= Epg.nowSec() && prog.end > Epg.nowSec()) Epg.nowSec() else prog.start
                             val old = selRow
                             selRow = row
                             adapter.notifyItemChanged(old)
@@ -237,7 +264,8 @@ class GuideActivity : AppCompatActivity() {
         }
 
         private fun bindStrip(h: VH, position: Int) {
-            h.strip.programs = Epg.programs(channels[position].id)
+            h.strip.programs = rowPrograms(position)
+            h.strip.replay = channels[position].archive > 0
             h.strip.rowFocused = position == selRow
             h.strip.selected = if (position == selRow) selectedIn(position) else null
             h.cell.isSelected = position == selRow

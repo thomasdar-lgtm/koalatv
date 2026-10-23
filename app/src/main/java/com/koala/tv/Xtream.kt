@@ -171,7 +171,9 @@ object Xtream {
         throw last ?: IOException("Erreur réseau")
     }
 
-    suspend fun login(server: String, user: String, pass: String): JSONObject = withContext(Dispatchers.IO) {
+    data class Account(val expiry: String, val tzOffset: Long?)
+
+    suspend fun login(server: String, user: String, pass: String): Account = withContext(Dispatchers.IO) {
         val txt = fetch(apiUrl(server, user, pass, null))
         val root = try {
             JSONObject(txt)
@@ -182,7 +184,50 @@ object Xtream {
         if (ui.s("auth") != "1") throw IOException("Identifiants refusés")
         val status = ui.s("status")
         if (status.isNotEmpty() && !status.equals("Active", true)) throw IOException("Abonnement : $status")
-        ui
+        Account(ui.s("exp_date"), serverOffset(root.optJSONObject("server_info")))
+    }
+
+    /** Remet à jour l'expiration et le fuseau du serveur (une fois par lancement). */
+    suspend fun refreshAccount() {
+        try {
+            val a = login(Prefs.server, Prefs.user, Prefs.pass)
+            Prefs.expiry = a.expiry
+            if (a.tzOffset != null) Prefs.tzOffset = a.tzOffset
+        } catch (e: Exception) {
+            // hors ligne : on garde les valeurs connues
+        }
+    }
+
+    /** Décalage (secondes) entre l'heure locale du serveur et l'heure UTC : utile pour le replay. */
+    private fun serverOffset(si: JSONObject?): Long? {
+        if (si == null) return null
+        val ts = si.s("timestamp_now").toLongOrNull()
+        val local = si.s("time_now")
+        if (ts != null && local.isNotEmpty()) {
+            try {
+                val f = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                f.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                val asUtc = (f.parse(local)?.time ?: 0L) / 1000
+                if (asUtc > 0) return Math.round((asUtc - ts) / 900.0) * 900
+            } catch (e: Exception) {
+                // format inattendu : on essaie le nom du fuseau
+            }
+        }
+        val tz = si.s("timezone")
+        if (tz.isNotEmpty()) {
+            val z = java.util.TimeZone.getTimeZone(tz)
+            if (z.id == tz) return z.getOffset(System.currentTimeMillis()) / 1000L
+        }
+        return null
+    }
+
+    /** Adresse de replay : début à l'heure du serveur, durée en minutes. */
+    fun catchupUrl(streamId: String, startSec: Long, durationMin: Int): String {
+        val off = Prefs.tzOffset ?: (java.util.TimeZone.getDefault().getOffset(startSec * 1000) / 1000L)
+        val f = java.text.SimpleDateFormat("yyyy-MM-dd:HH-mm", java.util.Locale.US)
+        f.timeZone = java.util.TimeZone.getTimeZone("UTC")
+        val start = f.format(java.util.Date((startSec + off) * 1000))
+        return "${Prefs.server}/timeshift/${creds()}/$durationMin/$start/$streamId.ts"
     }
 
     suspend fun seriesEpisodes(seriesId: String): List<Episode> = withContext(Dispatchers.IO) {
@@ -261,9 +306,14 @@ object Xtream {
     }
 
     /** Programmes à venir d'une chaîne (le premier est celui en cours). Liste vide si pas de guide. */
-    suspend fun shortEpg(streamId: String, limit: Int): List<Program> = withContext(Dispatchers.IO) {
+    suspend fun shortEpg(streamId: String, limit: Int): List<Program> = epgCall("get_short_epg", "&stream_id=$streamId&limit=$limit", false)
+
+    /** Guide complet (passé compris) pour les chaînes avec replay. */
+    suspend fun fullEpg(streamId: String): List<Program> = epgCall("get_simple_data_table", "&stream_id=$streamId", true)
+
+    private suspend fun epgCall(action: String, extra: String, keepPast: Boolean): List<Program> = withContext(Dispatchers.IO) {
         try {
-            val root = JSONObject(fetch(api("get_short_epg", "&stream_id=$streamId&limit=$limit")))
+            val root = JSONObject(fetch(api(action, extra)))
             val l = root.optJSONArray("epg_listings") ?: return@withContext emptyList()
             val now = System.currentTimeMillis() / 1000
             val out = ArrayList<Program>()
@@ -272,9 +322,10 @@ object Xtream {
                 val title = b64(e.s("title"))
                 val start = e.s("start_timestamp").toLongOrNull() ?: continue
                 val end = e.s("stop_timestamp").toLongOrNull() ?: e.s("end_timestamp").toLongOrNull() ?: continue
-                if (title.isEmpty() || end <= now) continue
+                if (title.isEmpty() || end <= start || (!keepPast && end <= now)) continue
                 out.add(Program(title, start, end, b64(e.s("description"))))
             }
+            out.sortBy { it.start }
             out
         } catch (e: Exception) {
             emptyList()

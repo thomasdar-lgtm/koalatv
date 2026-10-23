@@ -100,6 +100,7 @@ class ItemAdapter(
         val fav: View = v.findViewById(R.id.iv_fav)
         val epg: TextView? = v.findViewById(R.id.tv_epg)
         val epgBar: android.widget.ProgressBar? = v.findViewById(R.id.pb_epg)
+        val tag: View? = v.findViewById(R.id.tv_tag)
         var id: String = ""
     }
 
@@ -172,6 +173,7 @@ class ItemAdapter(
         h.name.text = item.name
         h.fav.visibility = if (favs.contains(item.favKey)) View.VISIBLE else View.GONE
         if (kind == Kind.LIVE) bindEpg(h, item)
+        h.tag?.visibility = if (item.archive > 0) View.VISIBLE else View.GONE
         if (item.icon.startsWith("http", true)) {
             h.img.load(item.icon) { crossfade(150) }
         } else {

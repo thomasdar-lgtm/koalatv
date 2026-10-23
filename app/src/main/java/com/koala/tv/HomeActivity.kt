@@ -16,6 +16,10 @@ import java.util.Locale
 
 class HomeActivity : AppCompatActivity() {
 
+    companion object {
+        private var accountRefreshed = false
+    }
+
     private lateinit var updateBar: View
     private lateinit var updateText: TextView
     private lateinit var updateAction: TextView
@@ -79,6 +83,10 @@ class HomeActivity : AppCompatActivity() {
 
         live.requestFocus()
         Lists.warmAll()
+        if (!accountRefreshed) {
+            accountRefreshed = true
+            Lists.scope.launch { Xtream.refreshAccount() }
+        }
     }
 
     override fun onResume() {

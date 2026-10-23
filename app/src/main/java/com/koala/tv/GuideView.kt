@@ -26,6 +26,8 @@ class GuideStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet
     var programs: List<Program>? = null
     var selected: Program? = null
     var rowFocused = false
+    /** La chaîne a du replay : les programmes passés restent regardables. */
+    var replay = false
 
     private val d = resources.displayMetrics.density
     private val bg = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ContextCompat.getColor(context, R.color.row) }
@@ -46,6 +48,11 @@ class GuideStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet
         color = ContextCompat.getColor(context, R.color.muted)
         textSize = 12f * resources.displayMetrics.scaledDensity
         typeface = ResourcesCompat.getFont(context, R.font.inter_regular) ?: Typeface.DEFAULT
+    }
+    private val replayText = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = ContextCompat.getColor(context, R.color.accent)
+        textSize = 12f * resources.displayMetrics.scaledDensity
+        typeface = ResourcesCompat.getFont(context, R.font.inter_semibold) ?: Typeface.DEFAULT
     }
     private val r = RectF()
 
@@ -82,14 +89,28 @@ class GuideStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet
             if (x1 - x0 < 2f) continue
             r.set(x0, gap, x1, h - gap)
             val isSel = rowFocused && p == selected
+            val past = p.end <= now
             c.drawRoundRect(r, rad, rad, if (isSel) bgSel else if (p.start <= now && p.end > now) bgNow else bg)
             if (isSel) c.drawRoundRect(r, rad, rad, ring)
             val avail = x1 - x0 - 24f * d
             if (avail > 12f * d) {
+                // programme passé sans replay : estompé
+                val dim = past && !replay
+                title.alpha = if (dim) 110 else 255
+                sub.alpha = if (dim) 110 else 255
                 val t = TextUtils.ellipsize(p.title, title, avail, TextUtils.TruncateAt.END)
                 c.drawText(t, 0, t.length, x0 + 12f * d, h / 2 - 2f * d, title)
-                val s = TextUtils.ellipsize("${Epg.hm(p.start)} – ${Epg.hm(p.end)}", sub, avail, TextUtils.TruncateAt.END)
+                val times = "${Epg.hm(p.start)} – ${Epg.hm(p.end)}"
+                val s = TextUtils.ellipsize(times, sub, avail, TextUtils.TruncateAt.END)
                 c.drawText(s, 0, s.length, x0 + 12f * d, h / 2 + sub.textSize + 2f * d, sub)
+                if (past && replay) {
+                    val tw = sub.measureText("$times  ")
+                    if (tw + replayText.measureText("Replay") < avail) {
+                        c.drawText("Replay", x0 + 12f * d + tw, h / 2 + sub.textSize + 2f * d, replayText)
+                    }
+                }
+                title.alpha = 255
+                sub.alpha = 255
             }
         }
         // repère « maintenant »

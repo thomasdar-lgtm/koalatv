@@ -55,6 +55,13 @@ object Prefs {
         get() = sp.getBoolean("ext", false)
         set(v) = sp.edit().putBoolean("ext", v).apply()
 
+    /** Décalage horaire du serveur en secondes (null = inconnu, on prend celui de l'appareil). */
+    var tzOffset: Long?
+        get() = if (sp.contains("tz_off")) sp.getLong("tz_off", 0L) else null
+        set(v) {
+            if (v == null) sp.edit().remove("tz_off").apply() else sp.edit().putLong("tz_off", v).apply()
+        }
+
     var lastUpdateCheck: Long
         get() = sp.getLong("upd_check", 0L)
         set(v) = sp.edit().putLong("upd_check", v).apply()

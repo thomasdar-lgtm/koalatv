@@ -16,6 +16,7 @@ object Epg {
     private class Slot(val list: List<Program>, val validUntil: Long)
 
     private const val LIMIT = 24
+    private const val FULL = "H:"
     private val cache = HashMap<String, Slot>()
     private val wanted = LinkedHashSet<String>()
     private val running = HashSet<String>()
@@ -28,15 +29,20 @@ object Epg {
     fun nowSec() = System.currentTimeMillis() / 1000
 
     /** Programmes à venir (le premier peut être en cours) ; null = en cours de chargement. */
-    fun programs(id: String): List<Program>? {
-        val s = cache[id]
+    fun programs(id: String): List<Program>? = load(id)?.filter { it.end > nowSec() }
+
+    /** Guide complet, passé compris (chaînes avec replay). */
+    fun full(id: String): List<Program>? = load(FULL + id)
+
+    private fun load(key: String): List<Program>? {
+        val s = cache[key]
         val t = nowSec()
-        if (s != null && t < s.validUntil) return s.list.filter { it.end > t }
-        if (id !in running) {
-            wanted.add(id)
+        if (s != null && t < s.validUntil) return s.list
+        if (key !in running) {
+            wanted.add(key)
             pump()
         }
-        return s?.list?.filter { it.end > t }
+        return s?.list
     }
 
     /** Programme en cours si connu ; sinon lance le chargement et renvoie null. */
@@ -48,6 +54,7 @@ object Epg {
     /** La ligne n'est plus à l'écran : inutile de charger son guide. */
     fun drop(id: String) {
         wanted.remove(id)
+        wanted.remove(FULL + id)
     }
 
     fun clear() {
@@ -56,17 +63,19 @@ object Epg {
 
     private fun pump() {
         while (running.size < 4 && wanted.isNotEmpty()) {
-            val id = wanted.last()
-            wanted.remove(id)
-            running.add(id)
+            val key = wanted.last()
+            wanted.remove(key)
+            running.add(key)
             Lists.scope.launch {
-                val list = Xtream.shortEpg(id, LIMIT)
+                val full = key.startsWith(FULL)
+                val id = if (full) key.substring(FULL.length) else key
+                val list = if (full) Xtream.fullEpg(id) else Xtream.shortEpg(id, LIMIT)
                 val t = nowSec()
                 // pas de guide : on ne redemande pas avant 30 min
                 val until = list.firstOrNull { it.end > t }?.end ?: (t + 1800)
                 main.post {
-                    cache[id] = Slot(list, until)
-                    running.remove(id)
+                    cache[key] = Slot(list, until)
+                    running.remove(key)
                     onLoaded?.invoke(id)
                     pump()
                 }

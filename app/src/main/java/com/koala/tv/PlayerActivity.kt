@@ -1,6 +1,11 @@
 package com.koala.tv
 
+import android.app.PictureInPictureParams
+import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import android.os.Handler
 import android.os.Looper
 import android.text.SpannableStringBuilder
@@ -26,6 +31,8 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import androidx.media3.session.MediaSession
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -52,6 +59,7 @@ class PlayerActivity : AppCompatActivity() {
     private lateinit var gestures: GestureDetector
 
     private var player: ExoPlayer? = null
+    private var session: MediaSession? = null
     private val handler = Handler(Looper.getMainLooper())
     private var index = 0
     private var retries = 0
@@ -103,6 +111,12 @@ class PlayerActivity : AppCompatActivity() {
         ovEpg = findViewById(R.id.ov_epg)
         tvStatus = findViewById(R.id.tv_status)
         tvNumber = findViewById(R.id.tv_number)
+        if (pipSupported) {
+            findViewById<View>(R.id.btn_pip).apply {
+                visibility = View.VISIBLE
+                setOnClickListener { enterPip() }
+            }
+        }
         pv.requestFocus()
 
         // Infos de la chaîne visibles tant que les commandes sont affichées
@@ -192,6 +206,12 @@ class PlayerActivity : AppCompatActivity() {
         p.addListener(listener)
         pv.player = p
         player = p
+        // commandes système (image dans l'image, casque Bluetooth, télécommandes)
+        session = try {
+            MediaSession.Builder(this, p).build()
+        } catch (e: Exception) {
+            null
+        }
         val start = Playback.startAt
         Playback.startAt = -1
         if (start >= 0) {
@@ -210,6 +230,8 @@ class PlayerActivity : AppCompatActivity() {
         handler.removeCallbacks(zapRunnable)
         epgJob?.cancel()
         player?.removeListener(listener)
+        session?.release()
+        session = null
         player?.release()
         player = null
         if (::pv.isInitialized) pv.player = null
@@ -292,7 +314,64 @@ class PlayerActivity : AppCompatActivity() {
         return sb
     }
 
+    // ---------- Image dans l'image (téléphone et tablette) ----------
+
+    private val pipSupported: Boolean by lazy {
+        Build.VERSION.SDK_INT >= 26 &&
+            packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) &&
+            !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+    }
+
+    private fun pipParams(): PictureInPictureParams? {
+        if (Build.VERSION.SDK_INT < 26) return null
+        val b = PictureInPictureParams.Builder()
+        val vs = player?.videoSize
+        if (vs != null && vs.width > 0 && vs.height > 0) {
+            val ratio = (vs.width * vs.pixelWidthHeightRatio / vs.height).coerceIn(0.42f, 2.38f)
+            b.setAspectRatio(Rational((ratio * 1000).toInt(), 1000))
+        } else {
+            b.setAspectRatio(Rational(16, 9))
+        }
+        if (Build.VERSION.SDK_INT >= 31) {
+            b.setAutoEnterEnabled(player?.isPlaying == true)
+            b.setSeamlessResizeEnabled(true)
+        }
+        return b.build()
+    }
+
+    private fun updatePip() {
+        if (pipSupported && Build.VERSION.SDK_INT >= 26) {
+            try { setPictureInPictureParams(pipParams()!!) } catch (e: Exception) { /* fenêtre pas prête */ }
+        }
+    }
+
+    private fun enterPip() {
+        if (!pipSupported || Build.VERSION.SDK_INT < 26) return
+        try { enterPictureInPictureMode(pipParams()!!) } catch (e: Exception) { toast("Image dans l'image indisponible") }
+    }
+
+    /** Bouton d'accueil : la vidéo continue dans une petite fenêtre (Android 8 à 11 ; ensuite c'est automatique). */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (Build.VERSION.SDK_INT in 26..30 && player?.isPlaying == true) enterPip()
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        pv.useController = !isInPictureInPictureMode
+        if (isInPictureInPictureMode) {
+            pv.hideController()
+            overlay.visibility = View.GONE
+            tvStatus.visibility = View.GONE
+            tvNumber.visibility = View.GONE
+        }
+    }
+
     private val listener = object : Player.Listener {
+        override fun onVideoSizeChanged(videoSize: VideoSize) = updatePip()
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) = updatePip()
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 Player.STATE_READY -> {

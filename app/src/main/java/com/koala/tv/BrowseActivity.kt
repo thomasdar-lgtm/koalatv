@@ -137,6 +137,10 @@ class BrowseActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        Lists.onUpdated = { k ->
+            val d = Lists.peek(k)
+            if (k == kind && d != null && allItems.isNotEmpty() && etSearch.text.isEmpty()) apply(d, initial = false)
+        }
         if (allItems.isNotEmpty()) {
             itemAdapter.reloadFavs()
             refreshFavCount()
@@ -148,36 +152,47 @@ class BrowseActivity : AppCompatActivity() {
         tvEmpty.visibility = View.GONE
         lifecycleScope.launch {
             try {
-                val c = Xtream.categories(kind)
-                val list = Xtream.items(kind)
-                allItems = list
-                val counts = HashMap<String, Int>()
-                for (it in list) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
-                val favs = Prefs.favs()
-                val favN = list.count { favs.contains(it.favKey) }
-                val built = ArrayList<Category>()
-                built.add(Category(FAV, "Favoris", favN))
-                built.add(Category(ALL, "Tout", list.size))
-                for (cat in c) {
-                    val n = counts[cat.id] ?: 0
-                    if (n > 0) built.add(Category(cat.id, cat.name, n))
-                }
-                cats = built
-                catAdapter.submit(built)
-                val start = when {
-                    restoreCat in built.indices -> restoreCat
-                    favN > 0 -> 0
-                    built.size > 2 -> 2
-                    else -> 1
-                }
-                selectCategory(start)
-                rvCats.scrollToPosition(start)
-                if (isWide) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+                apply(Lists.get(kind), initial = true)
             } catch (e: Exception) {
                 showMessage("Impossible de charger la liste.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
             } finally {
                 progress.visibility = View.GONE
             }
+        }
+    }
+
+    /** Construit les catégories (Favoris, Tout, puis celles du serveur qui ne sont pas vides). */
+    private fun apply(data: Lists.Data, initial: Boolean) {
+        val list = data.items
+        val prevId = cats.getOrNull(catIdx)?.id
+        allItems = list
+        val counts = HashMap<String, Int>()
+        for (it in list) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
+        val favs = Prefs.favs()
+        val favN = list.count { favs.contains(it.favKey) }
+        val built = ArrayList<Category>()
+        built.add(Category(FAV, "Favoris", favN))
+        built.add(Category(ALL, "Tout", list.size))
+        for (cat in data.cats) {
+            val n = counts[cat.id] ?: 0
+            if (n > 0) built.add(Category(cat.id, cat.name, n))
+        }
+        cats = built
+        catAdapter.submit(built)
+        if (initial) {
+            val start = when {
+                restoreCat in built.indices -> restoreCat
+                favN > 0 -> 0
+                built.size > 2 -> 2
+                else -> 1
+            }
+            selectCategory(start)
+            rvCats.scrollToPosition(start)
+            if (isWide) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+        } else {
+            // liste rafraîchie en arrière-plan : on reste sur la même catégorie, sans remonter en haut
+            val idx = built.indexOfFirst { it.id == prevId }.takeIf { it >= 0 } ?: 1
+            selectCategory(idx, clearSearch = false, keepScroll = true)
         }
     }
 
@@ -189,7 +204,7 @@ class BrowseActivity : AppCompatActivity() {
         handler.postDelayed(r, 300)
     }
 
-    private fun selectCategory(pos: Int, clearSearch: Boolean = true) {
+    private fun selectCategory(pos: Int, clearSearch: Boolean = true, keepScroll: Boolean = false) {
         val c = cats.getOrNull(pos) ?: return
         catIdx = pos
         catAdapter.setSelected(pos)
@@ -209,8 +224,8 @@ class BrowseActivity : AppCompatActivity() {
         val empty = if (c.id == FAV) {
             "Aucun favori pour le moment.\nAppui long sur une chaîne, un film ou une série pour l'ajouter."
         } else "Cette catégorie est vide."
-        showItems(list, c.name, empty)
-        if (!isWide) rvCats.smoothScrollToPosition(pos)
+        showItems(list, c.name, empty, keepScroll)
+        if (!isWide && !keepScroll) rvCats.smoothScrollToPosition(pos)
     }
 
     private fun runSearch(raw: String) {
@@ -219,14 +234,14 @@ class BrowseActivity : AppCompatActivity() {
             if (catIdx >= 0) selectCategory(catIdx, clearSearch = false)
             return
         }
-        val list = allItems.filter { fold(it.name).contains(q) }
+        val list = allItems.filter { it.searchKey.contains(q) }
         catAdapter.setSelected(-1)
         showItems(list, "Recherche : ${raw.trim()}", "Aucun résultat")
     }
 
-    private fun showItems(list: List<Item>, title: String, emptyMsg: String) {
+    private fun showItems(list: List<Item>, title: String, emptyMsg: String, keepScroll: Boolean = false) {
         itemAdapter.submit(list)
-        rvItems.scrollToPosition(0)
+        if (!keepScroll) rvItems.scrollToPosition(0)
         tvHead.text = title
         tvCount.text = if (list.isEmpty()) "" else plural(list.size, units.first, units.second)
         if (list.isEmpty()) showMessage(emptyMsg, false) else tvEmpty.visibility = View.GONE
@@ -304,6 +319,11 @@ class BrowseActivity : AppCompatActivity() {
             }
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        Lists.onUpdated = null
     }
 
     override fun onDestroy() {

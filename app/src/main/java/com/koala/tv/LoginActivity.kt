@@ -58,11 +58,11 @@ class LoginActivity : AppCompatActivity() {
             lifecycleScope.launch {
                 try {
                     val ui = Xtream.login(norm, user, pass)
+                    if (norm != Prefs.server || user != Prefs.user) Lists.clear()
                     Prefs.server = norm
                     Prefs.user = user
                     Prefs.pass = pass
                     Prefs.expiry = ui.s("exp_date")
-                    Cache.clear()
                     startActivity(Intent(this@LoginActivity, HomeActivity::class.java))
                     finish()
                 } catch (e: Exception) {

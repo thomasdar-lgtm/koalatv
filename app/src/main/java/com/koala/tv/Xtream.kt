@@ -2,6 +2,7 @@ package com.koala.tv
 
 import android.net.Uri
 import android.util.Base64
+import android.util.JsonReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -9,6 +10,7 @@ import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
+import java.io.InputStreamReader
 import java.net.URLEncoder
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -26,8 +28,15 @@ data class Item(
     val icon: String,
     val categoryId: String,
     val ext: String,
+    val num: Int = 0,
+    /** Jours de replay disponibles (0 = pas de replay). */
+    val archive: Int = 0,
+    val rating: String = "",
 ) {
     val favKey: String get() = "${kind.name}:$id"
+
+    /** Nom en minuscules sans accents, calculé une seule fois pour la recherche. */
+    val searchKey: String by lazy(LazyThreadSafetyMode.NONE) { fold(name) }
 }
 
 data class Episode(
@@ -46,14 +55,6 @@ data class PlayItem(
     val resumeKey: String?,
     val streamId: String?,
 )
-
-object Cache {
-    val cats = HashMap<Kind, List<Category>>()
-    val items = HashMap<Kind, List<Item>>()
-    fun clear() {
-        cats.clear(); items.clear()
-    }
-}
 
 /** Lit une valeur JSON en texte, en gérant les null / nombres renvoyés par certains panels. */
 fun JSONObject.s(k: String): String {
@@ -115,10 +116,29 @@ object Xtream {
         throw last ?: IOException("Erreur réseau")
     }
 
-    private fun arr(txt: String): JSONArray = try {
-        JSONArray(txt)
-    } catch (e: Exception) {
-        JSONArray()
+    /** Lit une réponse en flux (grandes listes) avec 3 tentatives. */
+    fun stream(action: String, block: (JsonReader) -> Unit) {
+        val req = Request.Builder().url(api(action)).header("User-Agent", Prefs.userAgent).build()
+        var last: IOException? = null
+        repeat(3) { attempt ->
+            try {
+                http.newCall(req).execute().use { r ->
+                    if (!r.isSuccessful) throw IOException("Erreur serveur HTTP ${r.code}")
+                    val body = r.body ?: throw IOException("Réponse vide")
+                    JsonReader(InputStreamReader(body.byteStream(), Charsets.UTF_8)).use { jr ->
+                        jr.isLenient = true
+                        block(jr)
+                    }
+                    return
+                }
+            } catch (e: IOException) {
+                last = e
+                if (attempt < 2) Thread.sleep(800L * (attempt + 1))
+            } catch (e: IllegalStateException) {
+                throw IOException("Réponse invalide du serveur")
+            }
+        }
+        throw last ?: IOException("Erreur réseau")
     }
 
     suspend fun login(server: String, user: String, pass: String): JSONObject = withContext(Dispatchers.IO) {
@@ -133,48 +153,6 @@ object Xtream {
         val status = ui.s("status")
         if (status.isNotEmpty() && !status.equals("Active", true)) throw IOException("Abonnement : $status")
         ui
-    }
-
-    suspend fun categories(kind: Kind): List<Category> = withContext(Dispatchers.IO) {
-        Cache.cats[kind]?.let { return@withContext it }
-        val action = when (kind) {
-            Kind.LIVE -> "get_live_categories"
-            Kind.MOVIE -> "get_vod_categories"
-            Kind.SERIES -> "get_series_categories"
-        }
-        val a = arr(fetch(api(action)))
-        val out = ArrayList<Category>(a.length())
-        for (i in 0 until a.length()) {
-            val o = a.optJSONObject(i) ?: continue
-            out.add(Category(o.s("category_id"), o.s("category_name")))
-        }
-        Cache.cats[kind] = out
-        out
-    }
-
-    suspend fun items(kind: Kind): List<Item> = withContext(Dispatchers.IO) {
-        Cache.items[kind]?.let { return@withContext it }
-        val action = when (kind) {
-            Kind.LIVE -> "get_live_streams"
-            Kind.MOVIE -> "get_vod_streams"
-            Kind.SERIES -> "get_series"
-        }
-        val a = arr(fetch(api(action)))
-        val out = ArrayList<Item>(a.length())
-        for (i in 0 until a.length()) {
-            val o = a.optJSONObject(i) ?: continue
-            val item = when (kind) {
-                Kind.LIVE -> Item(kind, o.s("stream_id"), o.s("name"), o.s("stream_icon"), o.s("category_id"), "")
-                Kind.MOVIE -> Item(
-                    kind, o.s("stream_id"), o.s("name"), o.s("stream_icon"), o.s("category_id"),
-                    o.s("container_extension").ifEmpty { "mp4" },
-                )
-                Kind.SERIES -> Item(kind, o.s("series_id"), o.s("name"), o.s("cover"), o.s("category_id"), "")
-            }
-            if (item.id.isNotEmpty()) out.add(item)
-        }
-        Cache.items[kind] = out
-        out
     }
 
     suspend fun seriesEpisodes(seriesId: String): List<Episode> = withContext(Dispatchers.IO) {

@@ -39,6 +39,7 @@ class HomeActivity : AppCompatActivity() {
         settings.setOnClickListener { showSettings() }
         listOf(live, movies, series, settings).forEach { it.focusZoom(1.05f) }
         live.requestFocus()
+        Lists.warmAll()
     }
 
     private fun appVersion(): String = try {
@@ -67,15 +68,15 @@ class HomeActivity : AppCompatActivity() {
                         showSettings()
                     }
                     2 -> {
-                        Cache.clear()
-                        toast("Listes actualisées")
+                        toast("Actualisation des listes…")
+                        Lists.refreshAll { ok -> toast(if (ok) "Listes à jour" else "Actualisation impossible, réessaie plus tard") }
                     }
                     3 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->
                             Prefs.pass = ""
-                            Cache.clear()
+                            Lists.clear()
                             startActivity(Intent(this, LoginActivity::class.java))
                             finish()
                         }

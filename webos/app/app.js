@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.3.0';
+  var VERSION = '1.4.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -82,6 +82,8 @@
       setP('hist', l);
     }
   };
+
+  function liveItem(it) { return { title: it.name, url: X.url('live', it.id), live: true, id: it.id, num: it.num || 0, icon: it.icon }; }
 
   /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
   function episodeList(sid, sname, icon, eps) {
@@ -1137,7 +1139,7 @@
       }
       var list = [], src = this.items.items;
       for (var i = 0; i < src.length; i++) {
-        list.push({ title: src[i].name, url: X.url('live', src[i].id), live: true, id: src[i].id });
+        list.push(liveItem(src[i]));
       }
       go('player', { list: list, index: this.items.idx });
     },
@@ -1393,6 +1395,10 @@
     enter: function (p) {
       this.list = p.list;
       this.i = p.index || 0;
+      this.prevList = null;
+      this.prevI = -1;
+      this.digits = '';
+      this.okTimer = null;
       this.active = true;
       this.start(true);
       var self = this;
@@ -1407,6 +1413,10 @@
       this.status('');
       cls($('p-info'), 'on', false);
       cls($('p-pause'), 'on', false);
+      cls($('p-num'), 'on', false);
+      clearTimeout(this.okTimer);
+      this.okTimer = null;
+      this.digits = '';
       spinner(false);
     },
     start: function (askResume) {
@@ -1485,10 +1495,14 @@
       if (this.i < this.list.length - 1) { this.i++; this.start(true); }
       else back();
     },
-    zap: function (d) {
+    /* Changement de chaîne : le titre s'affiche tout de suite, le flux démarre quand on arrête de zapper */
+    switchTo: function (list, i) {
       var self = this;
-      if (this.list.length < 2) return;
-      this.i = (this.i + d + this.list.length) % this.list.length;
+      if (!list.length || (list === this.list && i === this.i)) return;
+      this.prevList = this.list;
+      this.prevI = this.i;
+      this.list = list;
+      this.i = Math.max(0, Math.min(i, list.length - 1));
       this.retries = 0;
       clearTimeout(this.timers.retry);
       this.timers.retry = null;
@@ -1498,6 +1512,45 @@
       this.showInfo();
       clearTimeout(this.timers.zap);
       this.timers.zap = setTimeout(function () { self.load(0); }, 350);
+    },
+    zap: function (d) {
+      if (this.list.length < 2) return;
+      this.switchTo(this.list, (this.i + d + this.list.length) % this.list.length);
+    },
+    /* Retour à la chaîne regardée juste avant */
+    previous: function () {
+      if (!this.prevList || !this.prevList[this.prevI]) { toast('Pas encore de chaîne précédente'); return; }
+      this.switchTo(this.prevList, this.prevI);
+    },
+    /* Saisie d'un numéro de chaîne */
+    typeDigit: function (d) {
+      var self = this;
+      if (this.digits.length >= 4) this.digits = '';
+      this.digits += d;
+      $('p-num').textContent = this.digits;
+      cls($('p-num'), 'on', true);
+      clearTimeout(this.timers.digits);
+      this.timers.digits = setTimeout(function () { self.commitDigits(); }, 2000);
+    },
+    commitDigits: function () {
+      clearTimeout(this.timers.digits);
+      var n = parseInt(this.digits, 10), i, self = this;
+      this.digits = '';
+      cls($('p-num'), 'on', false);
+      if (!(n > 0)) return;
+      for (i = 0; i < this.list.length; i++) if (this.list[i].num === n) { this.switchTo(this.list, i); return; }
+      // pas dans la catégorie en cours : on cherche dans toutes les chaînes
+      Lists.get('live', function (err, data) {
+        if (err || !self.active) return;
+        var all = [], at = -1, k;
+        for (k = 0; k < data.items.length; k++) if (data.items[k].num > 0) all.push(data.items[k]);
+        all.sort(function (a, b) { return a.num - b.num; });
+        for (k = 0; k < all.length; k++) if (all[k].num === n) at = k;
+        if (at < 0) { toast('Chaîne ' + n + ' introuvable'); return; }
+        var list = [];
+        for (k = 0; k < all.length; k++) list.push(liveItem(all[k]));
+        self.switchTo(list, at);
+      });
     },
     saveProgress: function () {
       var it = this.cur(), v = this.v;
@@ -1522,7 +1575,7 @@
     showInfo: function (keep) {
       var self = this, it = this.cur();
       $('p-title').textContent = it.title;
-      $('p-pos').textContent = it.live && this.list.length > 1 ? (this.i + 1) + ' / ' + this.list.length : '';
+      $('p-pos').textContent = !it.live ? '' : it.num > 0 ? 'Chaîne ' + it.num : this.list.length > 1 ? (this.i + 1) + ' / ' + this.list.length : '';
       cls($('p-vod'), 'on', !it.live);
       if (!it.live) this.paintProgress();
       var epg = $('p-epg');
@@ -1584,17 +1637,34 @@
       for (i = 0; i < tr.length; i++) tr[i].mode = i === nx ? 'showing' : 'disabled';
       toast(nx < 0 ? 'Sous-titres désactivés' : 'Sous-titres : ' + (tr[nx].label || tr[nx].language || 'piste ' + (nx + 1)));
     },
-    key: function (c) {
+    keyup: function (c) {
+      if (c !== K.OK || !this.okTimer) return;
+      if (this.okTimer !== 'long') {
+        clearTimeout(this.okTimer);
+        if (this.digits) this.commitDigits(); else this.showInfo();
+      }
+      this.okTimer = null;
+    },
+    key: function (c, e) {
       var it = this.cur();
       if (c === K.STOP) { back(); return true; }
       if (c === K.GREEN) { this.cycleAudio(); return true; }
       if (c === K.YELLOW) { this.cycleSubs(); return true; }
       if (it.live) {
-        if (c === K.UP) this.zap(-1);
+        var self = this;
+        if (c >= 48 && c <= 57) this.typeDigit(c - 48);
+        else if (c >= 96 && c <= 105) this.typeDigit(c - 96);
+        else if (c === K.UP) this.zap(-1);
         else if (c === K.DOWN) this.zap(1);
         else if (c === K.CH_UP) this.zap(1);
         else if (c === K.CH_DOWN) this.zap(-1);
-        else if (c === K.OK || c === K.INFO || c === K.LEFT || c === K.RIGHT) this.showInfo();
+        else if (c === K.BLUE) this.previous();
+        else if (c === K.OK) {
+          // appui court : infos (ou valide le numéro) · appui long : chaîne précédente
+          if (e && e.repeat) return true;
+          if (!this.okTimer) this.okTimer = setTimeout(function () { self.okTimer = 'long'; self.previous(); }, 650);
+        }
+        else if (c === K.INFO || c === K.LEFT || c === K.RIGHT) this.showInfo();
         return true;
       }
       if (c === K.OK || c === K.PLAY || c === K.PAUSE) {

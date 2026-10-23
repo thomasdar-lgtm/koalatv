@@ -168,6 +168,9 @@ input { font-family: inherit; }
 #p-status { position: absolute; top: 2.4rem; left: 50%; width: 24rem; margin-left: -12rem; text-align: center;
   background: rgba(14, 17, 22, .9); padding: .8rem 1rem; border-radius: .8rem; font-size: 1.1rem; display: none; }
 #p-status.on { display: block; }
+#p-num { position: absolute; top: 2.4rem; right: 3.5rem; min-width: 6rem; padding: .4rem 1.4rem; text-align: center; border-radius: .9rem;
+  background: rgba(14, 17, 22, .9); color: #3DDC97; font-size: 3rem; font-weight: 700; display: none; }
+#p-num.on { display: block; }
 #p-pause { position: absolute; top: 50%; left: 50%; width: 6rem; height: 6rem; margin: -3rem 0 0 -3rem; border-radius: 50%;
   background: rgba(0, 0, 0, .6); display: none; }
 #p-pause.on { display: block; }

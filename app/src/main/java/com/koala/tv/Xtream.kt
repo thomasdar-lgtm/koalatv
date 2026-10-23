@@ -45,6 +45,20 @@ data class Episode(
     val plot: String,
 )
 
+data class MovieInfo(
+    val title: String,
+    val poster: String,
+    val backdrop: String,
+    val plot: String,
+    val year: String,
+    val minutes: Int,
+    val genre: String,
+    val rating: String,
+    val director: String,
+    val cast: String,
+    val ext: String,
+)
+
 /** Programme du guide TV (heures en secondes depuis 1970). */
 data class Program(val title: String, val start: Long, val end: Long, val desc: String = "") {
     fun progress(nowSec: Long): Int =
@@ -210,6 +224,40 @@ object Xtream {
         }
         out.sortWith(compareBy<Episode>({ it.season }, { it.num }))
         out
+    }
+
+    /** Fiche d'un film (résumé, durée, note…). */
+    suspend fun vodInfo(id: String): MovieInfo = withContext(Dispatchers.IO) {
+        val root = try {
+            JSONObject(fetch(api("get_vod_info", "&vod_id=$id")))
+        } catch (e: org.json.JSONException) {
+            throw IOException("Réponse invalide du serveur")
+        }
+        val info = root.optJSONObject("info") ?: JSONObject()
+        val data = root.optJSONObject("movie_data") ?: JSONObject()
+        val backdrop = when (val b = info.opt("backdrop_path")) {
+            is JSONArray -> if (b.length() > 0) b.optString(0) else ""
+            is String -> b
+            else -> ""
+        }
+        val secs = info.s("duration_secs").toLongOrNull()
+            ?: info.s("duration").split(':').let { p -> if (p.size == 3) p[0].toLongOrNull()?.let { h -> h * 3600 + (p[1].toLongOrNull() ?: 0) * 60 } else null }
+            ?: info.s("episode_run_time").toLongOrNull()?.times(60)
+            ?: 0L
+        val date = info.s("releasedate").ifEmpty { info.s("release_date") }
+        MovieInfo(
+            title = info.s("name").ifEmpty { data.s("name") },
+            poster = info.s("movie_image").ifEmpty { info.s("cover_big") },
+            backdrop = backdrop,
+            plot = info.s("plot").ifEmpty { info.s("description") },
+            year = Regex("\\b(19|20)\\d{2}\\b").find(date)?.value ?: "",
+            minutes = (secs / 60).toInt(),
+            genre = info.s("genre"),
+            rating = info.s("rating").toDoubleOrNull()?.takeIf { it > 0 }?.let { String.format(java.util.Locale.FRANCE, "%.1f", it) } ?: "",
+            director = info.s("director"),
+            cast = info.s("cast").ifEmpty { info.s("actors") },
+            ext = data.s("container_extension"),
+        )
     }
 
     /** Programmes à venir d'une chaîne (le premier est celui en cours). Liste vide si pas de guide. */

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Mobile : image en haut, affiche + titre, boutons, résumé -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="210dp">
+
+                <ImageView
+                    android:id="@+id/iv_backdrop"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:alpha="0.6"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/movie_scrim_bottom" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="-90dp"
+                android:orientation="vertical"
+                android:paddingStart="@dimen/page_pad"
+                android:paddingEnd="@dimen/page_pad"
+                android:paddingBottom="24dp">
+
+                <ImageView
+                    android:id="@+id/iv_poster"
+                    android:layout_width="110dp"
+                    android:layout_height="165dp"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/poster_bg"
+                    android:contentDescription="@null"
+                    android:scaleType="centerCrop" />
+
+                <include layout="@layout/view_movie_info" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="16dp"
+        android:indeterminateTint="@color/accent" />
+</FrameLayout>

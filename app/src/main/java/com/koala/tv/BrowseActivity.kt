@@ -299,10 +299,13 @@ class BrowseActivity : AppCompatActivity() {
                 val play = itemAdapter.items.map { liveItem(it) }
                 Nav.play(this, play, pos)
             }
-            Kind.MOVIE -> Nav.play(
-                this,
-                listOf(PlayItem(item.name, Xtream.movieUrl(item.id, item.ext), false, "m${item.id}", item.id, item.icon)),
-                0,
+            Kind.MOVIE -> startActivity(
+                Intent(this, MovieActivity::class.java)
+                    .putExtra("id", item.id)
+                    .putExtra("name", item.name)
+                    .putExtra("icon", item.icon)
+                    .putExtra("ext", item.ext)
+                    .putExtra("rating", item.rating),
             )
             Kind.SERIES -> startActivity(
                 Intent(this, SeriesActivity::class.java)

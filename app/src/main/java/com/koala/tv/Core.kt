@@ -98,15 +98,18 @@ object Prefs {
 object Playback {
     var items: List<PlayItem> = emptyList()
     var index: Int = 0
+    /** Position de départ choisie avant la lecture (fiche film) : -1 = demander s'il y a une reprise. */
+    var startAt: Long = -1
 }
 
 object Nav {
-    fun play(a: Activity, items: List<PlayItem>, index: Int) {
+    fun play(a: Activity, items: List<PlayItem>, index: Int, startAt: Long = -1) {
         if (items.isEmpty()) return
         val i = index.coerceIn(0, items.size - 1)
         if (Prefs.externalPlayer && openExternal(a, items[i])) return
         Playback.items = items
         Playback.index = i
+        Playback.startAt = startAt
         a.startActivity(Intent(a, PlayerActivity::class.java))
     }
 

@@ -192,7 +192,14 @@ class PlayerActivity : AppCompatActivity() {
         p.addListener(listener)
         pv.player = p
         player = p
-        playCurrent(askResume = true)
+        val start = Playback.startAt
+        Playback.startAt = -1
+        if (start >= 0) {
+            playCurrent(askResume = false)
+            if (start > 0) p.seekTo(start)
+        } else {
+            playCurrent(askResume = true)
+        }
         handler.removeCallbacks(saveLoop)
         handler.postDelayed(saveLoop, 10_000)
     }

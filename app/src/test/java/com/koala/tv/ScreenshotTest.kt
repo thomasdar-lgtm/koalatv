@@ -45,7 +45,7 @@ class ScreenshotTest {
         if (remote) {
             // une vraie touche de télécommande : sortie du mode tactile, comme sur le boîtier
             sc.onActivity { a ->
-                for (k in intArrayOf(android.view.KeyEvent.KEYCODE_DPAD_LEFT)) {
+                for (k in intArrayOf(android.view.KeyEvent.KEYCODE_DPAD_LEFT, android.view.KeyEvent.KEYCODE_DPAD_DOWN)) {
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k))
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, k))
                 }

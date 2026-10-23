@@ -2,12 +2,12 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.6.0';
+  var VERSION = '1.7.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
     LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, OK: 13, BACK: 461, ESC: 27, BKSP: 8,
-    CH_UP: 33, CH_DOWN: 34, PLAY: 415, PAUSE: 19, STOP: 413, FF: 417, RW: 412,
+    CH_UP: 33, CH_DOWN: 34, PLAY: 415, PAUSE: 19, STOP: 413, FF: 417, RW: 412, GUIDE: 458,
     RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406, INFO: 457
   };
 
@@ -355,15 +355,15 @@
       });
     },
 
-    epg: function (streamId, cb) {
-      getJson(api('get_short_epg', '&stream_id=' + encodeURIComponent(streamId) + '&limit=2'), function (err, j) {
+    epg: function (streamId, cb, limit) {
+      getJson(api('get_short_epg', '&stream_id=' + encodeURIComponent(streamId) + '&limit=' + (limit || 2)), function (err, j) {
         var out = [];
         if (!err && j && j.epg_listings && j.epg_listings.length) {
           for (var i = 0; i < j.epg_listings.length; i++) {
             var e = j.epg_listings[i], t = str(b64(str(e.title))), ts = parseInt(e.start_timestamp, 10),
               te = parseInt(e.stop_timestamp || e.end_timestamp, 10);
             if (!t || (te && te * 1000 <= Date.now())) continue;
-            out.push({ h: ts ? hm(ts) : '', t: t, s: ts || 0, e: te || 0 });
+            out.push({ h: ts ? hm(ts) : '', t: t, s: ts || 0, e: te || 0, d: str(b64(str(e.description))) });
           }
         }
         cb(out);
@@ -1075,32 +1075,41 @@
   /* Programme en cours des chaînes visibles : chargé à la demande, 4 à la fois, gardé jusqu'à la fin du programme */
   var Epg = {
     cache: {}, queue: [], running: 0, onLoaded: null,
-    now: function (id) {
-      var c = this.cache[id], t = Date.now() / 1000;
-      if (c && t < c.until) return c.p && c.p.e > t ? c.p : null;
+    /** Programmes à venir (le premier peut être en cours) ; null = en cours de chargement. */
+    list: function (id) {
+      var c = this.cache[id], t = Date.now() / 1000, out = null, i;
+      if (c && c.rows) { out = []; for (i = 0; i < c.rows.length; i++) if (c.rows[i].e > t) out.push(c.rows[i]); }
+      if (c && t < c.until) return out;
       if (!c || !c.loading) {
-        for (var i = 0; i < this.queue.length; i++) if (this.queue[i] === id) return null;
+        for (i = 0; i < this.queue.length; i++) if (this.queue[i] === id) return out;
         this.queue.push(id);
         if (this.queue.length > 40) this.queue.shift(); // seules les dernières lignes affichées comptent
         this.pump();
       }
+      return out;
+    },
+    now: function (id) {
+      var l = this.list(id), t = Date.now() / 1000;
+      if (l) for (var i = 0; i < l.length; i++) if (l[i].s <= t && l[i].e > t) return l[i];
       return null;
     },
     pump: function () {
       var self = this;
       while (this.running < 4 && this.queue.length) {
         var id = this.queue.pop();
-        this.cache[id] = { loading: true, until: 0 };
+        var old = this.cache[id];
+        this.cache[id] = { loading: true, until: 0, rows: old ? old.rows : null };
         this.running++;
         (function (id) {
           X.epg(id, function (rows) {
             self.running--;
-            var t = Date.now() / 1000, p = null;
-            for (var i = 0; i < rows.length; i++) if (rows[i].s <= t && rows[i].e > t) { p = rows[i]; break; }
-            self.cache[id] = { p: p, until: p ? p.e : (rows.length && rows[0].s > t ? rows[0].s : t + 1800) };
+            var t = Date.now() / 1000, until = t + 1800;
+            // gardé jusqu'à la fin du programme en cours ; pas de guide : on ne redemande pas avant 30 min
+            for (var i = 0; i < rows.length; i++) if (rows[i].e > t) { until = rows[i].e; break; }
+            self.cache[id] = { rows: rows, until: until };
             if (self.onLoaded) self.onLoaded(id);
             self.pump();
-          });
+          }, 24);
         })(id);
       }
     }
@@ -1160,6 +1169,7 @@
       });
       this.search.addEventListener('blur', function () { cls($('b-search-box'), 'editing', false); });
       $('b-search-box').addEventListener('click', function () { self.setZone('search'); self.editSearch(); });
+      $('b-guide').addEventListener('click', function () { self.openGuide(); });
     },
     enter: function (p) {
       var self = this, token = ++this.token;
@@ -1167,6 +1177,7 @@
       this.query = '';
       this.search.value = '';
       $('b-title').textContent = TITLES[this.kind];
+      cls($('b-guide'), 'hide', this.kind !== 'live');
       this.items.o.render = this.kind === 'live' ? renderRow : renderPoster;
       this.items.o.itemW = this.kind === 'live' ? 0 : 11.6;
       this.all = [];
@@ -1308,7 +1319,12 @@
       this.zone = z;
       this.paintZone();
     },
+    openGuide: function () {
+      if (this.kind !== 'live' || !this.items.items.length) return;
+      go('guide', { channels: this.items.items, index: this.zone === 'items' ? this.items.idx : 0 });
+    },
     paintZone: function () {
+      cls($('b-guide'), 'focus', this.zone === 'gbtn');
       cls($('b-search-box'), 'focus', this.zone === 'search');
       if (this.cats.active !== (this.zone === 'cats')) this.cats.focus(this.zone === 'cats');
       if (this.items.active !== (this.zone === 'items')) this.items.focus(this.zone === 'items');
@@ -1364,6 +1380,13 @@
         if (c === K.OK) this.enter({ kind: this.kind });
         return true;
       }
+      if ((c === K.GREEN || c === K.GUIDE) && this.kind === 'live') { this.openGuide(); return true; }
+      if (this.zone === 'gbtn') {
+        if (c === K.OK) this.openGuide();
+        else if (c === K.DOWN && this.items.items.length) this.setZone('items');
+        else if (c === K.LEFT) this.setZone('cats');
+        return true;
+      }
       if (this.zone === 'search') {
         if (c === K.OK) this.editSearch();
         else if (c === K.DOWN) this.setZone('cats');
@@ -1395,7 +1418,10 @@
       if (c === K.RED) { this.toggleFav(); return true; }
       if (c === K.LEFT) { if (!this.items.move(-1, 0)) this.setZone('cats'); return true; }
       if (c === K.RIGHT) { this.items.move(1, 0); return true; }
-      if (c === K.UP) { this.items.move(0, -1); return true; }
+      if (c === K.UP) {
+        if (!this.items.move(0, -1) && this.kind === 'live') this.setZone('gbtn');
+        return true;
+      }
       if (c === K.DOWN) { this.items.move(0, 1); return true; }
       if (c === K.CH_UP || c === K.CH_DOWN) { this.items.page(c === K.CH_UP ? -1 : 1); return true; }
       return false;
@@ -1518,6 +1544,139 @@
       else if (c === K.DOWN) this.eList.move(0, 1);
       else if (c === K.CH_UP || c === K.CH_DOWN) this.eList.page(c === K.CH_UP ? -1 : 1);
       else if (c === K.LEFT) this.setZone('seasons');
+      else if (c === K.OK) this.play();
+      return true;
+    }
+  };
+
+  /* ---------- Guide TV en grille ---------- */
+
+  screens.guide = {
+    el: $('s-guide'),
+    SPAN: 3 * 3600,
+    rowH: 0,
+    init: function () {
+      var self = this;
+      $('g-rows').addEventListener('click', function (e) {
+        var n = e.target, prog = null, row = null;
+        while (n && n !== this) {
+          if (n.getAttribute && n.getAttribute('data-p') !== null && prog === null) prog = parseInt(n.getAttribute('data-p'), 10);
+          if (n.getAttribute && n.getAttribute('data-r') !== null) { row = parseInt(n.getAttribute('data-r'), 10); break; }
+          n = n.parentNode;
+        }
+        if (row === null) return;
+        var list = Epg.list(self.ch[row].id) || [];
+        if (row === self.row && prog !== null && list[prog] === self.selected(row)) { self.play(); return; }
+        self.row = row;
+        if (prog !== null && list[prog]) self.time = Math.max(list[prog].s, Date.now() / 1000);
+        self.render();
+      });
+    },
+    floor30: function (t) { return t - t % 1800; },
+    enter: function (p) {
+      var self = this;
+      this.ch = p.channels;
+      this.row = Math.max(0, Math.min(p.index || 0, this.ch.length - 1));
+      this.time = Date.now() / 1000;
+      this.start = this.floor30(Math.floor(this.time));
+      this.top = Math.max(0, this.row - 1);
+      this.timer = setInterval(function () { self.render(); }, 30000);
+      this.render();
+    },
+    leave: function () { clearInterval(this.timer); },
+    resume: function () { this.render(); },
+    loaded: function (id) {
+      for (var i = this.top; i < Math.min(this.ch.length, this.top + this.vis + 1); i++) if (this.ch[i].id === id) { this.render(); return; }
+    },
+    selected: function (row) {
+      var l = Epg.list(this.ch[row].id), i;
+      if (!l || !l.length) return null;
+      for (i = 0; i < l.length; i++) if (l[i].s <= this.time && l[i].e > this.time) return l[i];
+      for (i = 0; i < l.length; i++) if (l[i].s > this.time) return l[i];
+      return l[l.length - 1];
+    },
+    render: function () {
+      var box = $('g-rows'), now = Date.now() / 1000, end = this.start + this.SPAN, i, j;
+      this.rowH = 3.7 * REM;
+      this.vis = Math.max(1, Math.floor(box.clientHeight / this.rowH));
+      if (this.row < this.top) this.top = this.row;
+      if (this.row > this.top + this.vis - 1) this.top = this.row - this.vis + 1;
+      // règle des heures
+      var r = '';
+      for (var t = this.start; t < end; t += 1800) r += '<span style="left:' + ((t - this.start) / this.SPAN * 100) + '%">' + hm(t) + '</span>';
+      if (now >= this.start && now < end) r += '<i style="left:' + ((now - this.start) / this.SPAN * 100) + '%"></i>';
+      $('g-ruler').innerHTML = r;
+      var d = new Date(this.start * 1000), days = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+      $('g-day').textContent = days[d.getDay()] + ' ' + d.getDate();
+      $('g-clock').textContent = hm(now);
+      // lignes visibles
+      var h = '';
+      for (i = this.top; i < Math.min(this.ch.length, this.top + this.vis); i++) {
+        var c = this.ch[i], l = Epg.list(c.id), sel = i === this.row ? this.selected(i) : null, cells = '';
+        if (!l || !l.length) {
+          cells = '<div class="gp empty' + (i === this.row ? ' focus' : '') + '" style="left:0;width:100%"><b>' + (l ? 'Pas de programme' : 'Chargement…') + '</b></div>';
+        } else {
+          for (j = 0; j < l.length; j++) {
+            var p = l[j];
+            if (p.e <= this.start || p.s >= end) continue;
+            var x0 = Math.max(0, (p.s - this.start) / this.SPAN), x1 = Math.min(1, (p.e - this.start) / this.SPAN);
+            cells += '<div class="gp' + (p === sel ? ' focus' : '') + (p.s <= now && p.e > now ? ' now' : '') + '" data-p="' + j +
+              '" style="left:' + (x0 * 100).toFixed(3) + '%;width:' + ((x1 - x0) * 100).toFixed(3) + '%"><b>' + esc(p.t) + '</b><small>' +
+              hm(p.s) + ' – ' + hm(p.e) + '</small></div>';
+          }
+        }
+        if (now >= this.start && now < end) cells += '<i class="gnow" style="left:' + ((now - this.start) / this.SPAN * 100) + '%"></i>';
+        h += '<div class="grow' + (i === this.row ? ' sel' : '') + '" data-r="' + i + '" style="top:' + ((i - this.top) * this.rowH) + 'px;height:' + this.rowH + 'px">' +
+          '<div class="gch"><span class="logo">' + imgTag(c.icon) + '</span><span class="n">' + esc(c.name) + '</span></div>' +
+          '<div class="gstrip">' + cells + '</div></div>';
+      }
+      box.innerHTML = h;
+      // détails du programme sélectionné
+      var ch = this.ch[this.row], ps = this.selected(this.row), lst = Epg.list(ch.id);
+      $('g-title').textContent = ps ? ps.t : ch.name;
+      var when;
+      if (!ps) when = lst ? 'Pas de programme pour cette chaîne' : 'Chargement du programme…';
+      else when = ch.name + '  ·  ' + hm(ps.s) + ' – ' + hm(ps.e) + '  ·  ' + (ps.s <= now
+        ? 'en cours · reste ' + Math.max(1, Math.floor((ps.e - now) / 60)) + ' min'
+        : 'dans ' + Math.max(1, Math.floor((ps.s - now) / 60)) + ' min');
+      $('g-when').textContent = when;
+      $('g-desc').textContent = ps && ps.d ? ps.d : '';
+    },
+    moveRow: function (dlt) {
+      var n = Math.max(0, Math.min(this.ch.length - 1, this.row + dlt));
+      if (n === this.row) return;
+      this.row = n;
+      this.render();
+    },
+    moveProg: function (dlt) {
+      var l = Epg.list(this.ch[this.row].id) || [], cur = this.selected(this.row), idx = -1, i, now = Date.now() / 1000;
+      for (i = 0; i < l.length; i++) if (l[i] === cur) idx = i;
+      var next = l[idx + dlt], nowFloor = this.floor30(Math.floor(now));
+      if (!next) {
+        // ligne vide ou bout de la liste : on fait défiler le temps par demi-heure
+        var s = Math.max(nowFloor, this.start + dlt * 1800);
+        if (s === this.start) return;
+        this.start = s;
+        this.time = Math.max(now, s);
+      } else {
+        this.time = Math.max(next.s, now);
+        if (next.s >= this.start + this.SPAN - 1800) this.start = this.floor30(next.s) - 1800;
+        if (next.e <= this.start || (next.s < this.start && dlt < 0)) this.start = Math.max(nowFloor, this.floor30(next.s));
+      }
+      this.render();
+    },
+    play: function () {
+      var list = [];
+      for (var i = 0; i < this.ch.length; i++) list.push(liveItem(this.ch[i]));
+      go('player', { list: list, index: this.row });
+    },
+    key: function (c) {
+      if (c === K.UP) this.moveRow(-1);
+      else if (c === K.DOWN) this.moveRow(1);
+      else if (c === K.CH_UP) this.moveRow(-this.vis);
+      else if (c === K.CH_DOWN) this.moveRow(this.vis);
+      else if (c === K.LEFT) this.moveProg(-1);
+      else if (c === K.RIGHT) this.moveProg(1);
       else if (c === K.OK) this.play();
       return true;
     }
@@ -2047,6 +2206,7 @@
 
   Epg.onLoaded = function (id) {
     var b = screens.browse;
+    if (cur === screens.guide) { screens.guide.loaded(id); return; }
     if (cur !== b || b.kind !== 'live') return;
     for (var k in b.items.nodes) {
       if (b.items.nodes.hasOwnProperty(k) && b.items.items[k] && b.items.items[k].id === id) b.items.refresh(+k);

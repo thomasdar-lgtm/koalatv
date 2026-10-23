@@ -97,7 +97,7 @@ input { font-family: inherit; }
 .head { position: absolute; top: 2rem; left: 2.2rem; right: 2.2rem; height: 2.2rem; line-height: 2.2rem;
   display: -webkit-box; display: -webkit-flex; display: flex; }
 .head span:first-child { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; font-size: 1.5rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.head span:last-child { font-size: 1.05rem; color: #8B95A3; margin-left: 1rem; }
+#b-count, #sr-count { font-size: 1.05rem; color: #8B95A3; margin-left: 1rem; }
 #b-items, #sr-eps { position: absolute; top: 5.4rem; left: 1.4rem; right: 1.4rem; bottom: .8rem; }
 .msg { position: absolute; top: 45%; left: 10%; right: 10%; text-align: center; font-size: 1.3rem; line-height: 1.9rem; color: #8B95A3; display: none; }
 .msg.on { display: block; }
@@ -144,6 +144,42 @@ input { font-family: inherit; }
 .ep .tt { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; font-size: 1.2rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ep .r { font-size: .9rem; color: #3DDC97; margin-left: 1rem; }
 .ep .p { margin-top: .4rem; height: 2.5rem; font-size: .95rem; line-height: 1.25rem; color: #8B95A3; overflow: hidden; }
+
+/* Bouton « Guide TV » */
+.head span.hbtn { -webkit-box-flex: 0; -webkit-flex: none; flex: none; margin-left: 1.2rem; height: 2.2rem; line-height: 1.92rem; padding: 0 1rem;
+  border-radius: .7rem; background: #1B222C; border: .14rem solid transparent; font-size: 1rem; font-weight: 600; color: #EDEFF2; }
+.head span.hbtn.focus { border-color: #3DDC97; background: #1E2631; }
+.head span.hbtn.hide { display: none; }
+
+/* Guide TV */
+.g-info { position: absolute; top: 1.6rem; left: 3rem; right: 3rem; height: 7.2rem; }
+.g-top { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: baseline; -webkit-align-items: baseline; align-items: baseline; }
+#g-title { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; font-size: 1.7rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#g-clock { margin-left: 1.5rem; font-size: 1.2rem; font-weight: 600; color: #8B95A3; }
+#g-when { margin-top: .4rem; font-size: 1.05rem; color: #3DDC97; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#g-desc { margin-top: .4rem; font-size: 1rem; line-height: 1.45rem; color: #B7C0CC; max-height: 2.9rem; overflow: hidden; }
+.g-rule { position: absolute; top: 9.4rem; left: 3rem; right: 3rem; height: 2rem; }
+#g-day { position: absolute; left: .4rem; bottom: .5rem; font-size: .95rem; color: #8B95A3; }
+#g-ruler { position: absolute; left: 13.6rem; right: 0; top: 0; bottom: 0; }
+#g-ruler span { position: absolute; bottom: .5rem; padding-left: .4rem; border-left: .07rem solid #222A35; font-size: .95rem; font-weight: 600; color: #8B95A3; }
+#g-ruler i { position: absolute; bottom: 0; width: .5rem; height: .5rem; margin-left: -.25rem; border-radius: 50%; background: #3DDC97; }
+#g-rows { position: absolute; top: 11.6rem; left: 3rem; right: 3rem; bottom: 1.2rem; overflow: hidden; }
+.grow { position: absolute; left: 0; right: 0; }
+.gch { position: absolute; left: 0; top: .2rem; bottom: .2rem; width: 13rem; border-radius: .6rem; background: #141920; border: .14rem solid transparent;
+  display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; padding: 0 .6rem; }
+.grow.sel .gch { border-color: #3DDC97; background: #1E2631; }
+.gch .logo { width: 3.6rem; height: 2.2rem; border-radius: .35rem; background: #1D232C; text-align: center; overflow: hidden; -webkit-flex-shrink: 0; flex-shrink: 0; }
+.gch .logo img { max-width: 100%; max-height: 100%; position: relative; top: 50%; -webkit-transform: translateY(-50%); transform: translateY(-50%); }
+.gch .n { margin-left: .6rem; font-size: .95rem; line-height: 1.2rem; max-height: 2.4rem; overflow: hidden; }
+.gstrip { position: absolute; left: 13.6rem; right: 0; top: 0; bottom: 0; }
+.gp { position: absolute; top: .2rem; bottom: .2rem; border-radius: .6rem; background: #141920; border: .14rem solid transparent;
+  border-left: .2rem solid #0E1116; border-right: .2rem solid #0E1116; padding: .45rem .8rem 0; overflow: hidden; white-space: nowrap; }
+.gp.now { background: #161B22; }
+.gp.focus { background: #1E2631; box-shadow: inset 0 0 0 .14rem #3DDC97; }
+.gp b { display: block; font-size: .95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.gp small { display: block; margin-top: .2rem; font-size: .8rem; color: #8B95A3; overflow: hidden; text-overflow: ellipsis; }
+.gp.empty b { font-weight: 400; color: #8B95A3; margin-top: .55rem; }
+.gnow { position: absolute; top: 0; bottom: 0; width: .14rem; margin-left: -.07rem; background: #3DDC97; }
 
 /* Catégories visibles */
 .cs-head { position: absolute; top: 2rem; left: 3.5rem; right: 3.5rem; }

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.0.1';
+  var VERSION = '1.1.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -158,8 +158,6 @@
     }
   }
 
-  var cache = { cats: {}, items: {} };
-
   var X = {
     login: function (server, user, pass, cb) {
       getJson(apiUrl(server, user, pass), function (err, j) {
@@ -169,40 +167,6 @@
         var st = str(ui.status).toLowerCase();
         if (st && st !== 'active') return cb(new Error(st === 'expired' ? 'Abonnement expiré' : 'Abonnement inactif'));
         cb(null, ui);
-      });
-    },
-
-    load: function (kind, cb) {
-      if (cache.items[kind]) return cb(null, cache.cats[kind], cache.items[kind]);
-      var A = {
-        live: ['get_live_categories', 'get_live_streams'],
-        movie: ['get_vod_categories', 'get_vod_streams'],
-        series: ['get_series_categories', 'get_series']
-      }[kind];
-      getJson(api(A[0]), function (err, rawCats) {
-        if (err) return cb(err);
-        getJson(api(A[1]), function (err2, rawList) {
-          if (err2) return cb(err2);
-          var cats = [], items = [], i, o, it;
-          if (rawCats && rawCats.length) {
-            for (i = 0; i < rawCats.length; i++) {
-              o = rawCats[i];
-              if (o) cats.push({ id: str(o.category_id), name: str(o.category_name) });
-            }
-          }
-          if (rawList && rawList.length) {
-            for (i = 0; i < rawList.length; i++) {
-              o = rawList[i];
-              if (!o) continue;
-              if (kind === 'series') it = { id: str(o.series_id), name: str(o.name), icon: str(o.cover), cat: str(o.category_id) };
-              else it = { id: str(o.stream_id), name: str(o.name), icon: str(o.stream_icon), cat: str(o.category_id), ext: str(o.container_extension) || 'mp4' };
-              if (it.id) { it.kind = kind; items.push(it); }
-            }
-          }
-          cache.cats[kind] = cats;
-          cache.items[kind] = items;
-          cb(null, cats, items);
-        });
       });
     },
 
@@ -253,6 +217,194 @@
       return base + '.' + (kind === 'live' ? P.live : ext);
     }
   };
+
+
+  /* ---------- Listes : mémoire → appareil (IndexedDB) → serveur ---------- */
+
+  var Lists = (function () {
+    var FORMAT = 2, MAX_AGE = 6 * 3600 * 1000, STORE = 'lists';
+    var mem = {}, waiting = {}, db = null, dbState = 0, dbQueue = [];
+    var self = { onUpdated: null };
+
+    function account() { return P.server + '|' + P.user; }
+
+    function withDb(cb) {
+      if (dbState === 2) return cb(db);
+      if (dbState === 3) return cb(null);
+      dbQueue.push(cb);
+      if (dbState === 1) return;
+      dbState = 1;
+      function done(d) {
+        db = d;
+        dbState = d ? 2 : 3;
+        var q = dbQueue; dbQueue = [];
+        for (var i = 0; i < q.length; i++) q[i](d);
+      }
+      try {
+        var rq = window.indexedDB.open('koalatv', 1);
+        rq.onupgradeneeded = function () { rq.result.createObjectStore(STORE); };
+        rq.onsuccess = function () { done(rq.result); };
+        rq.onerror = function () { done(null); };
+        rq.onblocked = function () { done(null); };
+      } catch (e) { done(null); }
+    }
+
+    function dbGet(kind, cb) {
+      withDb(function (d) {
+        if (!d) return cb(null);
+        try {
+          var rq = d.transaction(STORE, 'readonly').objectStore(STORE).get(kind);
+          rq.onsuccess = function () { cb(rq.result || null); };
+          rq.onerror = function () { cb(null); };
+        } catch (e) { cb(null); }
+      });
+    }
+
+    function dbPut(kind, rec) {
+      withDb(function (d) {
+        if (!d) return;
+        try { d.transaction(STORE, 'readwrite').objectStore(STORE).put(rec, kind); } catch (e) { /* stockage plein */ }
+      });
+    }
+
+    function pack(kind, data) {
+      var c = [], it = [], i, o;
+      for (i = 0; i < data.cats.length; i++) c.push([data.cats[i].id, data.cats[i].name]);
+      for (i = 0; i < data.items.length; i++) {
+        o = data.items[i];
+        it.push([o.id, o.name, o.icon, o.cat, o.ext, o.num, o.archive, o.rating]);
+      }
+      return { v: FORMAT, account: account(), savedAt: data.savedAt, cats: c, items: it };
+    }
+
+    function unpack(kind, rec) {
+      if (!rec || rec.v !== FORMAT || rec.account !== account()) return null;
+      var cats = [], items = [], i, a;
+      for (i = 0; i < rec.cats.length; i++) cats.push({ id: rec.cats[i][0], name: rec.cats[i][1] });
+      for (i = 0; i < rec.items.length; i++) {
+        a = rec.items[i];
+        items.push({ kind: kind, id: a[0], name: a[1], icon: a[2], cat: a[3], ext: a[4], num: a[5], archive: a[6], rating: a[7] });
+      }
+      return { cats: cats, items: items, savedAt: rec.savedAt };
+    }
+
+    function download(kind, cb) {
+      var A = {
+        live: ['get_live_categories', 'get_live_streams'],
+        movie: ['get_vod_categories', 'get_vod_streams'],
+        series: ['get_series_categories', 'get_series']
+      }[kind];
+      getJson(api(A[0]), function (err, rawCats) {
+        if (err) return cb(err);
+        getJson(api(A[1]), function (err2, rawList) {
+          if (err2) return cb(err2);
+          var cats = [], items = [], i, o, cat, it;
+          if (rawCats && rawCats.length) {
+            for (i = 0; i < rawCats.length; i++) {
+              o = rawCats[i];
+              if (o) cats.push({ id: str(o.category_id), name: str(o.category_name) });
+            }
+          }
+          if (rawList && rawList.length) {
+            for (i = 0; i < rawList.length; i++) {
+              o = rawList[i];
+              if (!o) continue;
+              cat = str(o.category_id);
+              if (!cat && o.category_ids && o.category_ids.length) cat = str(o.category_ids[0]);
+              it = {
+                kind: kind,
+                id: str(kind === 'series' ? o.series_id : o.stream_id),
+                name: str(o.name),
+                icon: str(kind === 'series' ? o.cover : o.stream_icon),
+                cat: cat,
+                ext: kind === 'movie' ? (str(o.container_extension) || 'mp4') : '',
+                num: parseInt(o.num, 10) || 0,
+                archive: str(o.tv_archive) === '1' ? (parseInt(o.tv_archive_duration, 10) || 0) : 0,
+                rating: str(o.rating)
+              };
+              if (it.id) items.push(it);
+            }
+          }
+          cb(null, { cats: cats, items: items, savedAt: Date.now() });
+        });
+      });
+    }
+
+    function same(a, b) {
+      if (a.items.length !== b.items.length || a.cats.length !== b.cats.length) return false;
+      for (var i = 0; i < a.items.length; i++) {
+        var x = a.items[i], y = b.items[i];
+        if (x.id !== y.id || x.name !== y.name || x.cat !== y.cat || x.icon !== y.icon) return false;
+      }
+      for (i = 0; i < a.cats.length; i++) if (a.cats[i].id !== b.cats[i].id || a.cats[i].name !== b.cats[i].name) return false;
+      return true;
+    }
+
+    function refresh(kind, cb) {
+      download(kind, function (err, fresh) {
+        if (err) { if (cb) cb(err); return; }
+        var old = mem[kind];
+        mem[kind] = fresh;
+        dbPut(kind, pack(kind, fresh));
+        if (old && !same(old, fresh) && self.onUpdated) self.onUpdated(kind);
+        if (cb) cb(null);
+      });
+    }
+
+    /** Liste prête à afficher : mémoire, sinon appareil, sinon serveur. */
+    self.get = function (kind, cb) {
+      if (mem[kind]) return cb(null, mem[kind]);
+      if (waiting[kind]) { waiting[kind].push(cb); return; }
+      waiting[kind] = [cb];
+      function finish(err, data) {
+        var q = waiting[kind]; waiting[kind] = null;
+        for (var i = 0; i < q.length; i++) q[i](err, data);
+      }
+      dbGet(kind, function (rec) {
+        var disk = unpack(kind, rec);
+        if (disk) {
+          mem[kind] = disk;
+          finish(null, disk);
+          if (Date.now() - disk.savedAt > MAX_AGE) refresh(kind);
+          return;
+        }
+        download(kind, function (err, fresh) {
+          if (err) return finish(err);
+          mem[kind] = fresh;
+          dbPut(kind, pack(kind, fresh));
+          finish(null, fresh);
+        });
+      });
+    };
+
+    /** Prépare les trois listes en arrière-plan, l'une après l'autre. */
+    self.warmAll = function () {
+      var kinds = ['live', 'movie', 'series'], n = 0;
+      (function next() {
+        if (n >= kinds.length) return;
+        self.get(kinds[n++], function () { setTimeout(next, 50); });
+      })();
+    };
+
+    /** Force le téléchargement des trois listes. */
+    self.refreshAll = function (done) {
+      var kinds = ['live', 'movie', 'series'], n = 0, ok = true;
+      (function next() {
+        if (n >= kinds.length) return done(ok);
+        refresh(kinds[n++], function (err) { if (err) ok = false; next(); });
+      })();
+    };
+
+    self.clear = function () {
+      mem = {};
+      withDb(function (d) {
+        if (!d) return;
+        try { d.transaction(STORE, 'readwrite').objectStore(STORE).clear(); } catch (e) { /* ignoré */ }
+      });
+    };
+
+    return self;
+  })();
 
   /* ---------- Éléments communs ---------- */
 
@@ -543,11 +695,11 @@
         self.busy = false;
         spinner(false);
         if (err) { self.status(err.message, true); return; }
+        if (server !== P.server || user !== P.user) Lists.clear();
         setP('server', server);
         setP('user', user);
         setP('pass', pass);
         setP('exp', str(ui.exp_date));
-        cache = { cats: {}, items: {} };
         reset('home');
       });
     }
@@ -578,6 +730,7 @@
       }
       $('h-account').textContent = txt;
       this.paint();
+      Lists.warmAll();
     },
     resume: function () { this.paint(); },
     paint: function () {
@@ -602,7 +755,10 @@
         },
         {
           label: 'Actualiser les listes',
-          fn: function () { cache = { cats: {}, items: {} }; toast('Listes actualisées'); }
+          fn: function () {
+            toast('Actualisation des listes…');
+            Lists.refreshAll(function (ok) { toast(ok ? 'Listes à jour' : 'Actualisation impossible, réessaie plus tard'); });
+          }
         },
         {
           label: 'Se déconnecter',
@@ -610,7 +766,7 @@
             Dialog.show('Se déconnecter ?', 'Tes favoris et reprises de lecture sont conservés.', [
               {
                 label: 'Se déconnecter',
-                fn: function () { setP('pass', ''); cache = { cats: {}, items: {} }; reset('login'); }
+                fn: function () { setP('pass', ''); Lists.clear(); reset('login'); }
               },
               { label: 'Annuler' }
             ]);
@@ -702,7 +858,7 @@
       this.zone = 'cats';
       this.paintZone();
       spinner(true);
-      X.load(this.kind, function (err, cats, items) {
+      Lists.get(this.kind, function (err, data) {
         if (token !== self.token) return;
         spinner(false);
         if (err) {
@@ -710,11 +866,11 @@
           self.zone = 'retry';
           return;
         }
-        self.build(cats, items);
+        self.build(data.cats, data.items);
       });
     },
-    build: function (cats, items) {
-      var counts = {}, list = [], favN = 0, i;
+    build: function (cats, items, keep) {
+      var counts = {}, list = [], favN = 0, i, prev = this.catList[this.catIdx];
       for (i = 0; i < items.length; i++) {
         counts[items[i].cat] = (counts[items[i].cat] || 0) + 1;
         if (isFav(items[i])) favN++;
@@ -726,6 +882,16 @@
       }
       this.all = items;
       this.catList = list;
+      if (keep && prev) {
+        // liste rafraîchie en arrière-plan : même catégorie, même position
+        var at = 1, itemIdx = this.items.idx;
+        for (i = 0; i < list.length; i++) if (list[i].id === prev.id) at = i;
+        this.cats.set(list, at, true);
+        this.pickCat(at, true, true, true);
+        this.items.idx = Math.min(itemIdx, Math.max(0, this.items.items.length - 1));
+        this.items.render();
+        return;
+      }
       var start = favN ? 0 : (list.length > 2 ? 2 : 1);
       this.cats.set(list, start);
       this.pickCat(start, true);
@@ -760,7 +926,7 @@
       m.textContent = txt;
       cls(m, 'on', !!txt);
     },
-    pickCat: function (i, stayInCats, keepSearch) {
+    pickCat: function (i, stayInCats, keepSearch, keepTop) {
       clearTimeout(this.selTimer);
       var c = this.catList[i];
       if (!c) return;
@@ -774,11 +940,11 @@
       else { for (k = 0; k < this.all.length; k++) if (this.all[k].cat === c.id) list.push(this.all[k]); }
       this.showItems(list, c.name, c.id === '*fav'
         ? 'Aucun favori pour le moment.\nMaintiens OK ou appuie sur le bouton rouge pour en ajouter.'
-        : 'Cette catégorie est vide.');
+        : 'Cette catégorie est vide.', keepTop);
       if (!stayInCats && list.length) this.setZone('items');
     },
-    showItems: function (list, title, empty) {
-      this.items.set(list, 0);
+    showItems: function (list, title, empty, keepTop) {
+      this.items.set(list, 0, keepTop);
       var u = UNITS[this.kind];
       this.head(title, list.length ? plural(list.length, u[0], u[1]) : '');
       this.msg(list.length ? '' : empty);
@@ -1334,11 +1500,18 @@
     if (cur === screens.series) { screens.series.sList.redraw(); screens.series.eList.redraw(); }
   });
 
+  Lists.onUpdated = function (kind) {
+    var b = screens.browse;
+    if (cur === b && b.kind === kind && !b.query && b.zone !== 'retry') {
+      Lists.get(kind, function (err, data) { if (!err) b.build(data.cats, data.items, true); });
+    }
+  };
+
   /* ---------- Démarrage ---------- */
 
   sizeRoot();
   for (var name in screens) if (screens.hasOwnProperty(name) && screens[name].init) screens[name].init();
   reset(loggedIn() ? 'home' : 'login');
 
-  window.KoalaTV = { version: VERSION, P: P, X: X, screens: screens, K: K };
+  window.KoalaTV = { version: VERSION, P: P, X: X, Lists: Lists, screens: screens, K: K };
 })();

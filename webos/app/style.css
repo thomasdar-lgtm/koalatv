@@ -61,6 +61,19 @@ input { font-family: inherit; }
 .tile.focus { -webkit-transform: scale(1.04); transform: scale(1.04); }
 .tile.focus img { box-shadow: 0 0 0 .3rem #0E1116, 0 0 0 .5rem #4C9AFF, 0 1.2rem 3rem rgba(0, 0, 0, .5); }
 
+/* Rangée « Ajoutés récemment » (sous les tuiles, la page remonte quand on y descend) */
+#h-wrap { position: absolute; top: 0; left: 0; width: 100%; height: 100%; -webkit-transition: -webkit-transform .25s ease-out; transition: transform .25s ease-out; }
+#h-recent { position: absolute; left: 3.5rem; right: 3.5rem; display: none; }
+.has-new #h-recent { display: block; }
+#h-recent .n-clip { height: 17.6rem; }
+#h-new { position: absolute; top: .4rem; left: .6rem; white-space: nowrap; -webkit-transition: -webkit-transform .2s ease-out; transition: transform .2s ease-out; }
+.nc { display: inline-block; vertical-align: top; width: 9.6rem; margin-right: 1rem; white-space: normal; }
+.ni { width: 9.6rem; height: 14.4rem; border-radius: .8rem; background: #1D232C; overflow: hidden; border: .16rem solid transparent; }
+.ni img { width: 100%; height: 100%; object-fit: cover; }
+.nn { margin-top: .5rem; font-size: .95rem; color: #B7C0CC; height: 1.3rem; line-height: 1.3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nc.focus .ni { border-color: #4C9AFF; box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .5); }
+.nc.focus .nn { color: #EDEFF2; }
+
 /* Rangée « Reprendre » */
 #h-resume { position: absolute; top: 8.4rem; left: 3.5rem; right: 3.5rem; display: none; }
 .has-resume #h-resume { display: block; }

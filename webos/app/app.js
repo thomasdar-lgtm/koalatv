@@ -609,7 +609,7 @@
   /* ---------- Listes : mémoire → appareil (IndexedDB) → serveur ---------- */
 
   var Lists = (function () {
-    var FORMAT = 2, MAX_AGE = 6 * 3600 * 1000, STORE = 'lists';
+    var FORMAT = 3, MAX_AGE = 6 * 3600 * 1000, STORE = 'lists';
     var mem = {}, waiting = {}, db = null, dbState = 0, dbQueue = [];
     var self = { onUpdated: null };
 
@@ -659,7 +659,7 @@
       for (i = 0; i < data.cats.length; i++) c.push([data.cats[i].id, data.cats[i].name]);
       for (i = 0; i < data.items.length; i++) {
         o = data.items[i];
-        it.push([o.id, o.name, o.icon, o.cat, o.ext, o.num, o.archive, o.rating]);
+        it.push([o.id, o.name, o.icon, o.cat, o.ext, o.num, o.archive, o.rating, o.added]);
       }
       return { v: FORMAT, account: account(), savedAt: data.savedAt, cats: c, items: it };
     }
@@ -670,7 +670,7 @@
       for (i = 0; i < rec.cats.length; i++) cats.push({ id: rec.cats[i][0], name: rec.cats[i][1] });
       for (i = 0; i < rec.items.length; i++) {
         a = rec.items[i];
-        items.push({ kind: kind, id: a[0], name: a[1], icon: a[2], cat: a[3], ext: a[4], num: a[5], archive: a[6], rating: a[7] });
+        items.push({ kind: kind, id: a[0], name: a[1], icon: a[2], cat: a[3], ext: a[4], num: a[5], archive: a[6], rating: a[7], added: a[8] || 0 });
       }
       return { cats: cats, items: items, savedAt: rec.savedAt };
     }
@@ -707,7 +707,9 @@
                 ext: kind === 'movie' ? (str(o.container_extension) || 'mp4') : '',
                 num: parseInt(o.num, 10) || 0,
                 archive: str(o.tv_archive) === '1' ? (parseInt(o.tv_archive_duration, 10) || 0) : 0,
-                rating: str(o.rating)
+                rating: str(o.rating),
+                // date d'ajout (secondes) : « Ajoutés récemment »
+                added: parseInt(kind === 'series' ? (o.last_modified || o.added) : o.added, 10) || 0
               };
               if (it.id) items.push(it);
             }
@@ -1132,6 +1134,15 @@
           self.open();
         });
       }
+      $('h-new').addEventListener('click', function (e) {
+        var n = e.target;
+        while (n && n.getAttribute && n.getAttribute('data-n') === null) n = n.parentNode;
+        if (!n || !n.getAttribute) return;
+        self.zone = 'recent';
+        self.nIdx = parseInt(n.getAttribute('data-n'), 10);
+        self.paint();
+        self.openRecent();
+      });
       $('h-row').addEventListener('click', function (e) {
         var n = e.target;
         while (n && n.getAttribute && n.getAttribute('data-r') === null) n = n.parentNode;
@@ -1153,6 +1164,7 @@
       this.drawResume();
       this.paint();
       Lists.warmAll();
+      this.loadRecent();
       if (!this.accountDone) { this.accountDone = true; X.refreshAccount(); }
       this.pullHistory();
       Sync.pullCats();
@@ -1162,6 +1174,7 @@
     resume: function () {
       this.drawResume();
       this.paint();
+      this.loadRecent();
       this.pullHistory();
       Sync.pullCats();
       Sync.pullFavs();
@@ -1171,6 +1184,40 @@
     pullHistory: function () {
       var self = this;
       Sync.pull(function () { if (cur === self) { self.drawResume(); self.paint(); } });
+    },
+    /* « Ajoutés récemment » : les 24 films et séries les plus récents, hors catégories masquées */
+    recent: [],
+    nIdx: 0,
+    loadRecent: function () {
+      var self = this, got = {}, n = 0;
+      function done() {
+        if (++n < 2) return;
+        var all = [], k, i, it;
+        for (k in got) if (got.hasOwnProperty(k)) for (i = 0; i < got[k].length; i++) {
+          it = got[k][i];
+          if (it.added > 0 && !Hidden.isHidden(it.kind, it.cat)) all.push(it);
+        }
+        all.sort(function (a, b) { return b.added - a.added; });
+        self.recent = all.slice(0, 24);
+        self.drawRecent();
+      }
+      Lists.get('movie', function (err, d) { got.movie = err ? [] : d.items; done(); });
+      Lists.get('series', function (err, d) { got.series = err ? [] : d.items; done(); });
+    },
+    drawRecent: function () {
+      var l = this.recent, h = '';
+      for (var i = 0; i < l.length; i++) {
+        h += '<div class="nc" data-n="' + i + '"><div class="ni">' + imgTag(l[i].icon) + '</div><div class="nn">' + esc(l[i].name) + '</div></div>';
+      }
+      $('h-new').innerHTML = h;
+      cls(this.el, 'has-new', l.length > 0);
+      if (this.nIdx >= l.length) this.nIdx = Math.max(0, l.length - 1);
+      if (!l.length && this.zone === 'recent') this.zone = 'tiles';
+      this.paint();
+    },
+    openRecent: function () {
+      var it = this.recent[this.nIdx];
+      if (it) go(it.kind === 'series' ? 'series' : 'movie', it);
     },
     drawResume: function () {
       var l = P.hist, h = '';
@@ -1193,6 +1240,18 @@
     },
     paint: function () {
       cls(this.el, 'resume-on', this.zone === 'resume');
+      // la rangée « Ajoutés récemment » est sous les tuiles : on fait remonter la page pour l'afficher
+      var tl = this.el.querySelector('.tiles'), nr = $('h-recent');
+      nr.style.top = (tl.offsetTop + tl.offsetHeight + 2.2 * REM) + 'px';
+      var shift = this.zone === 'recent' ? Math.max(0, nr.offsetTop + nr.offsetHeight + 1.5 * REM - this.el.clientHeight) : 0;
+      setTransform($('h-wrap'), 'translate3d(0,' + (-shift) + 'px,0)');
+      var nc = $('h-new').children;
+      for (var j = 0; j < nc.length; j++) cls(nc[j], 'focus', this.zone === 'recent' && j === this.nIdx);
+      var f = nc[this.nIdx];
+      if (f) {
+        var w = $('h-new').parentNode.clientWidth, x = f.offsetLeft + f.offsetWidth - w + 2 * REM;
+        setTransform($('h-new'), 'translate3d(' + (-Math.max(0, x)) + 'px,0,0)');
+      }
       for (var i = 0; i < this.tiles.length; i++) cls(this.tiles[i], 'focus', this.zone === 'tiles' && i === this.idx);
       var cards = $('h-row').children;
       for (i = 0; i < cards.length; i++) cls(cards[i], 'focus', this.zone === 'resume' && i === this.rIdx);
@@ -1217,6 +1276,15 @@
         else if (c === K.RED) this.forget();
         return true;
       }
+      if (this.zone === 'recent') {
+        var m = this.recent.length;
+        if (c === K.LEFT && this.nIdx > 0) { this.nIdx--; this.paint(); }
+        else if (c === K.RIGHT && this.nIdx < m - 1) { this.nIdx++; this.paint(); }
+        else if (c === K.UP) { this.zone = 'tiles'; this.paint(); }
+        else if (c === K.OK) this.openRecent();
+        return true;
+      }
+      if (c === K.DOWN && this.recent.length) { this.zone = 'recent'; this.paint(); return true; }
       if (c === K.UP && n) { this.zone = 'resume'; this.paint(); return true; }
       if (c === K.LEFT && this.idx > 0) { this.idx--; this.paint(); return true; }
       if (c === K.RIGHT && this.idx < this.tiles.length - 1) { this.idx++; this.paint(); return true; }
@@ -2166,7 +2234,10 @@
         self.ctl = 'btn';
         self.act(a);
       };
+      if (v.audioTracks && v.audioTracks.addEventListener) v.audioTracks.addEventListener('addtrack', function () { self.applyLangs(); });
+      if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', function () { self.applyLangs(); });
       v.addEventListener('loadedmetadata', function () {
+        self.applyLangs();
         if (self.startAt > 0) {
           try { v.currentTime = self.startAt; } catch (e) { /* ignoré */ }
           self.startAt = 0;
@@ -2517,6 +2588,23 @@
       this.lastPos = t;
       this.showInfo(v.paused);
     },
+    /* Réapplique la langue audio et les sous-titres choisis la dernière fois */
+    applyLangs: function () {
+      var v = this.v, a = load('alang', ''), t = load('slang', ''), i;
+      var at = v.audioTracks;
+      if (a && at && at.length > 1) {
+        var hit = -1;
+        for (i = 0; i < at.length; i++) if ((at[i].language || at[i].label) === a) hit = i;
+        if (hit >= 0 && !at[hit].enabled) for (i = 0; i < at.length; i++) at[i].enabled = i === hit;
+      }
+      var tt = v.textTracks;
+      if (t && tt && tt.length) {
+        for (i = 0; i < tt.length; i++) {
+          var want = t !== 'off' && (tt[i].language || tt[i].label) === t ? 'showing' : 'disabled';
+          if (tt[i].mode !== want) tt[i].mode = want;
+        }
+      }
+    },
     cycleAudio: function () {
       var tr = this.v.audioTracks;
       if (!tr || tr.length < 2) { toast('Une seule piste audio'); return; }
@@ -2524,6 +2612,8 @@
       for (i = 0; i < tr.length; i++) if (tr[i].enabled) cur = i;
       var nx = (cur + 1) % tr.length;
       for (i = 0; i < tr.length; i++) tr[i].enabled = i === nx;
+      // langue retenue pour les prochaines lectures
+      save('alang', tr[nx].language || tr[nx].label || '');
       toast('Audio : ' + (tr[nx].label || tr[nx].language || 'piste ' + (nx + 1)));
     },
     cycleSubs: function () {
@@ -2533,6 +2623,7 @@
       for (i = 0; i < tr.length; i++) if (tr[i].mode === 'showing') cur = i;
       var nx = cur + 1 >= tr.length ? -1 : cur + 1;
       for (i = 0; i < tr.length; i++) tr[i].mode = i === nx ? 'showing' : 'disabled';
+      save('slang', nx < 0 ? 'off' : (tr[nx].language || tr[nx].label || ''));
       toast(nx < 0 ? 'Sous-titres désactivés' : 'Sous-titres : ' + (tr[nx].label || tr[nx].language || 'piste ' + (nx + 1)));
     },
     keyup: function (c) {
@@ -2652,6 +2743,7 @@
 
   Lists.onUpdated = function (kind) {
     var b = screens.browse;
+    if (cur === screens.home && kind !== 'live') screens.home.loadRecent();
     if (cur === b && b.kind === kind && !b.query && b.zone !== 'retry') {
       Lists.get(kind, function (err, data) { if (!err) b.build(data.cats, data.items, true); });
     }

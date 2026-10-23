@@ -29,6 +29,8 @@ data class Item(
     /** Jours de replay disponibles (0 = pas de replay). */
     val archive: Int = 0,
     val rating: String = "",
+    /** Date d'ajout sur le serveur (secondes), pour « Ajoutés récemment ». */
+    val added: Long = 0,
 ) {
     val favKey: String get() = "${kind.name}:$id"
 

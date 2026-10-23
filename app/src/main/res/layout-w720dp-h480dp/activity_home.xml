@@ -1,9 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- TV et tablette : 4 tuiles alignées -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- La page défile : les tuiles remplissent le premier écran, « Ajoutés récemment » est en dessous -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/home_scroll"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:scrollbars="none">
+
+<LinearLayout
+    android:id="@+id/home_content"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:padding="@dimen/page_pad">
 
@@ -16,8 +24,7 @@
     <FrameLayout
         android:id="@+id/tiles_area"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="320dp">
 
         <LinearLayout
             android:id="@+id/tiles_row"
@@ -78,4 +85,7 @@
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <include layout="@layout/view_recent" />
 </LinearLayout>
+</ScrollView>

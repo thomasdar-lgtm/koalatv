@@ -21,7 +21,7 @@ import java.io.IOException
  * Une liste du disque de plus de 6 h est réaffichée tout de suite puis rafraîchie en arrière-plan.
  */
 object Lists {
-    private const val FORMAT = "ktv2"
+    private const val FORMAT = "ktv3"
     private const val MAX_AGE_MS = 6 * 3600 * 1000L
 
     class Data(val cats: List<Category>, val items: List<Item>, val savedAt: Long)
@@ -136,6 +136,7 @@ object Lists {
                         num = o["num"]?.toIntOrNull() ?: 0,
                         archive = if (o["tv_archive"] == "1") (o["tv_archive_duration"]?.toIntOrNull() ?: 0) else 0,
                         rating = o["rating"] ?: "",
+                        added = (if (kind == Kind.SERIES) (o["last_modified"] ?: o["added"]) else o["added"])?.toLongOrNull() ?: 0,
                     ),
                 )
             }
@@ -145,7 +146,7 @@ object Lists {
 
     private val WANTED = setOf(
         "category_id", "category_name", "stream_id", "series_id", "name", "stream_icon", "cover",
-        "container_extension", "num", "tv_archive", "tv_archive_duration", "rating",
+        "container_extension", "num", "tv_archive", "tv_archive_duration", "rating", "added", "last_modified",
     )
 
     /** Parcourt un tableau JSON d'objets ; chaque objet est réduit aux champs utiles, en texte. */
@@ -214,7 +215,8 @@ object Lists {
                     w.write(clean(i.ext)); w.write('\t'.code)
                     w.write(i.num.toString()); w.write('\t'.code)
                     w.write(i.archive.toString()); w.write('\t'.code)
-                    w.write(clean(i.rating)); w.write('\n'.code)
+                    w.write(clean(i.rating)); w.write('\t'.code)
+                    w.write(i.added.toString()); w.write('\n'.code)
                 }
             }
             if (!tmp.renameTo(file(kind))) tmp.delete()
@@ -241,8 +243,8 @@ object Lists {
                 while (true) {
                     val line = r.readLine() ?: break
                     val p = line.split('\t')
-                    if (p.size < 8) continue
-                    items.add(Item(kind, p[0], p[1], p[2], p[3], p[4], p[5].toIntOrNull() ?: 0, p[6].toIntOrNull() ?: 0, p[7]))
+                    if (p.size < 9) continue
+                    items.add(Item(kind, p[0], p[1], p[2], p[3], p[4], p[5].toIntOrNull() ?: 0, p[6].toIntOrNull() ?: 0, p[7], p[8].toLongOrNull() ?: 0))
                 }
                 Data(cats, items, savedAt)
             }

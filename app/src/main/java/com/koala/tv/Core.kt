@@ -49,6 +49,14 @@ object Prefs {
     var liveFormat: String
         get() = str("live_format", "ts")
         set(v) = put("live_format", v)
+    /** Dernière langue audio choisie (vide = français par défaut). */
+    var audioLang: String
+        get() = str("audio_lang", "")
+        set(v) = put("audio_lang", v)
+    /** Derniers sous-titres choisis : code de langue, « off », ou vide (par défaut). */
+    var textLang: String
+        get() = str("text_lang", "")
+        set(v) = put("text_lang", v)
     var userAgent: String
         get() = str("ua", DEFAULT_UA)
         set(v) = put("ua", v)
@@ -139,6 +147,22 @@ object Playback {
 }
 
 object Nav {
+    /** Fiche d'un film ou d'une série. */
+    fun openDetails(a: android.app.Activity, item: Item) {
+        when (item.kind) {
+            Kind.MOVIE -> a.startActivity(
+                android.content.Intent(a, MovieActivity::class.java)
+                    .putExtra("id", item.id).putExtra("name", item.name).putExtra("icon", item.icon)
+                    .putExtra("ext", item.ext).putExtra("rating", item.rating),
+            )
+            Kind.SERIES -> a.startActivity(
+                android.content.Intent(a, SeriesActivity::class.java)
+                    .putExtra("id", item.id).putExtra("name", item.name).putExtra("cover", item.icon),
+            )
+            Kind.LIVE -> {}
+        }
+    }
+
     fun play(a: Activity, items: List<PlayItem>, index: Int, startAt: Long = -1) {
         if (items.isEmpty()) return
         val i = index.coerceIn(0, items.size - 1)

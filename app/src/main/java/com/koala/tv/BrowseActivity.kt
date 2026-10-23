@@ -335,20 +335,7 @@ class BrowseActivity : AppCompatActivity() {
                 val play = itemAdapter.items.map { liveItem(it) }
                 Nav.play(this, play, pos)
             }
-            Kind.MOVIE -> startActivity(
-                Intent(this, MovieActivity::class.java)
-                    .putExtra("id", item.id)
-                    .putExtra("name", item.name)
-                    .putExtra("icon", item.icon)
-                    .putExtra("ext", item.ext)
-                    .putExtra("rating", item.rating),
-            )
-            Kind.SERIES -> startActivity(
-                Intent(this, SeriesActivity::class.java)
-                    .putExtra("id", item.id)
-                    .putExtra("name", item.name)
-                    .putExtra("cover", item.icon),
-            )
+            Kind.MOVIE, Kind.SERIES -> Nav.openDetails(this, item)
         }
     }
 

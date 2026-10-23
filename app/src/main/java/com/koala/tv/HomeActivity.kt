@@ -30,6 +30,7 @@ class HomeActivity : AppCompatActivity() {
     private var reopenCategories = false
     private lateinit var resumeBox: View
     private lateinit var resumeAdapter: ResumeAdapter
+    private var recentAdapter: RecentAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +85,35 @@ class HomeActivity : AppCompatActivity() {
             }
         }
 
+        // Accueil défilant : les tuiles remplissent le premier écran, « Ajoutés récemment » est en dessous
+        val scroll = findViewById<android.widget.ScrollView?>(R.id.home_scroll)
+        val tilesArea = findViewById<View?>(R.id.tiles_area)
+        if (scroll != null && tilesArea != null) {
+            val content = scroll.getChildAt(0)
+            val fit = {
+                val h = scroll.height - tilesArea.top - content.paddingBottom
+                if (scroll.height > 0 && h > dp(140) && kotlin.math.abs(tilesArea.layoutParams.height - h) > 2) {
+                    tilesArea.post { tilesArea.layoutParams = tilesArea.layoutParams.apply { height = h } }
+                }
+            }
+            scroll.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }
+            content.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }
+            // en revenant vers les tuiles, on remonte en haut de la page
+            listOf(live, movies, series, settings).forEach { t ->
+                t.setOnFocusChangeListener { v, has ->
+                    val sc = if (has) 1.05f else 1f
+                    v.animate().scaleX(sc).scaleY(sc).setDuration(120).start()
+                    if (has) scroll.smoothScrollTo(0, 0)
+                }
+            }
+        }
+        findViewById<RecyclerView?>(R.id.rv_recent)?.let { rv ->
+            recentAdapter = RecentAdapter(dp(if (isWide) 132 else 112)) { Nav.openDetails(this, it) }
+            rv.layoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+            rv.adapter = recentAdapter
+            rv.itemAnimator = null
+        }
+
         live.requestFocus()
         Lists.warmAll()
         if (!accountRefreshed) {
@@ -96,6 +126,7 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
         if (!::updateBar.isInitialized) return
         refreshResume()
+        loadRecent()
         // historique et catégories masquées partagés avec les autres appareils
         lifecycleScope.launch { if (Sync.pull()) refreshResume() }
         lifecycleScope.launch { Sync.pullCats() }
@@ -110,6 +141,24 @@ class HomeActivity : AppCompatActivity() {
             startUpdate()
         } else if (!downloading) {
             checkUpdate(force = false)
+        }
+    }
+
+    /** « Ajoutés récemment » : les 24 films et séries les plus récents, hors catégories masquées. */
+    private fun loadRecent() {
+        val ad = recentAdapter ?: return
+        lifecycleScope.launch {
+            val all = ArrayList<Item>()
+            for (k in listOf(Kind.MOVIE, Kind.SERIES)) {
+                try {
+                    Lists.get(k).items.filterTo(all) { it.added > 0 && !Hidden.isHidden(k, it.categoryId) }
+                } catch (e: Exception) {
+                    // liste indisponible : rangée partielle
+                }
+            }
+            val top = all.sortedByDescending { it.added }.take(24)
+            ad.submit(top)
+            findViewById<View?>(R.id.recent_box)?.visibility = if (top.isEmpty()) View.GONE else View.VISIBLE
         }
     }
 

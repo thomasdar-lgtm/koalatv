@@ -281,3 +281,35 @@ class ResumeAdapter(
         }
     }
 }
+
+/** Rangée « Ajoutés récemment » de l'accueil : affiches. */
+class RecentAdapter(private val widthPx: Int, private val onClick: (Item) -> Unit) : RecyclerView.Adapter<RecentAdapter.VH>() {
+    var items: List<Item> = emptyList()
+        private set
+
+    class VH(v: View) : RecyclerView.ViewHolder(v) {
+        val img: ImageView = v.findViewById(R.id.iv)
+        val name: TextView = v.findViewById(R.id.tv_name)
+    }
+
+    fun submit(l: List<Item>) {
+        items = l
+        notifyDataSetChanged()
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
+        val v = LayoutInflater.from(parent.context).inflate(R.layout.item_poster, parent, false)
+        v.layoutParams = RecyclerView.LayoutParams(widthPx, ViewGroup.LayoutParams.WRAP_CONTENT)
+        v.focusZoom(1.06f)
+        return VH(v)
+    }
+
+    override fun getItemCount() = items.size
+
+    override fun onBindViewHolder(h: VH, position: Int) {
+        val it = items[position]
+        h.name.text = it.name
+        if (it.icon.startsWith("http", true)) h.img.load(it.icon) { crossfade(150) } else h.img.setImageDrawable(null)
+        h.itemView.setOnClickListener { _ -> onClick(it) }
+    }
+}

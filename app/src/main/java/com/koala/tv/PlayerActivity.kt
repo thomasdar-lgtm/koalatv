@@ -26,6 +26,8 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.Tracks
 import androidx.media3.common.ForwardingPlayer
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -314,9 +316,24 @@ class PlayerActivity : AppCompatActivity() {
         if (::pv.isInitialized) pv.player = null
     }
 
+    /** Les choix de pistes de l'utilisateur ne sont mémorisés qu'après l'application des langues retenues. */
+    private var langsApplied = false
+
+    private fun applyLangs(p: ExoPlayer) {
+        val t = Prefs.textLang
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+            .clearOverrides()
+            .setPreferredAudioLanguage(Prefs.audioLang.ifEmpty { "fr" })
+            .setPreferredTextLanguage(if (t.isEmpty() || t == "off") null else t)
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, t == "off")
+            .build()
+    }
+
     private fun playCurrent(askResume: Boolean) {
         val p = player ?: return
         hideNext(false)
+        langsApplied = false
+        applyLangs(p)
         val item = current
         tvStatus.visibility = View.GONE
         val b = MediaItem.Builder()
@@ -450,9 +467,26 @@ class PlayerActivity : AppCompatActivity() {
 
         override fun onIsPlayingChanged(isPlaying: Boolean) = updatePip()
 
+        /** Mémorise la langue audio et les sous-titres en cours, pour les prochaines lectures. */
+        override fun onTracksChanged(tracks: Tracks) {
+            val audio = tracks.groups.filter { it.type == C.TRACK_TYPE_AUDIO }
+            val text = tracks.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+            if (audio.size > 1) {
+                audio.firstOrNull { it.isSelected }?.let { g ->
+                    (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { i -> g.getTrackFormat(i).language?.let { Prefs.audioLang = it } }
+                }
+            }
+            if (text.isNotEmpty() && langsApplied) {
+                val g = text.firstOrNull { it.isSelected }
+                Prefs.textLang = if (g == null) "off" else
+                    (0 until g.length).firstOrNull { g.isTrackSelected(it) }?.let { g.getTrackFormat(it).language } ?: Prefs.textLang
+            }
+        }
+
         override fun onPlaybackStateChanged(playbackState: Int) {
             when (playbackState) {
                 Player.STATE_READY -> {
+                    langsApplied = true
                     retries = 0
                     tvStatus.visibility = View.GONE
                 }

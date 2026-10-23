@@ -39,6 +39,7 @@
     <header class="top">
       <div class="brand"><img src="koala.png" alt=""><span>Koala<b>TV</b></span></div>
       <div id="h-account"></div>
+      <div id="h-search" class="hsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><span>Rechercher</span></div>
     </header>
     <div id="h-resume">
       <div class="h-label">Reprendre<span class="h-hint">Appui long sur OK pour retirer</span></div>
@@ -67,6 +68,16 @@
       <div class="h-clip n-clip"><div id="h-new"></div></div>
     </div>
     </div>
+  </section>
+
+  <section id="s-gsearch" class="screen">
+    <label class="search gs-box" id="gs-box">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg>
+      <input id="gs-input" type="text" placeholder="Chaîne, film ou série" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </label>
+    <div class="head gs-head"><span id="gs-head"></span><span id="gs-count"></span></div>
+    <div id="gs-list" class="vlist"></div>
+    <div id="gs-msg" class="msg"></div>
   </section>
 
   <section id="s-browse" class="screen">

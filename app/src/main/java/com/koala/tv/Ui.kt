@@ -115,3 +115,36 @@ class TileImage @JvmOverloads constructor(context: Context, attrs: AttributeSet?
         canvas.drawRoundRect(rect, r, r, ring)
     }
 }
+
+/**
+ * Recherche vocale : affiche le micro si l'appareil sait transformer la voix en texte,
+ * et place le texte dicté dans le champ. À appeler dans onCreate.
+ */
+fun androidx.activity.ComponentActivity.voiceInput(btn: android.view.View?, et: android.widget.EditText) {
+    if (btn == null) return
+    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
+        .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Dis le nom d'une chaîne, d'un film ou d'une série")
+    val ok = try {
+        packageManager.queryIntentActivities(intent, 0).isNotEmpty()
+    } catch (e: Exception) {
+        false
+    }
+    if (!ok) return
+    val launcher = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
+        val text = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!text.isNullOrBlank()) {
+            et.setText(text)
+            et.setSelection(text.length)
+        }
+    }
+    btn.visibility = android.view.View.VISIBLE
+    btn.setOnClickListener {
+        try {
+            launcher.launch(intent)
+        } catch (e: Exception) {
+            toast("Recherche vocale indisponible")
+        }
+    }
+}

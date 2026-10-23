@@ -32,4 +32,16 @@
         android:maxLines="2"
         android:textColor="@color/muted"
         android:textSize="13sp" />
+
+    <ImageView
+        android:id="@+id/btn_search"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="14dp"
+        android:background="@drawable/btn_bg"
+        android:clickable="true"
+        android:contentDescription="Rechercher"
+        android:focusable="true"
+        android:padding="12dp"
+        android:src="@drawable/ic_search" />
 </LinearLayout>

@@ -77,6 +77,7 @@ class BrowseActivity : AppCompatActivity() {
         tvHead = findViewById(R.id.tv_head)
         tvCount = findViewById(R.id.tv_count)
         etSearch = findViewById(R.id.et_search)
+        voiceInput(findViewById(R.id.btn_mic), etSearch)
         findViewById<TextView>(R.id.tv_title).text = when (kind) {
             Kind.LIVE -> "TV en direct"
             Kind.MOVIE -> "Films"

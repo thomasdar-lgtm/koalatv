@@ -1134,6 +1134,7 @@
           self.open();
         });
       }
+      $('h-search').addEventListener('click', function () { go('gsearch'); });
       $('h-new').addEventListener('click', function (e) {
         var n = e.target;
         while (n && n.getAttribute && n.getAttribute('data-n') === null) n = n.parentNode;
@@ -1240,6 +1241,7 @@
     },
     paint: function () {
       cls(this.el, 'resume-on', this.zone === 'resume');
+      cls($('h-search'), 'focus', this.zone === 'search');
       // la rangée « Ajoutés récemment » est sous les tuiles : on fait remonter la page pour l'afficher
       var tl = this.el.querySelector('.tiles'), nr = $('h-recent');
       nr.style.top = (tl.offsetTop + tl.offsetHeight + 2.2 * REM) + 'px';
@@ -1268,12 +1270,18 @@
         if (c === K.LEFT && this.rIdx > 0) { this.rIdx--; this.paint(); }
         else if (c === K.RIGHT && this.rIdx < n - 1) { this.rIdx++; this.paint(); }
         else if (c === K.DOWN) { this.zone = 'tiles'; this.paint(); }
+        else if (c === K.UP) { this.zone = 'search'; this.paint(); }
         else if (c === K.OK) {
           // appui court : reprendre ; appui long : retirer
           var self = this;
           if (!this.okTimer) this.okTimer = setTimeout(function () { self.okTimer = null; self.forget(); }, 650);
         }
         else if (c === K.RED) this.forget();
+        return true;
+      }
+      if (this.zone === 'search') {
+        if (c === K.OK) go('gsearch');
+        else if (c === K.DOWN) { this.zone = n ? 'resume' : 'tiles'; this.paint(); }
         return true;
       }
       if (this.zone === 'recent') {
@@ -1285,7 +1293,7 @@
         return true;
       }
       if (c === K.DOWN && this.recent.length) { this.zone = 'recent'; this.paint(); return true; }
-      if (c === K.UP && n) { this.zone = 'resume'; this.paint(); return true; }
+      if (c === K.UP) { this.zone = n ? 'resume' : 'search'; this.paint(); return true; }
       if (c === K.LEFT && this.idx > 0) { this.idx--; this.paint(); return true; }
       if (c === K.RIGHT && this.idx < this.tiles.length - 1) { this.idx++; this.paint(); return true; }
       if (c === K.OK) { this.open(); return true; }
@@ -1440,6 +1448,35 @@
     }
   };
 
+  /*
+   * Recherche : titre exact, titre qui commence par la saisie, mot qui commence par la saisie,
+   * puis (à partir de 2 lettres) titre qui contient la saisie. q est déjà « plié » (minuscules, sans accents).
+   */
+  function searchList(pool, q, max) {
+    var groups = [[], [], [], []], wq = ' ' + q;
+    for (var i = 0; i < pool.length; i++) {
+      var it = pool[i];
+      if (it._f === undefined) {
+        it._f = fold(it.name);
+        it._w = ' ' + it._f.replace(/[^a-z0-9]+/g, ' ');
+        // sans préfixe de langue (« FR | », « EN: »…) ni année finale
+        it._c = it._f.replace(/^\s*[a-z0-9+]{1,6}\s*[|:\-]\s*/, '').replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/, '');
+      }
+      var g = it._c === q || it._f === q ? 0 : it._c.indexOf(q) === 0 || it._f.indexOf(q) === 0 ? 1 :
+        it._w.indexOf(wq) >= 0 ? 2 : q.length > 1 && it._f.indexOf(q) >= 0 ? 3 : -1;
+      if (g >= 0) groups[g].push(it);
+    }
+    var out = groups[0].concat(groups[1], groups[2], groups[3]);
+    return max ? out.slice(0, max) : out;
+  }
+
+  var KIND_LABEL = { live: 'Chaîne', movie: 'Film', series: 'Série' };
+  function renderAny(it) {
+    if (it.kind === 'live') return renderRow(it).replace('<div class="row">', '<div class="row"><span class="kd">Chaîne</span>');
+    return '<div class="row"><span class="kd">' + KIND_LABEL[it.kind] + '</span><span class="logo pst">' + imgTag(it.icon) + '</span><span class="tx"><span class="n">' +
+      esc(it.name) + '</span></span>' + (isFav(it) ? STAR : '') + '</div>';
+  }
+
   function renderRow(it) {
     var p = Epg.now(it.id), g = '';
     if (p) {
@@ -1454,6 +1491,104 @@
     return '<div class="poster"><div class="img">' + imgTag(it.icon) + (isFav(it) ? STAR : '') +
       '</div><div class="n">' + esc(it.name) + '</div></div>';
   }
+
+  /* ---------- Recherche globale (chaînes, films et séries) ---------- */
+
+  screens.gsearch = {
+    el: $('s-gsearch'),
+    zone: 'input',
+    pool: [],
+    query: '',
+    init: function () {
+      var self = this;
+      this.input = $('gs-input');
+      this.list = new VList($('gs-list'), {
+        rowH: 5.2,
+        render: renderAny,
+        onPointer: function () { self.setZone('list'); },
+        onOk: function () { self.open(); }
+      });
+      this.input.addEventListener('input', function () {
+        clearTimeout(self.timer);
+        self.timer = setTimeout(function () { self.run(self.input.value); }, 300);
+      });
+      this.input.addEventListener('blur', function () { cls($('gs-box'), 'editing', false); });
+      $('gs-box').addEventListener('click', function () { self.setZone('input'); self.edit(); });
+    },
+    enter: function () {
+      var self = this, n = 0, got = {};
+      this.input.value = '';
+      this.query = '';
+      this.list.set([]);
+      this.head('', '');
+      this.msg('Tape le nom d\'une chaîne, d\'un film ou d\'une série');
+      this.setZone('input');
+      this.pool = [];
+      ['live', 'movie', 'series'].forEach(function (k) {
+        Lists.get(k, function (err, d) {
+          got[k] = err ? [] : d.items;
+          if (++n < 3) return;
+          var all = [];
+          ['live', 'movie', 'series'].forEach(function (kk) {
+            for (var i = 0; i < got[kk].length; i++) if (!Hidden.isHidden(kk, got[kk][i].cat)) all.push(got[kk][i]);
+          });
+          self.pool = all;
+          if (self.query) self.run(self.input.value);
+        });
+      });
+      setTimeout(function () { if (cur === self) self.edit(); }, 50);
+    },
+    resume: function () { this.list.redraw(); this.paintZone(); },
+    head: function (t, c) { $('gs-head').textContent = t; $('gs-count').textContent = c; },
+    msg: function (txt) { var m = $('gs-msg'); m.textContent = txt; cls(m, 'on', !!txt); },
+    edit: function () { cls($('gs-box'), 'editing', true); this.input.focus(); },
+    run: function (raw) {
+      var q = fold(str(raw)).replace(/^\s+|\s+$/g, '');
+      this.query = q;
+      if (!q) { this.list.set([]); this.head('', ''); this.msg('Tape le nom d\'une chaîne, d\'un film ou d\'une série'); return; }
+      var out = searchList(this.pool, q, 300);
+      this.list.set(out, 0);
+      this.head('Résultats', out.length ? plural(out.length, 'résultat', 'résultats') : '');
+      this.msg(out.length ? '' : (this.pool.length ? 'Aucun résultat' : 'Chargement des listes…'));
+    },
+    inputDone: function (input, c) {
+      clearTimeout(this.timer);
+      this.run(input.value);
+      if ((c === K.OK || c === K.DOWN || c === K.RIGHT) && this.list.items.length) this.setZone('list');
+      else this.setZone('input');
+    },
+    setZone: function (z) { this.zone = z; this.paintZone(); },
+    paintZone: function () {
+      cls($('gs-box'), 'focus', this.zone === 'input');
+      if (this.list.active !== (this.zone === 'list')) this.list.focus(this.zone === 'list');
+    },
+    open: function () {
+      var it = this.list.items[this.list.idx];
+      if (!it) return;
+      if (it.kind === 'series') { go('series', it); return; }
+      if (it.kind === 'movie') { go('movie', it); return; }
+      // chaîne : on zappe parmi les chaînes trouvées
+      var list = [], at = 0;
+      for (var i = 0; i < this.list.items.length; i++) {
+        if (this.list.items[i].kind !== 'live') continue;
+        if (this.list.items[i] === it) at = list.length;
+        list.push(liveItem(this.list.items[i]));
+      }
+      go('player', { list: list, index: at });
+    },
+    key: function (c) {
+      if (this.zone === 'input') {
+        if (c === K.OK) this.edit();
+        else if ((c === K.DOWN || c === K.RIGHT) && this.list.items.length) this.setZone('list');
+        return true;
+      }
+      if (c === K.UP) { if (!this.list.move(0, -1)) this.setZone('input'); }
+      else if (c === K.DOWN) this.list.move(0, 1);
+      else if (c === K.CH_UP || c === K.CH_DOWN) this.list.page(c === K.CH_UP ? -1 : 1);
+      else if (c === K.OK) this.open();
+      return true;
+    }
+  };
 
   /* ---------- Parcourir (direct, films, séries) ---------- */
 
@@ -1620,22 +1755,7 @@
         this.pickCat(this.catIdx, true, true);
         return;
       }
-      // classement : titre exact, titre qui commence par la saisie, mot qui commence par la saisie,
-      // puis (à partir de 2 lettres) titre qui contient la saisie
-      var groups = [[], [], [], []], wq = ' ' + q;
-      for (var i = 0; i < this.pool.length; i++) {
-        var it = this.pool[i];
-        if (it._f === undefined) {
-          it._f = fold(it.name);
-          it._w = ' ' + it._f.replace(/[^a-z0-9]+/g, ' ');
-          // sans préfixe de langue (« FR | », « EN: »…) ni année finale
-          it._c = it._f.replace(/^\s*[a-z0-9+]{1,6}\s*[|:\-]\s*/, '').replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/, '');
-        }
-        var g = it._c === q || it._f === q ? 0 : it._c.indexOf(q) === 0 || it._f.indexOf(q) === 0 ? 1 :
-          it._w.indexOf(wq) >= 0 ? 2 : q.length > 1 && it._f.indexOf(q) >= 0 ? 3 : -1;
-        if (g >= 0) groups[g].push(it);
-      }
-      var out = groups[0].concat(groups[1], groups[2], groups[3]);
+      var out = searchList(this.pool, q);
       this.cats.select(-1);
       this.showItems(out, 'Recherche : ' + str(raw), 'Aucun résultat');
     },

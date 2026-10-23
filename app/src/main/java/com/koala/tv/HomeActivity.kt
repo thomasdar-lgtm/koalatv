@@ -57,6 +57,7 @@ class HomeActivity : AppCompatActivity() {
         movies.setOnClickListener { open(Kind.MOVIE) }
         series.setOnClickListener { open(Kind.SERIES) }
         settings.setOnClickListener { showSettings() }
+        findViewById<View?>(R.id.btn_search)?.setOnClickListener { startActivity(Intent(this, SearchActivity::class.java)) }
         listOf(live, movies, series, settings).forEach { it.focusZoom(1.05f) }
 
         updateBar = findViewById(R.id.update_bar)

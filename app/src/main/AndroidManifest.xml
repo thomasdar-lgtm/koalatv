@@ -8,6 +8,13 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- recherche vocale : voir si un service de dictée est installé -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:name=".App"
         android:allowBackup="true"
@@ -47,6 +54,9 @@
         <activity android:name=".MovieActivity" />
         <activity android:name=".CategoriesActivity" />
         <activity android:name=".GuideActivity" />
+        <activity
+            android:name=".SearchActivity"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
         <activity
             android:name=".PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"

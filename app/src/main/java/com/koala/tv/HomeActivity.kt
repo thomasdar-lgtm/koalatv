@@ -80,6 +80,12 @@ class HomeActivity : AppCompatActivity() {
                 if (bottom - top != oldBottom - oldTop) {
                     val h = minOf(maxH, bottom - top - dp(24)).coerceAtLeast(dp(120))
                     if (row.layoutParams.height != h) row.post { row.layoutParams = row.layoutParams.apply { height = h } }
+                    // l'icône rétrécit avec la tuile pour que le libellé reste visible
+                    val icon = minOf(resources.getDimensionPixelSize(R.dimen.tile_icon), h - dp(84)).coerceAtLeast(dp(36))
+                    for (t in listOf(live, movies, series, settings)) {
+                        val iv = (t as? android.view.ViewGroup)?.getChildAt(0) ?: continue
+                        if (iv.layoutParams.width != icon) iv.post { iv.layoutParams = iv.layoutParams.apply { width = icon; height = icon } }
+                    }
                 }
             }
         }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="wide">true</bool>
-    <dimen name="tile_icon">72dp</dimen>
+    <dimen name="tile_icon">96dp</dimen>
     <dimen name="tile_gap">22dp</dimen>
     <dimen name="tile_text">22sp</dimen>
     <dimen name="page_pad">36dp</dimen>

@@ -68,3 +68,9 @@ save(banner(1920, 1080, with_text=False), "webos/app/splash.png")
 save(logo(256), "webos/app/koala.png")
 # Dépôt Homebrew
 save(icon(256), "docs/icon.png")
+# Icônes des tuiles de l'accueil (détourées par brand/cut_icons.py)
+for name in ("live", "movies", "series", "settings"):
+    src = Image.open(os.path.join(ROOT, "brand", "icons", name + ".png")).convert("RGBA")
+    for folder, px in (("drawable-xhdpi", 192), ("drawable-xxhdpi", 288), ("drawable-xxxhdpi", 384)):
+        save(src.resize((px, px), Image.LANCZOS), f"app/src/main/res/{folder}/ic_tile_{name}.png")
+    save(src.resize((256, 256), Image.LANCZOS), f"webos/app/tile_{name}.png")

@@ -51,7 +51,7 @@ input { font-family: inherit; }
   -webkit-box-align: center; -webkit-align-items: center; align-items: center;
   -webkit-transition: -webkit-transform .15s ease-out, background-color .15s, color .15s;
   transition: transform .15s ease-out, background-color .15s, color .15s; }
-.tile svg { width: 5.2rem; height: 5.2rem; stroke-width: 1.3; }
+.tile img { width: 7rem; height: 7rem; }
 .tile span { margin-top: 1.6rem; font-size: 1.6rem; font-weight: 600; color: #EDEFF2; }
 .tile.focus { background: #1E2631; border-color: #3DDC97; color: #3DDC97; -webkit-transform: scale(1.05); transform: scale(1.05);
   box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, .45); }
@@ -73,7 +73,7 @@ input { font-family: inherit; }
 .rc .bar div { height: 100%; background: #3DDC97; }
 .rl { margin-top: .45rem; font-size: .85rem; color: #8B95A3; }
 .has-resume .tiles { top: 18.6rem; height: 15rem; margin-top: 0; }
-.has-resume .tile svg { width: 4rem; height: 4rem; }
+.has-resume .tile img { width: 5.2rem; height: 5.2rem; }
 .has-resume .tile span { margin-top: 1rem; font-size: 1.4rem; }
 
 /* Listes */

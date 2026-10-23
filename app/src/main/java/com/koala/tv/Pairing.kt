@@ -14,7 +14,7 @@ import java.security.SecureRandom
  * Ils transitent chiffrés (clé tirée du code) par la base Firebase, à une adresse tirée du code,
  * et sont effacés dès réception. Même calcul que l'appli LG.
  */
-object Pair {
+object Pairing {
     private const val ABC = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
     private val JSON = "application/json; charset=utf-8".toMediaType()
     private val rnd = SecureRandom()

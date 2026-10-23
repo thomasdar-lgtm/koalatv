@@ -82,15 +82,15 @@ class LoginActivity : AppCompatActivity() {
         val tvCode = findViewById<TextView>(R.id.tv_code)
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                var code = Pair.newCode()
+                var code = Pairing.newCode()
                 var since = System.currentTimeMillis()
-                tvCode.text = Pair.display(code)
+                tvCode.text = Pairing.display(code)
                 while (true) {
                     delay(3000)
                     if (System.currentTimeMillis() - since > 600_000) {
-                        code = Pair.newCode(); since = System.currentTimeMillis(); tvCode.text = Pair.display(code)
+                        code = Pairing.newCode(); since = System.currentTimeMillis(); tvCode.text = Pairing.display(code)
                     }
-                    val c = Pair.receive(code) ?: continue
+                    val c = Pairing.receive(code) ?: continue
                     etServer.setText(c.server)
                     etUser.setText(c.user)
                     etPass.setText(c.pass)

@@ -240,7 +240,7 @@ class HomeActivity : AppCompatActivity() {
             .create()
         d.setOnShowListener {
             d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val code = Pair.clean(et.text.toString())
+                val code = Pairing.clean(et.text.toString())
                 if (code == null) {
                     et.error = "Code incorrect"
                     return@setOnClickListener
@@ -248,17 +248,17 @@ class HomeActivity : AppCompatActivity() {
                 d.dismiss()
                 toast("Envoi des identifiants…")
                 lifecycleScope.launch {
-                    if (!Pair.send(code)) {
+                    if (!Pairing.send(code)) {
                         toast("Envoi impossible, vérifie la connexion"); return@launch
                     }
                     // l'autre appareil récupère les identifiants en quelques secondes
                     repeat(20) {
                         kotlinx.coroutines.delay(3000)
-                        if (Pair.consumed(code)) {
+                        if (Pairing.consumed(code)) {
                             toast("Appareil connecté"); return@launch
                         }
                     }
-                    Pair.cancel(code)
+                    Pairing.cancel(code)
                     toast("L'appareil n'a pas répondu, vérifie le code")
                 }
             }

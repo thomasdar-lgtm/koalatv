@@ -130,6 +130,12 @@ class BrowseActivity : AppCompatActivity() {
         }
 
         tvEmpty.setOnClickListener { if (allItems.isEmpty()) load() }
+        if (kind == Kind.LIVE) {
+            findViewById<View>(R.id.btn_guide).apply {
+                visibility = View.VISIBLE
+                setOnClickListener { openGuide() }
+            }
+        }
         load()
     }
 
@@ -332,6 +338,16 @@ class BrowseActivity : AppCompatActivity() {
         }
     }
 
+    /** Guide TV des chaînes affichées (catégorie ou recherche en cours). */
+    private fun openGuide() {
+        if (itemAdapter.items.isEmpty()) return
+        Guide.channels = itemAdapter.items
+        Guide.title = tvHead.text.toString()
+        val f = currentFocus
+        Guide.startIndex = if (f != null && f.parent == rvItems) rvItems.getChildAdapterPosition(f).coerceAtLeast(0) else 0
+        startActivity(Intent(this, GuideActivity::class.java))
+    }
+
     private fun toggleFav(pos: Int, item: Item) {
         val added = Prefs.toggleFav(item.favKey)
         toast(if (added) "Ajouté aux favoris" else "Retiré des favoris")
@@ -341,6 +357,9 @@ class BrowseActivity : AppCompatActivity() {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         // Touches Menu ou rouge de la télécommande : favori sur l'élément sélectionné
+        if (kind == Kind.LIVE && (keyCode == KeyEvent.KEYCODE_GUIDE || keyCode == KeyEvent.KEYCODE_PROG_GREEN)) {
+            openGuide(); return true
+        }
         if (keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_PROG_RED) {
             val focused = currentFocus
             if (focused != null && focused.parent == rvItems) {

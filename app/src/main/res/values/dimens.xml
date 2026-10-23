@@ -7,4 +7,5 @@
     <dimen name="page_pad">16dp</dimen>
     <dimen name="poster_min">108dp</dimen>
     <dimen name="tile_row">190dp</dimen>
+    <dimen name="guide_channel">128dp</dimen>
 </resources>

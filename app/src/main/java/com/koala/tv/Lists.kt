@@ -116,10 +116,12 @@ object Lists {
         }
         val cats = ArrayList<Category>()
         Xtream.stream(catAction) { r ->
+            cats.clear() // nouvelle tentative après coupure : on repart de zéro
             readArray(r) { o -> cats.add(Category(o["category_id"] ?: "", o["category_name"] ?: "")) }
         }
         val items = ArrayList<Item>()
         Xtream.stream(listAction) { r ->
+            items.clear()
             readArray(r) { o ->
                 val id = (if (kind == Kind.SERIES) o["series_id"] else o["stream_id"]) ?: ""
                 if (id.isEmpty()) return@readArray

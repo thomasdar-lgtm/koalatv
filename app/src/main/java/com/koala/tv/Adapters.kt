@@ -24,6 +24,7 @@ class CatAdapter(
         val name: TextView = v.findViewById(R.id.tv_name)
         val count: TextView? = v.findViewById(R.id.tv_count)
         val bar: View? = v.findViewById(R.id.v_bar)
+        val lock: View? = v.findViewById(R.id.iv_lock)
     }
 
     fun submit(l: List<Category>) {
@@ -57,6 +58,17 @@ class CatAdapter(
         val sel = position == selected
         h.name.text = c.name
         h.count?.text = fmtNum(c.count)
+        h.lock?.visibility = if (c.locked) View.VISIBLE else View.GONE
+        if (h.lock == null) {
+            // puce (mobile) : cadenas à droite du nom
+            val d = if (c.locked) androidx.core.content.ContextCompat.getDrawable(h.name.context, R.drawable.ic_lock)?.mutate()?.apply {
+                val s = h.name.context.dp(14)
+                setBounds(0, 0, s, s)
+                setTint(h.name.currentTextColor)
+            } else null
+            h.name.setCompoundDrawablesRelative(null, null, d, null)
+            h.name.compoundDrawablePadding = h.name.context.dp(6)
+        }
         h.bar?.visibility = if (sel) View.VISIBLE else View.INVISIBLE
         h.itemView.isActivated = sel
         h.itemView.setOnClickListener {

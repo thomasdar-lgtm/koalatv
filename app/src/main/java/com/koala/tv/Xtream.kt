@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 
 enum class Kind { LIVE, MOVIE, SERIES }
 
-data class Category(val id: String, val name: String, val count: Int = 0)
+data class Category(val id: String, val name: String, val count: Int = 0, val locked: Boolean = false)
 
 data class Item(
     val kind: Kind,

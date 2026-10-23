@@ -38,6 +38,9 @@ class BrowseActivity : AppCompatActivity() {
     private lateinit var itemAdapter: ItemAdapter
 
     private var allItems: List<Item> = emptyList()
+    /** Éléments affichables : sans les catégories masquées ni verrouillées (tant que le code n'est pas saisi). */
+    private var pool: List<Item> = emptyList()
+    private var lastData: Lists.Data? = null
     private var cats: List<Category> = emptyList()
     private var catIdx = -1
     private var restoreCat = -1
@@ -178,17 +181,20 @@ class BrowseActivity : AppCompatActivity() {
     private fun apply(data: Lists.Data, initial: Boolean) {
         val list = data.items
         val prevId = cats.getOrNull(catIdx)?.id
+        lastData = data
         allItems = list
+        pool = list.filter { !Parental.blocked(kind, it.categoryId) }
         val counts = HashMap<String, Int>()
         for (it in list) counts[it.categoryId] = (counts[it.categoryId] ?: 0) + 1
         val favs = Prefs.favs()
-        val favN = list.count { favs.contains(it.favKey) }
+        val favN = pool.count { favs.contains(it.favKey) }
         val built = ArrayList<Category>()
         built.add(Category(FAV, "Favoris", favN))
-        built.add(Category(ALL, "Tout", list.size))
+        built.add(Category(ALL, "Tout", pool.size))
         for (cat in data.cats) {
             val n = counts[cat.id] ?: 0
-            if (n > 0) built.add(Category(cat.id, cat.name, n))
+            if (n == 0 || Parental.state(kind, cat.id) == Parental.State.HIDDEN) continue
+            built.add(Category(cat.id, cat.name, n, Parental.locked(kind, cat.id)))
         }
         cats = built
         catAdapter.submit(built)
@@ -219,6 +225,16 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun selectCategory(pos: Int, clearSearch: Boolean = true, keepScroll: Boolean = false) {
         val c = cats.getOrNull(pos) ?: return
+        if (c.locked && Parental.blocked(kind, c.id)) {
+            // catégorie verrouillée : code parental, puis on reconstruit les listes déverrouillées
+            Parental.ask(this) {
+                val d = lastData ?: return@ask
+                apply(d, initial = false)
+                val idx = cats.indexOfFirst { it.id == c.id }
+                if (idx >= 0) selectCategory(idx, clearSearch, keepScroll)
+            }
+            return
+        }
         catIdx = pos
         catAdapter.setSelected(pos)
         if (clearSearch && etSearch.text.isNotEmpty()) {
@@ -229,9 +245,9 @@ class BrowseActivity : AppCompatActivity() {
         val list = when (c.id) {
             FAV -> {
                 val favs = Prefs.favs()
-                allItems.filter { favs.contains(it.favKey) }
+                pool.filter { favs.contains(it.favKey) }
             }
-            ALL -> allItems
+            ALL -> pool
             else -> allItems.filter { it.categoryId == c.id }
         }
         val empty = if (c.id == FAV) {
@@ -247,7 +263,7 @@ class BrowseActivity : AppCompatActivity() {
             if (catIdx >= 0) selectCategory(catIdx, clearSearch = false)
             return
         }
-        val list = allItems.filter { it.searchKey.contains(q) }
+        val list = pool.filter { it.searchKey.contains(q) }
         catAdapter.setSelected(-1)
         showItems(list, "Recherche : ${raw.trim()}", "Aucun résultat")
     }
@@ -270,10 +286,10 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun refreshFavCount() {
         val favs = Prefs.favs()
-        val n = allItems.count { favs.contains(it.favKey) }
+        val n = pool.count { favs.contains(it.favKey) }
         catAdapter.item(0)?.let { if (it.count != n) catAdapter.update(0, it.copy(count = n)) }
         if (catIdx == 0 && etSearch.text.isEmpty()) {
-            val list = allItems.filter { favs.contains(it.favKey) }
+            val list = pool.filter { favs.contains(it.favKey) }
             if (list.size != itemAdapter.itemCount) showItems(list, cats[0].name, "Aucun favori pour le moment.")
         }
         cats = cats.mapIndexed { i, c -> if (i == 0) c.copy(count = n) else c }

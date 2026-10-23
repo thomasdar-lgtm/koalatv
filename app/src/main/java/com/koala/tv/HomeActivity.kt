@@ -182,11 +182,23 @@ class HomeActivity : AppCompatActivity() {
         }
     }
 
+    private fun chooseCategories() {
+        AlertDialog.Builder(this)
+            .setTitle("Catégories visibles")
+            .setItems(arrayOf("TV en direct", "Films", "Séries")) { _, which ->
+                startActivity(Intent(this, CategoriesActivity::class.java).putExtra("kind", Kind.values()[which].name))
+            }
+            .setNegativeButton("Fermer", null)
+            .show()
+    }
+
     private fun showSettings() {
         val labels = arrayOf(
             "Format du direct : " + if (Prefs.liveFormat == "ts") "MPEG-TS (recommandé)" else "HLS",
             "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC)" else "intégré (recommandé)",
             "Actualiser les listes",
+            "Catégories visibles",
+            "Code parental : " + if (Parental.hasCode) "activé" else "désactivé",
             "Rechercher une mise à jour",
             "Se déconnecter",
         )
@@ -206,8 +218,10 @@ class HomeActivity : AppCompatActivity() {
                         toast("Actualisation des listes…")
                         Lists.refreshAll { ok -> toast(if (ok) "Listes à jour" else "Actualisation impossible, réessaie plus tard") }
                     }
-                    3 -> checkUpdate(force = true)
-                    4 -> AlertDialog.Builder(this)
+                    3 -> Parental.ask(this) { chooseCategories() }
+                    4 -> Parental.settings(this)
+                    5 -> checkUpdate(force = true)
+                    6 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->

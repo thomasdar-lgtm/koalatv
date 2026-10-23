@@ -45,6 +45,7 @@
             android:windowSoftInputMode="stateHidden|adjustNothing" />
         <activity android:name=".SeriesActivity" />
         <activity android:name=".MovieActivity" />
+        <activity android:name=".CategoriesActivity" />
         <activity
             android:name=".PlayerActivity"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation"

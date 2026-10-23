@@ -56,6 +56,26 @@ input { font-family: inherit; }
 .tile.focus { background: #1E2631; border-color: #3DDC97; color: #3DDC97; -webkit-transform: scale(1.05); transform: scale(1.05);
   box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, .45); }
 
+/* Rangée « Reprendre » */
+#h-resume { position: absolute; top: 7.4rem; left: 3.5rem; right: 3.5rem; display: none; }
+.has-resume #h-resume { display: block; }
+.h-label { font-size: 1.25rem; font-weight: 600; height: 1.6rem; line-height: 1.6rem; }
+.h-clip { position: relative; height: 7.6rem; margin: .4rem -.6rem 0; padding: .4rem .6rem; overflow: hidden; }
+#h-row { position: absolute; top: .4rem; left: .6rem; white-space: nowrap; -webkit-transition: -webkit-transform .15s ease-out; transition: transform .15s ease-out; }
+.rc { display: inline-block; vertical-align: top; width: 17.5rem; height: 6.8rem; margin-right: .8rem; padding: .5rem; border-radius: .8rem;
+  background: #141920; border: .14rem solid transparent; white-space: normal; }
+.rc.focus { border-color: #3DDC97; background: #1E2631; }
+.rp { float: left; width: 3.8rem; height: 5.5rem; border-radius: .4rem; background: #1D232C; overflow: hidden; }
+.rp img { width: 100%; height: 100%; object-fit: cover; }
+.rt { margin-left: 4.6rem; padding-top: .2rem; }
+.rn { height: 2.5rem; font-size: .95rem; line-height: 1.25rem; font-weight: 600; overflow: hidden; }
+.rc .bar { margin-top: .55rem; height: .25rem; }
+.rc .bar div { height: 100%; background: #3DDC97; }
+.rl { margin-top: .45rem; font-size: .85rem; color: #8B95A3; }
+.has-resume .tiles { top: 18.6rem; height: 15rem; margin-top: 0; }
+.has-resume .tile svg { width: 4rem; height: 4rem; }
+.has-resume .tile span { margin-top: 1rem; font-size: 1.4rem; }
+
 /* Listes */
 .side { position: absolute; top: 0; left: 0; bottom: 0; width: 21rem; background: #12161C; }
 .main { position: absolute; top: 0; left: 21rem; right: 0; bottom: 0; }

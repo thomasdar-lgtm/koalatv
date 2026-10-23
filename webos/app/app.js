@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.1.0';
+  var VERSION = '1.2.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -63,10 +63,37 @@
 
   var P = {
     server: load('server', ''), user: load('user', ''), pass: load('pass', ''), exp: load('exp', ''),
-    live: load('live', 'm3u8'), favs: load('favs', {}), pos: load('pos', {})
+    live: load('live', 'm3u8'), favs: load('favs', {}), pos: load('pos', {}), hist: load('hist', [])
   };
   function setP(k, v) { P[k] = v; save(k, v); }
   function loggedIn() { return !!(P.server && P.user && P.pass); }
+
+  /* Films et épisodes commencés, du plus récent au plus ancien (rangée « Reprendre ») */
+  var Hist = {
+    remove: function (key) {
+      var l = [], changed = false;
+      for (var i = 0; i < P.hist.length; i++) { if (P.hist[i].k === key) changed = true; else l.push(P.hist[i]); }
+      if (changed) setP('hist', l);
+    },
+    update: function (it, pos, dur) {
+      var l = [{ k: it.key, t: it.title, u: it.url, i: it.icon || '', p: Math.floor(pos), d: Math.floor(dur || 0), sid: it.sid || '', sn: it.sname || '' }];
+      for (var i = 0; i < P.hist.length && l.length < 20; i++) if (P.hist[i].k !== it.key) l.push(P.hist[i]);
+      setP('hist', l);
+    }
+  };
+
+  /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
+  function episodeList(sid, sname, icon, eps) {
+    var list = [];
+    for (var i = 0; i < eps.length; i++) {
+      var e = eps[i];
+      list.push({
+        title: sname + ' · ' + (e.season > 0 ? 'S' + e.season + ' ' : '') + 'É' + e.num,
+        url: X.url('episode', e.id, e.ext), live: false, key: 'e' + e.id, icon: icon, sid: sid, sname: sname
+      });
+    }
+    return list;
+  }
 
   /* ---------- Réseau ---------- */
 
@@ -707,20 +734,39 @@
 
   /* ---------- Accueil ---------- */
 
+  function resumeLeft(h) {
+    var m = h.d > 0 ? Math.max(0, Math.floor((h.d - h.p) / 60)) : 0;
+    if (m >= 60) return 'Reste ' + Math.floor(m / 60) + ' h ' + pad2(m % 60);
+    if (m > 0) return 'Reste ' + m + ' min';
+    return 'Reprendre à ' + fmtTime(h.p);
+  }
+
   screens.home = {
     el: $('s-home'),
     idx: 0,
+    rIdx: 0,
+    zone: 'tiles',
     tiles: null,
     init: function () {
       var self = this;
       this.tiles = this.el.querySelectorAll('.tile');
       for (var i = 0; i < this.tiles.length; i++) {
         this.tiles[i].addEventListener('click', function () {
+          self.zone = 'tiles';
           self.idx = parseInt(this.getAttribute('data-i'), 10);
           self.paint();
           self.open();
         });
       }
+      $('h-row').addEventListener('click', function (e) {
+        var n = e.target;
+        while (n && n.getAttribute && n.getAttribute('data-r') === null) n = n.parentNode;
+        if (!n || !n.getAttribute) return;
+        self.zone = 'resume';
+        self.rIdx = parseInt(n.getAttribute('data-r'), 10);
+        self.paint();
+        self.resumeItem();
+      });
     },
     enter: function () {
       var exp = parseInt(P.exp, 10), txt = P.user;
@@ -729,18 +775,80 @@
         txt += ' · expire le ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
       }
       $('h-account').textContent = txt;
+      this.zone = 'tiles';
+      this.drawResume();
       this.paint();
       Lists.warmAll();
     },
-    resume: function () { this.paint(); },
+    resume: function () { this.drawResume(); this.paint(); },
+    drawResume: function () {
+      var l = P.hist, h = '';
+      for (var i = 0; i < l.length; i++) {
+        var it = l[i], pct = it.d > 0 ? Math.min(100, it.p / it.d * 100) : 0;
+        h += '<div class="rc" data-r="' + i + '"><div class="rp">' + imgTag(it.i) + '</div><div class="rt">' +
+          '<div class="rn">' + esc(it.t) + '</div><div class="bar"><div style="width:' + pct.toFixed(1) + '%"></div></div>' +
+          '<div class="rl">' + esc(resumeLeft(it)) + '</div></div></div>';
+      }
+      $('h-row').innerHTML = h;
+      cls(this.el, 'has-resume', l.length > 0);
+      if (this.rIdx >= l.length) this.rIdx = Math.max(0, l.length - 1);
+      if (!l.length && this.zone === 'resume') this.zone = 'tiles';
+    },
     paint: function () {
-      for (var i = 0; i < this.tiles.length; i++) cls(this.tiles[i], 'focus', i === this.idx);
+      for (var i = 0; i < this.tiles.length; i++) cls(this.tiles[i], 'focus', this.zone === 'tiles' && i === this.idx);
+      var cards = $('h-row').children;
+      for (i = 0; i < cards.length; i++) cls(cards[i], 'focus', this.zone === 'resume' && i === this.rIdx);
+      // fait défiler la rangée pour garder la carte choisie visible
+      var c = cards[this.rIdx];
+      if (c) {
+        var row = $('h-row'), w = row.parentNode.clientWidth, x = c.offsetLeft + c.offsetWidth - w + 2 * REM;
+        setTransform(row, 'translate3d(' + (-Math.max(0, x)) + 'px,0,0)');
+      }
     },
     key: function (c) {
+      var n = P.hist.length;
+      if (this.zone === 'resume') {
+        if (c === K.LEFT && this.rIdx > 0) { this.rIdx--; this.paint(); }
+        else if (c === K.RIGHT && this.rIdx < n - 1) { this.rIdx++; this.paint(); }
+        else if (c === K.DOWN) { this.zone = 'tiles'; this.paint(); }
+        else if (c === K.OK) this.resumeItem();
+        else if (c === K.RED) this.forget();
+        return true;
+      }
+      if (c === K.UP && n) { this.zone = 'resume'; this.paint(); return true; }
       if (c === K.LEFT && this.idx > 0) { this.idx--; this.paint(); return true; }
       if (c === K.RIGHT && this.idx < this.tiles.length - 1) { this.idx++; this.paint(); return true; }
       if (c === K.OK) { this.open(); return true; }
       return false;
+    },
+    resumeItem: function () {
+      var h = P.hist[this.rIdx];
+      if (!h) return;
+      var single = { title: h.t, url: h.u, live: false, key: h.k, icon: h.i, sid: h.sid, sname: h.sn };
+      if (!h.sid) { go('player', { list: [single], index: 0 }); return; }
+      // épisode : on recharge la saison pour enchaîner les épisodes suivants
+      spinner(true);
+      X.episodes(h.sid, function (err, eps) {
+        spinner(false);
+        if (cur !== screens.home) return;
+        var epId = h.k.substr(1), ep = null, i;
+        if (!err) for (i = 0; i < eps.length; i++) if (eps[i].id === epId) ep = eps[i];
+        if (!ep) { go('player', { list: [single], index: 0 }); return; }
+        var season = [];
+        for (i = 0; i < eps.length; i++) if (eps[i].season === ep.season) season.push(eps[i]);
+        go('player', { list: episodeList(h.sid, h.sn, h.i, season), index: season.indexOf(ep) });
+      });
+    },
+    forget: function () {
+      var self = this, h = P.hist[this.rIdx];
+      if (!h) return;
+      Dialog.show(h.t, '', [
+        {
+          label: 'Retirer de « Reprendre »',
+          fn: function () { Hist.remove(h.k); delete P.pos[h.k]; save('pos', P.pos); self.drawResume(); self.paint(); }
+        },
+        { label: 'Annuler' }
+      ]);
     },
     open: function () {
       if (this.idx === 3) this.settings(0);
@@ -984,7 +1092,7 @@
       if (!it) return;
       if (it.kind === 'series') { go('series', it); return; }
       if (it.kind === 'movie') {
-        go('player', { list: [{ title: it.name, url: X.url('movie', it.id, it.ext), live: false, key: 'm' + it.id }], index: 0 });
+        go('player', { list: [{ title: it.name, url: X.url('movie', it.id, it.ext), live: false, key: 'm' + it.id, icon: it.icon }], index: 0 });
         return;
       }
       var list = [], src = this.items.items;
@@ -1168,15 +1276,7 @@
       if (this.eList.active !== (this.zone === 'eps')) this.eList.focus(this.zone === 'eps');
     },
     play: function () {
-      var list = [], src = this.eList.items, name = this.it.name;
-      for (var i = 0; i < src.length; i++) {
-        var e = src[i];
-        list.push({
-          title: name + ' · ' + (e.season > 0 ? 'S' + e.season + ' ' : '') + 'É' + e.num,
-          url: X.url('episode', e.id, e.ext), live: false, key: 'e' + e.id
-        });
-      }
-      go('player', { list: list, index: this.eList.idx });
+      go('player', { list: episodeList(this.it.id, this.it.name, this.it.icon, this.eList.items), index: this.eList.idx });
     },
     back: function () {
       if (this.zone === 'eps') { this.setZone('seasons'); return true; }
@@ -1341,7 +1441,7 @@
     },
     next: function () {
       var it = this.cur();
-      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); }
+      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.remove(it.key); }
       if (this.i < this.list.length - 1) { this.i++; this.start(true); }
       else back();
     },
@@ -1363,9 +1463,13 @@
       var it = this.cur(), v = this.v;
       if (!it || it.live || !it.key) return;
       var pos = this.lastPos, dur = v.duration;
-      if (dur > 0 && isFinite(dur) && pos > dur - 120) delete P.pos[it.key];
-      else if (pos > 30) P.pos[it.key] = Math.floor(pos);
-      else return;
+      if (dur > 0 && isFinite(dur) && pos > dur - 120) {
+        delete P.pos[it.key];
+        Hist.remove(it.key);
+      } else if (pos > 30) {
+        P.pos[it.key] = Math.floor(pos);
+        Hist.update(it, pos, isFinite(dur) ? dur : 0);
+      } else return;
       save('pos', P.pos);
     },
     paintProgress: function () {

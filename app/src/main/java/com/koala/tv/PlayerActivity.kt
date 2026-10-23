@@ -163,7 +163,9 @@ class PlayerActivity : AppCompatActivity() {
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(20_000, 60_000, 2_000, 4_000)
             .build()
-        val renderers = DefaultRenderersFactory(this).setEnableDecoderFallback(true)
+        val renderers = DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true)
+            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         val trackSelector = DefaultTrackSelector(this)
         trackSelector.setParameters(trackSelector.buildUponParameters().setPreferredAudioLanguage("fr").build())
 

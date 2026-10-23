@@ -11,8 +11,8 @@ android {
         applicationId = "com.koala.tv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.1.1"
+        versionCode = 5
+        versionName = "1.2.0"
     }
 
     signingConfigs {
@@ -48,12 +48,14 @@ android {
 }
 
 dependencies {
-    val media3 = "1.4.1"
+    val media3 = "1.6.1"
     implementation("androidx.media3:media3-exoplayer:$media3")
     implementation("androidx.media3:media3-exoplayer-hls:$media3")
     implementation("androidx.media3:media3-extractor:$media3")
     implementation("androidx.media3:media3-ui:$media3")
     implementation("androidx.media3:media3-datasource-okhttp:$media3")
+    // Décodeur audio logiciel (AC3, E-AC3, DTS, TrueHD…) pour les appareils qui ne les lisent pas
+    implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.appcompat:appcompat:1.7.0")

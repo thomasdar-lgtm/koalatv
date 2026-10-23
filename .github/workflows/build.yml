@@ -28,7 +28,8 @@ jobs:
       - name: Build
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace --no-daemon
+          set -o pipefail
+          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1 | tee build.log
 
       - name: Prepare APK
         run: |
@@ -48,3 +49,22 @@ jobs:
           name: KoalaTV ${{ env.VERSION }}
           files: KoalaTV.apk
           make_latest: true
+
+      # Résultat de la compilation (et erreurs) sur la branche build-logs, lisible sans accès à l'onglet Actions
+      - name: Report
+        if: always()
+        run: |
+          RESULT="${{ job.status }}"
+          mkdir -p /tmp/report
+          echo "$RESULT ${GITHUB_SHA}" > /tmp/report/status.txt
+          if [ -f build.log ]; then
+            grep -E "^e: |error:|FAILURE|What went wrong|BUILD (SUCCESSFUL|FAILED)|\.kt:[0-9]+|\.xml:[0-9]+|AAPT|Could not" build.log | head -200 > /tmp/report/errors.txt || true
+            tail -150 build.log > /tmp/report/tail.txt
+          fi
+          cd /tmp/report
+          git init -q -b build-logs
+          git config user.name "build-bot"
+          git config user.email "build-bot@users.noreply.github.com"
+          git add -A
+          git commit -q -m "$RESULT ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" build-logs

@@ -239,6 +239,11 @@ input { font-family: inherit; }
 #p-vod.on { display: block; }
 .bar { height: .35rem; border-radius: .2rem; background: rgba(255, 255, 255, .18); overflow: hidden; }
 #p-prog { height: 100%; width: 0; background: #3DDC97; }
+#p-vod .bar { overflow: visible; -webkit-transition: height .15s; transition: height .15s; }
+#p-prog { position: relative; border-radius: .2rem; }
+#p-info.bar-on #p-vod .bar { height: .55rem; border-radius: .3rem; }
+#p-info.bar-on #p-prog:after { content: ""; position: absolute; right: -.75rem; top: 50%; width: 1.5rem; height: 1.5rem; margin-top: -.75rem;
+  border-radius: 50%; background: #EDEFF2; box-shadow: 0 0 0 .3rem rgba(61, 220, 151, .55); }
 .times { display: -webkit-box; display: -webkit-flex; display: flex; margin-top: .5rem; font-size: 1rem; color: #B7C0CC; }
 .times span:first-child { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; }
 /* Boutons du lecteur (films et séries) */

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.12.1';
+  var VERSION = '1.12.2';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -1975,7 +1975,7 @@
         if (!n || !n.getAttribute) return;
         var a = n.getAttribute('data-a');
         for (var k = 0; k < self.ACT.length; k++) if (self.ACT[k] === a) self.cIdx = k;
-        self.ctl = true;
+        self.ctl = 'btn';
         self.act(a);
       };
       v.addEventListener('loadedmetadata', function () {
@@ -2005,6 +2005,7 @@
     },
     cur: function () { return this.list[this.i]; },
     ACT: ['prev', 'back', 'play', 'fwd', 'next', 'audio', 'subs'],
+    /* Zone active sous le titre : false (rien), 'bar' (barre de progression) ou 'btn' (boutons) */
     ctl: false,
     cIdx: 2,
     /* Boutons visibles / utilisables selon le contenu et la position dans la saison */
@@ -2021,7 +2022,8 @@
         cls(el, 'off', !this.usable(a));
         cls(el, 'focus', k === this.cIdx);
       }
-      cls($('p-info'), 'ctl-on', this.ctl);
+      cls($('p-info'), 'ctl-on', this.ctl === 'btn');
+      cls($('p-info'), 'bar-on', this.ctl === 'bar');
       cls($('p-info'), 'paused', this.v.paused);
     },
     moveCtl: function (d) {
@@ -2077,6 +2079,7 @@
       cls($('p-info'), 'on', false);
       this.ctl = false;
       cls($('p-info'), 'ctl-on', false);
+      cls($('p-info'), 'bar-on', false);
       cls($('p-pause'), 'on', false);
       cls($('p-num'), 'on', false);
       clearTimeout(this.okTimer);
@@ -2345,25 +2348,31 @@
         else if (c === K.INFO || c === K.LEFT || c === K.RIGHT) this.showInfo();
         return true;
       }
-      // Films et séries : sans les boutons, gauche/droite reculent/avancent ; OK ou haut affichent les boutons
+      // Films et séries : la barre de progression est au-dessus des boutons.
+      // Haut : barre (gauche/droite reculent/avancent) · bas : boutons · bas depuis les boutons : on cache.
       if (c === K.PLAY || c === K.PAUSE) {
         if (c === K.PLAY && !this.v.paused) this.showInfo();
         else if (c === K.PAUSE && this.v.paused) this.showInfo(true);
         else this.togglePause();
       } else if (c === K.OK) {
         if (e && e.repeat) return true;
-        if (this.ctl) this.act(this.ACT[this.cIdx]);
-        else { this.ctl = true; this.cIdx = 2; this.togglePause(); }
+        if (this.ctl === 'btn') this.act(this.ACT[this.cIdx]);
+        else if (this.ctl === 'bar') this.togglePause();
+        else { this.ctl = 'btn'; this.cIdx = 2; this.togglePause(); }
       } else if (c === K.LEFT || c === K.RIGHT) {
-        if (this.ctl) this.moveCtl(c === K.LEFT ? -1 : 1);
+        if (this.ctl === 'btn') this.moveCtl(c === K.LEFT ? -1 : 1);
         else this.seek(c === K.LEFT ? -10 : 30);
-      } else if (c === K.UP || c === K.INFO) {
-        this.ctl = true;
-        if (!this.usable(this.ACT[this.cIdx])) this.cIdx = 2;
+      } else if (c === K.UP) {
+        this.ctl = 'bar';
         this.showInfo(this.v.paused);
-      } else if (c === K.DOWN) {
-        if (this.ctl && !this.v.paused) this.hideInfo();
-        else { this.ctl = false; this.showInfo(this.v.paused); }
+      } else if (c === K.DOWN || c === K.INFO) {
+        if (this.ctl === 'btn' && c === K.DOWN) {
+          if (!this.v.paused) this.hideInfo();
+        } else {
+          this.ctl = 'btn';
+          if (!this.usable(this.ACT[this.cIdx])) this.cIdx = 2;
+          this.showInfo(this.v.paused);
+        }
       }
       else if (c === K.CH_UP) this.act('next');
       else if (c === K.CH_DOWN) this.act('prev');

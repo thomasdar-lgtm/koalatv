@@ -82,6 +82,16 @@ class GuideStrip @JvmOverloads constructor(context: Context, attrs: AttributeSet
             return
         }
         val now = Epg.nowSec()
+        // passé d'une chaîne sans replay : bloc neutre
+        val gapEnd = minOf(now, list.first().start, w.end)
+        if (!replay && gapEnd - w.start >= 900) {
+            r.set(gap / 2, gap, xOf(gapEnd) - gap / 2, h - gap)
+            c.drawRoundRect(r, rad, rad, bg)
+            sub.alpha = 110
+            val t = TextUtils.ellipsize("Pas de replay", sub, r.width() - 24f * d, TextUtils.TruncateAt.END)
+            c.drawText(t, 0, t.length, r.left + 12f * d, h / 2 + sub.textSize / 3, sub)
+            sub.alpha = 255
+        }
         for (p in list) {
             if (p.end <= w.start || p.start >= w.end) continue
             val x0 = maxOf(0f, xOf(p.start)) + gap / 2

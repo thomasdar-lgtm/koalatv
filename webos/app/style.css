@@ -178,6 +178,10 @@ input { font-family: inherit; }
 .gp.focus { background: #1E2631; box-shadow: inset 0 0 0 .14rem #3DDC97; }
 .gp b { display: block; font-size: .95rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .gp small { display: block; margin-top: .2rem; font-size: .8rem; color: #8B95A3; overflow: hidden; text-overflow: ellipsis; }
+.gp.past b, .gp.past small { opacity: .45; }
+.gp small em { font-style: normal; font-weight: 600; color: #3DDC97; margin-left: .3rem; }
+.row .n .rp { font-style: normal; font-size: .75rem; font-weight: 600; color: #3DDC97; background: #222A35; border-radius: .3rem; padding: .1rem .45rem;
+  margin-left: .7rem; position: relative; top: -.15rem; }
 .gp.empty b { font-weight: 400; color: #8B95A3; margin-top: .55rem; }
 .gnow { position: absolute; top: 0; bottom: 0; width: .14rem; margin-left: -.07rem; background: #3DDC97; }
 

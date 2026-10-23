@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.7.0';
+  var VERSION = '1.8.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -66,7 +66,7 @@
 
   var P = {
     server: load('server', ''), user: load('user', ''), pass: load('pass', ''), exp: load('exp', ''),
-    live: load('live', 'm3u8'), favs: load('favs', {}), pos: load('pos', {}), hist: load('hist', [])
+    live: load('live', 'm3u8'), favs: load('favs', {}), pos: load('pos', {}), hist: load('hist', []), tzoff: load('tzoff', null)
   };
   function setP(k, v) { P[k] = v; save(k, v); }
   function loggedIn() { return !!(P.server && P.user && P.pass); }
@@ -317,6 +317,15 @@
     }
   }
 
+  /** Décalage (secondes) entre l'heure locale du serveur et l'heure UTC : utile pour le replay. */
+  function serverOffset(si) {
+    if (!si) return null;
+    var ts = parseInt(si.timestamp_now, 10), m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(str(si.time_now));
+    if (!ts || !m) return null;
+    var asUtc = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) / 1000;
+    return Math.round((asUtc - ts) / 900) * 900;
+  }
+
   var X = {
     login: function (server, user, pass, cb) {
       getJson(apiUrl(server, user, pass), function (err, j) {
@@ -325,8 +334,26 @@
         if (!ui || str(ui.auth) !== '1') return cb(new Error('Identifiant ou mot de passe incorrect'));
         var st = str(ui.status).toLowerCase();
         if (st && st !== 'active') return cb(new Error(st === 'expired' ? 'Abonnement expiré' : 'Abonnement inactif'));
+        ui.tzoff = serverOffset(j.server_info);
         cb(null, ui);
       });
+    },
+
+    /** Remet à jour l'expiration et le fuseau du serveur (une fois par lancement). */
+    refreshAccount: function () {
+      X.login(P.server, P.user, P.pass, function (err, ui) {
+        if (err) return;
+        setP('exp', str(ui.exp_date));
+        if (ui.tzoff !== null) setP('tzoff', ui.tzoff);
+      });
+    },
+
+    /** Adresse de replay : début à l'heure du serveur, durée en minutes. */
+    catchupUrl: function (id, startSec, minutes) {
+      var off = typeof P.tzoff === 'number' ? P.tzoff : -new Date(startSec * 1000).getTimezoneOffset() * 60;
+      var d = new Date((startSec + off) * 1000);
+      var start = d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate()) + ':' + pad2(d.getUTCHours()) + '-' + pad2(d.getUTCMinutes());
+      return P.server + '/timeshift/' + encodeURIComponent(P.user) + '/' + encodeURIComponent(P.pass) + '/' + minutes + '/' + start + '/' + id + '.ts';
     },
 
     episodes: function (id, cb) {
@@ -355,17 +382,20 @@
       });
     },
 
-    epg: function (streamId, cb, limit) {
-      getJson(api('get_short_epg', '&stream_id=' + encodeURIComponent(streamId) + '&limit=' + (limit || 2)), function (err, j) {
+    epg: function (streamId, cb, limit, full) {
+      var q = full ? api('get_simple_data_table', '&stream_id=' + encodeURIComponent(streamId))
+        : api('get_short_epg', '&stream_id=' + encodeURIComponent(streamId) + '&limit=' + (limit || 2));
+      getJson(q, function (err, j) {
         var out = [];
         if (!err && j && j.epg_listings && j.epg_listings.length) {
           for (var i = 0; i < j.epg_listings.length; i++) {
             var e = j.epg_listings[i], t = str(b64(str(e.title))), ts = parseInt(e.start_timestamp, 10),
               te = parseInt(e.stop_timestamp || e.end_timestamp, 10);
-            if (!t || (te && te * 1000 <= Date.now())) continue;
+            if (!t || !ts || !te || te <= ts || (!full && te * 1000 <= Date.now())) continue;
             out.push({ h: ts ? hm(ts) : '', t: t, s: ts || 0, e: te || 0, d: str(b64(str(e.description))) });
           }
         }
+        out.sort(function (a, b) { return a.s - b.s; });
         cb(out);
       });
     },
@@ -880,6 +910,7 @@
         setP('user', user);
         setP('pass', pass);
         setP('exp', str(ui.exp_date));
+        setP('tzoff', ui.tzoff);
         reset('home');
       });
     }
@@ -932,6 +963,7 @@
       this.drawResume();
       this.paint();
       Lists.warmAll();
+      if (!this.accountDone) { this.accountDone = true; X.refreshAccount(); }
     },
     resume: function () { this.drawResume(); this.paint(); },
     drawResume: function () {
@@ -1076,6 +1108,18 @@
   var Epg = {
     cache: {}, queue: [], running: 0, onLoaded: null,
     /** Programmes à venir (le premier peut être en cours) ; null = en cours de chargement. */
+    /** Guide complet, passé compris (chaînes avec replay). */
+    full: function (id) {
+      var c = this.cache['H:' + id], t = Date.now() / 1000;
+      if (!(c && t < c.until) && !(c && c.loading)) this.want('H:' + id);
+      return c && c.rows ? c.rows : null;
+    },
+    want: function (key) {
+      for (var i = 0; i < this.queue.length; i++) if (this.queue[i] === key) return;
+      this.queue.push(key);
+      if (this.queue.length > 40) this.queue.shift(); // seules les dernières lignes affichées comptent
+      this.pump();
+    },
     list: function (id) {
       var c = this.cache[id], t = Date.now() / 1000, out = null, i;
       if (c && c.rows) { out = []; for (i = 0; i < c.rows.length; i++) if (c.rows[i].e > t) out.push(c.rows[i]); }
@@ -1096,21 +1140,22 @@
     pump: function () {
       var self = this;
       while (this.running < 4 && this.queue.length) {
-        var id = this.queue.pop();
-        var old = this.cache[id];
-        this.cache[id] = { loading: true, until: 0, rows: old ? old.rows : null };
+        var key = this.queue.pop();
+        var old = this.cache[key];
+        this.cache[key] = { loading: true, until: 0, rows: old ? old.rows : null };
         this.running++;
-        (function (id) {
+        (function (key) {
+          var full = key.indexOf('H:') === 0, id = full ? key.substr(2) : key;
           X.epg(id, function (rows) {
             self.running--;
             var t = Date.now() / 1000, until = t + 1800;
             // gardé jusqu'à la fin du programme en cours ; pas de guide : on ne redemande pas avant 30 min
             for (var i = 0; i < rows.length; i++) if (rows[i].e > t) { until = rows[i].e; break; }
-            self.cache[id] = { rows: rows, until: until };
+            self.cache[key] = { rows: rows, until: until };
             if (self.onLoaded) self.onLoaded(id);
             self.pump();
-          }, 24);
-        })(id);
+          }, 24, full);
+        })(key);
       }
     }
   };
@@ -1121,7 +1166,8 @@
       var pct = Math.max(0, Math.min(100, (Date.now() / 1000 - p.s) / (p.e - p.s) * 100));
       g = '<span class="g">' + hm(p.s) + ' – ' + hm(p.e) + ' · ' + esc(p.t) + '</span><span class="gb"><i style="width:' + pct.toFixed(1) + '%"></i></span>';
     }
-    return '<div class="row"><span class="logo">' + imgTag(it.icon) + '</span><span class="tx"><span class="n">' + esc(it.name) + '</span>' +
+    return '<div class="row"><span class="logo">' + imgTag(it.icon) + '</span><span class="tx"><span class="n">' + esc(it.name) +
+      (it.archive > 0 ? '<em class="rp">Replay</em>' : '') + '</span>' +
       g + '</span>' + (isFav(it) ? STAR : '') + '</div>';
   }
   function renderPoster(it) {
@@ -1565,17 +1611,20 @@
           n = n.parentNode;
         }
         if (row === null) return;
-        var list = Epg.list(self.ch[row].id) || [];
+        var list = self.rowList(row) || [], nw = Date.now() / 1000;
         if (row === self.row && prog !== null && list[prog] === self.selected(row)) { self.play(); return; }
         self.row = row;
-        if (prog !== null && list[prog]) self.time = Math.max(list[prog].s, Date.now() / 1000);
+        if (prog !== null && list[prog]) self.time = list[prog].s <= nw && list[prog].e > nw ? nw : list[prog].s;
         self.render();
       });
     },
     floor30: function (t) { return t - t % 1800; },
     enter: function (p) {
-      var self = this;
+      var self = this, days = 0;
       this.ch = p.channels;
+      for (var k = 0; k < this.ch.length; k++) days = Math.max(days, this.ch[k].archive || 0);
+      // jusqu'à 7 jours en arrière si des chaînes ont du replay
+      this.minStart = this.floor30(Math.floor(Date.now() / 1000) - Math.min(7, days) * 86400);
       this.row = Math.max(0, Math.min(p.index || 0, this.ch.length - 1));
       this.time = Date.now() / 1000;
       this.start = this.floor30(Math.floor(this.time));
@@ -1588,8 +1637,21 @@
     loaded: function (id) {
       for (var i = this.top; i < Math.min(this.ch.length, this.top + this.vis + 1); i++) if (this.ch[i].id === id) { this.render(); return; }
     },
+    /* programmes d'une ligne : passé compris pour les chaînes avec replay */
+    rowList: function (row) {
+      var c = this.ch[row];
+      if (!(c.archive > 0)) return Epg.list(c.id);
+      var all = Epg.full(c.id), from = Date.now() / 1000 - c.archive * 86400, out = [];
+      if (!all) return null;
+      for (var i = 0; i < all.length; i++) if (all[i].e > from) out.push(all[i]);
+      return out;
+    },
+    canReplay: function (row, p) {
+      var c = this.ch[row], now = Date.now() / 1000;
+      return c.archive > 0 && p.e <= now && p.s >= now - c.archive * 86400;
+    },
     selected: function (row) {
-      var l = Epg.list(this.ch[row].id), i;
+      var l = this.rowList(row), i;
       if (!l || !l.length) return null;
       for (i = 0; i < l.length; i++) if (l[i].s <= this.time && l[i].e > this.time) return l[i];
       for (i = 0; i < l.length; i++) if (l[i].s > this.time) return l[i];
@@ -1612,17 +1674,23 @@
       // lignes visibles
       var h = '';
       for (i = this.top; i < Math.min(this.ch.length, this.top + this.vis); i++) {
-        var c = this.ch[i], l = Epg.list(c.id), sel = i === this.row ? this.selected(i) : null, cells = '';
+        var c = this.ch[i], l = this.rowList(i), sel = i === this.row ? this.selected(i) : null, cells = '';
         if (!l || !l.length) {
           cells = '<div class="gp empty' + (i === this.row ? ' focus' : '') + '" style="left:0;width:100%"><b>' + (l ? 'Pas de programme' : 'Chargement…') + '</b></div>';
         } else {
+          // passé d'une chaîne sans replay : bloc neutre
+          var gapEnd = Math.min(now, l[0].s, end);
+          if (!(c.archive > 0) && gapEnd - this.start >= 900) {
+            cells += '<div class="gp past empty" style="left:0;width:' + ((gapEnd - this.start) / this.SPAN * 100).toFixed(3) + '%"><b>Pas de replay</b></div>';
+          }
           for (j = 0; j < l.length; j++) {
             var p = l[j];
             if (p.e <= this.start || p.s >= end) continue;
             var x0 = Math.max(0, (p.s - this.start) / this.SPAN), x1 = Math.min(1, (p.e - this.start) / this.SPAN);
-            cells += '<div class="gp' + (p === sel ? ' focus' : '') + (p.s <= now && p.e > now ? ' now' : '') + '" data-p="' + j +
-              '" style="left:' + (x0 * 100).toFixed(3) + '%;width:' + ((x1 - x0) * 100).toFixed(3) + '%"><b>' + esc(p.t) + '</b><small>' +
-              hm(p.s) + ' – ' + hm(p.e) + '</small></div>';
+            var past = p.e <= now, rp = past && c.archive > 0;
+            cells += '<div class="gp' + (p === sel ? ' focus' : '') + (p.s <= now && p.e > now ? ' now' : '') + (past && !rp ? ' past' : '') +
+              '" data-p="' + j + '" style="left:' + (x0 * 100).toFixed(3) + '%;width:' + ((x1 - x0) * 100).toFixed(3) + '%"><b>' + esc(p.t) +
+              '</b><small>' + hm(p.s) + ' – ' + hm(p.e) + (rp ? ' <em>Replay</em>' : '') + '</small></div>';
           }
         }
         if (now >= this.start && now < end) cells += '<i class="gnow" style="left:' + ((now - this.start) / this.SPAN * 100) + '%"></i>';
@@ -1632,11 +1700,13 @@
       }
       box.innerHTML = h;
       // détails du programme sélectionné
-      var ch = this.ch[this.row], ps = this.selected(this.row), lst = Epg.list(ch.id);
+      var ch = this.ch[this.row], ps = this.selected(this.row), lst = this.rowList(this.row);
       $('g-title').textContent = ps ? ps.t : ch.name;
       var when;
       if (!ps) when = lst ? 'Pas de programme pour cette chaîne' : 'Chargement du programme…';
-      else when = ch.name + '  ·  ' + hm(ps.s) + ' – ' + hm(ps.e) + '  ·  ' + (ps.s <= now
+      else when = ch.name + '  ·  ' + hm(ps.s) + ' – ' + hm(ps.e) + '  ·  ' + (ps.e <= now
+        ? (this.canReplay(this.row, ps) ? 'Replay · OK pour regarder' : 'terminé')
+        : ps.s <= now
         ? 'en cours · reste ' + Math.max(1, Math.floor((ps.e - now) / 60)) + ' min'
         : 'dans ' + Math.max(1, Math.floor((ps.s - now) / 60)) + ' min');
       $('g-when').textContent = when;
@@ -1649,23 +1719,29 @@
       this.render();
     },
     moveProg: function (dlt) {
-      var l = Epg.list(this.ch[this.row].id) || [], cur = this.selected(this.row), idx = -1, i, now = Date.now() / 1000;
+      var l = this.rowList(this.row) || [], cur = this.selected(this.row), idx = -1, i, now = Date.now() / 1000;
       for (i = 0; i < l.length; i++) if (l[i] === cur) idx = i;
-      var next = l[idx + dlt], nowFloor = this.floor30(Math.floor(now));
+      var next = l[idx + dlt];
       if (!next) {
         // ligne vide ou bout de la liste : on fait défiler le temps par demi-heure
-        var s = Math.max(nowFloor, this.start + dlt * 1800);
+        var s = Math.max(this.minStart, this.start + dlt * 1800);
         if (s === this.start) return;
         this.start = s;
-        this.time = Math.max(now, s);
+        this.time = dlt < 0 ? s + 60 : Math.max(now, s);
       } else {
-        this.time = Math.max(next.s, now);
+        this.time = next.s <= now && next.e > now ? now : next.s;
         if (next.s >= this.start + this.SPAN - 1800) this.start = this.floor30(next.s) - 1800;
-        if (next.e <= this.start || (next.s < this.start && dlt < 0)) this.start = Math.max(nowFloor, this.floor30(next.s));
+        if (next.e <= this.start || (next.s < this.start && dlt < 0)) this.start = Math.max(this.minStart, this.floor30(next.s));
       }
       this.render();
     },
     play: function () {
+      var p = this.selected(this.row), c = this.ch[this.row];
+      if (p && this.canReplay(this.row, p)) {
+        var url = X.catchupUrl(c.id, p.s, Math.ceil((p.e - p.s) / 60));
+        go('player', { list: [{ title: c.name + ' · ' + p.t, url: url, live: false, id: c.id, icon: c.icon }], index: 0 });
+        return;
+      }
       var list = [];
       for (var i = 0; i < this.ch.length; i++) list.push(liveItem(this.ch[i]));
       go('player', { list: list, index: this.row });

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.4.0';
+  var VERSION = '1.5.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -12,6 +12,7 @@
   };
 
   var STAR = '<svg class="fav" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></svg>';
+  var STAR_S = '<svg class="st" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></svg>';
 
   /* ---------- Outils ---------- */
 
@@ -238,6 +239,27 @@
           }
         }
         cb(out);
+      });
+    },
+
+    movie: function (id, cb) {
+      getJson(api('get_vod_info', '&vod_id=' + encodeURIComponent(id)), function (err, j) {
+        if (err || !j) return cb(err || new Error('Fiche indisponible'));
+        var info = j.info || {}, data = j.movie_data || {};
+        var back = info.backdrop_path;
+        if (back && back.length !== undefined && typeof back !== 'string') back = back[0];
+        var secs = parseInt(info.duration_secs, 10);
+        if (!secs && info.duration) {
+          var d = String(info.duration).split(':');
+          if (d.length === 3) secs = (parseInt(d[0], 10) || 0) * 3600 + (parseInt(d[1], 10) || 0) * 60;
+        }
+        var date = str(info.releasedate || info.release_date), y = date.match(/\b(19|20)\d{2}\b/), r = parseFloat(info.rating);
+        cb(null, {
+          title: str(info.name || data.name), poster: str(info.movie_image || info.cover_big), backdrop: str(back),
+          plot: str(info.plot || info.description), year: y ? y[0] : '', minutes: secs ? Math.floor(secs / 60) : 0,
+          genre: str(info.genre), rating: r > 0 ? r.toFixed(1).replace('.', ',') : '', director: str(info.director),
+          cast: str(info.cast || info.actors), ext: str(data.container_extension)
+        });
       });
     },
 
@@ -1133,10 +1155,7 @@
       var it = this.current();
       if (!it) return;
       if (it.kind === 'series') { go('series', it); return; }
-      if (it.kind === 'movie') {
-        go('player', { list: [{ title: it.name, url: X.url('movie', it.id, it.ext), live: false, key: 'm' + it.id, icon: it.icon }], index: 0 });
-        return;
-      }
+      if (it.kind === 'movie') { go('movie', it); return; }
       var list = [], src = this.items.items;
       for (var i = 0; i < src.length; i++) {
         list.push(liveItem(src[i]));
@@ -1341,6 +1360,91 @@
     }
   };
 
+  /* ---------- Fiche film ---------- */
+
+  screens.movie = {
+    el: $('s-movie'),
+    idx: 0,
+    token: 0,
+    init: function () {
+      var self = this;
+      $('m-btns').addEventListener('click', function (e) {
+        var n = e.target;
+        while (n && n.getAttribute && n.getAttribute('data-b') === null) n = n.parentNode;
+        if (n && n.getAttribute) { self.idx = parseInt(n.getAttribute('data-b'), 10); self.paint(); self.ok(); }
+      });
+    },
+    enter: function (it) {
+      var self = this, token = ++this.token;
+      this.it = it;
+      this.ext = it.ext || 'mp4';
+      this.idx = 0;
+      var r = parseFloat(it.rating);
+      this.show({ title: it.name, poster: it.icon, backdrop: '', plot: '', year: '', minutes: 0, genre: '', rating: r > 0 ? r.toFixed(1).replace('.', ',') : '', director: '', cast: '' });
+      this.paint();
+      X.movie(it.id, function (err, m) {
+        if (err || token !== self.token) return;
+        if (m.ext) self.ext = m.ext;
+        if (!m.title) m.title = it.name;
+        if (!m.poster) m.poster = it.icon;
+        self.show(m);
+      });
+    },
+    resume: function () { this.paint(); },
+    show: function (m) {
+      $('m-title').textContent = m.title;
+      var meta = [];
+      if (m.rating) meta.push('<span class="r">' + STAR_S + esc(m.rating) + '</span>');
+      if (m.year) meta.push(esc(m.year));
+      if (m.minutes) meta.push(m.minutes >= 60 ? Math.floor(m.minutes / 60) + ' h ' + pad2(m.minutes % 60) : m.minutes + ' min');
+      $('m-meta').innerHTML = meta.join('  ·  ');
+      $('m-genre').textContent = m.genre;
+      $('m-plot').textContent = m.plot;
+      var cr = [];
+      if (m.director) cr.push('Réalisation : ' + m.director);
+      if (m.cast) cr.push('Avec : ' + m.cast);
+      $('m-credits').innerHTML = esc(cr.join('\n')).replace(/\n/g, '<br>');
+      var img = $('m-poster');
+      img.style.visibility = 'hidden';
+      img.onload = function () { img.style.visibility = 'visible'; };
+      img.onerror = function () { img.style.visibility = 'hidden'; };
+      img.src = /^https?:\/\//i.test(m.poster) ? m.poster : '';
+      var back = m.backdrop || m.poster;
+      $('m-back').style.backgroundImage = /^https?:\/\//i.test(back) ? 'url("' + back.replace(/"/g, '%22') + '")' : 'none';
+    },
+    key0: function () { return 'm' + this.it.id; },
+    paint: function () {
+      var pos = P.pos[this.key0()] || 0;
+      $('m-play').textContent = pos > 0 ? 'Reprendre à ' + fmtTime(pos) : 'Lecture';
+      cls($('m-restart'), 'hide', !(pos > 0));
+      if (!(pos > 0) && this.idx === 1) this.idx = 0;
+      cls($('m-fav'), 'on', isFav(this.it));
+      var b = [$('m-play'), $('m-restart'), $('m-fav')];
+      for (var i = 0; i < b.length; i++) cls(b[i], 'focus', i === this.idx);
+    },
+    ok: function () {
+      var it = this.it, pos = P.pos[this.key0()] || 0;
+      if (this.idx === 2) {
+        var key = it.kind + ':' + it.id;
+        if (P.favs[key]) delete P.favs[key]; else P.favs[key] = 1;
+        save('favs', P.favs);
+        toast(P.favs[key] ? 'Ajouté aux favoris' : 'Retiré des favoris');
+        this.paint();
+        return;
+      }
+      var item = { title: it.name, url: X.url('movie', it.id, this.ext), live: false, key: this.key0(), icon: it.icon };
+      go('player', { list: [item], index: 0, startAt: this.idx === 1 ? 0 : pos });
+    },
+    key: function (c) {
+      var order = (P.pos[this.key0()] || 0) > 0 ? [0, 1, 2] : [0, 2], k = order.indexOf(this.idx);
+      if (c === K.LEFT && k > 0) { this.idx = order[k - 1]; this.paint(); }
+      else if (c === K.RIGHT && k < order.length - 1) { this.idx = order[k + 1]; this.paint(); }
+      else if (c === K.OK) this.ok();
+      else if (c === K.RED) { this.idx = 2; this.ok(); }
+      return true;
+    }
+  };
+
   /* ---------- Lecteur ---------- */
 
   screens.player = {
@@ -1395,6 +1499,7 @@
     enter: function (p) {
       this.list = p.list;
       this.i = p.index || 0;
+      this.forcedStart = typeof p.startAt === 'number' ? p.startAt : -1;
       this.prevList = null;
       this.prevI = -1;
       this.digits = '';
@@ -1423,6 +1528,12 @@
       var self = this, it = this.cur();
       this.retries = 0;
       this.lastPos = 0;
+      if (this.forcedStart >= 0) {
+        var at = this.forcedStart;
+        this.forcedStart = -1;
+        this.load(at);
+        return;
+      }
       var saved = !it.live ? (P.pos[it.key] || 0) : 0;
       if (askResume && saved > 0) {
         Dialog.show(it.title, '', [

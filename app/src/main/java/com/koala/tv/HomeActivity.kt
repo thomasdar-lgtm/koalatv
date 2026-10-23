@@ -90,15 +90,16 @@ class HomeActivity : BaseActivity() {
                     val tileW = (rowW - 3 * dp(20)) / 4
                     val label = (live as android.view.ViewGroup).getChildAt(1)
                     val labelH = label.height + (label.layoutParams as android.view.ViewGroup.MarginLayoutParams).topMargin
-                    val ideal = ((tileW - dp(10)) * 470f / 494f).toInt() + dp(10) + labelH + dp(8)
+                    val ideal = ((tileW - dp(10)) * 470f / 494f).toInt() + dp(10) + labelH + dp(8) + tilesArea.paddingTop
                     h = minOf(ideal, avail)
                 }
                 h = h.coerceAtLeast(dp(120))
                 if (kotlin.math.abs(tilesArea.layoutParams.height - h) > 2) {
                     tilesArea.post { tilesArea.layoutParams = tilesArea.layoutParams.apply { height = h } }
                 }
-                if (row != null && kotlin.math.abs(row.layoutParams.height - h) > 2) {
-                    row.post { row.layoutParams = row.layoutParams.apply { height = h } }
+                val rowH = h - tilesArea.paddingTop
+                if (row != null && kotlin.math.abs(row.layoutParams.height - rowH) > 2) {
+                    row.post { row.layoutParams = row.layoutParams.apply { height = rowH } }
                 }
             }
             scroll.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> fit() }

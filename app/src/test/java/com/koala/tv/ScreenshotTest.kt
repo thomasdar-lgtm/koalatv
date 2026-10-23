@@ -34,7 +34,7 @@ class ScreenshotTest {
         }
     }
 
-    private fun shoot(name: String, remote: Boolean = false) {
+    private fun shoot(name: String, remote: Boolean = false, focusLive: Boolean = true) {
         // télécommande : pas de mode tactile, la tuile choisie est mise en avant
         if (remote) androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().setInTouchMode(false)
         val sc = ActivityScenario.launch(HomeActivity::class.java)
@@ -49,7 +49,7 @@ class ScreenshotTest {
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, k))
                     a.dispatchKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, k))
                 }
-                a.findViewById<android.view.View>(R.id.tile_live).requestFocus()
+                if (focusLive) a.findViewById<android.view.View>(R.id.tile_live).requestFocus()
             }
             repeat(6) {
                 shadowOf(Looper.getMainLooper()).idle()
@@ -69,7 +69,7 @@ class ScreenshotTest {
     @Test
     @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-television-xhdpi")
     fun homeTvResume() {
-        login(tv = true, resume = true); shoot("home_tv_resume", remote = true)
+        login(tv = true, resume = true); shoot("home_tv_resume", remote = true, focusLive = false)
     }
 
     @Test

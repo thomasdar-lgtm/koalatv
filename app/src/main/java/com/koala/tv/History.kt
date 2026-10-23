@@ -40,15 +40,50 @@ object History {
         val key = item.resumeKey ?: return
         val l = load()
         l.removeAll { it.key == key }
-        l.add(0, Entry(key, item.title, item.url, item.icon, pos, dur, System.currentTimeMillis(), item.seriesId, item.seriesName))
+        val e = Entry(key, item.title, item.url, item.icon, pos, dur, System.currentTimeMillis(), item.seriesId, item.seriesName)
+        l.add(0, e)
         while (l.size > MAX) l.removeAt(l.size - 1)
         save(l)
+        Sync.push(e)
     }
 
     @Synchronized
     fun remove(key: String) {
         val l = load()
         if (l.removeAll { it.key == key }) save(l)
+        val at = System.currentTimeMillis()
+        sp.edit().putLong("gone_$key", at).apply()
+        Sync.pushGone(key, at)
+    }
+
+    /**
+     * Fusion avec l'historique partagé : pour chaque élément, la version la plus récente gagne
+     * (y compris une suppression faite sur un autre appareil). Renvoie true si quelque chose a changé.
+     */
+    @Synchronized
+    fun merge(remote: List<Sync.Remote>): Boolean {
+        val l = load()
+        var changed = false
+        for (r in remote) {
+            val local = l.firstOrNull { it.key == r.key }
+            val goneAt = sp.getLong("gone_${r.key}", 0L)
+            if (r.at <= (local?.at ?: 0L) || r.at <= goneAt) continue
+            l.removeAll { it.key == r.key }
+            if (r.entry == null) {
+                Prefs.setPos(r.key, 0)
+                sp.edit().putLong("gone_${r.key}", r.at).apply()
+            } else {
+                l.add(r.entry)
+                Prefs.setPos(r.key, r.entry.pos)
+            }
+            changed = true
+        }
+        if (changed) {
+            l.sortByDescending { it.at }
+            while (l.size > MAX) l.removeAt(l.size - 1)
+            save(l)
+        }
+        return changed
     }
 
     @Synchronized

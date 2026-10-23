@@ -94,6 +94,8 @@ class HomeActivity : AppCompatActivity() {
         super.onResume()
         if (!::updateBar.isInitialized) return
         refreshResume()
+        // historique partagé avec les autres appareils
+        lifecycleScope.launch { if (Sync.pull()) refreshResume() }
         if (waitingPermission) {
             waitingPermission = false
             startUpdate()

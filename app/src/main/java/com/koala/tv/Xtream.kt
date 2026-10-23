@@ -34,6 +34,10 @@ data class Item(
 
     /** Nom en minuscules sans accents, calculé une seule fois pour la recherche. */
     val searchKey: String by lazy(LazyThreadSafetyMode.NONE) { fold(name) }
+    /** Mots du titre, séparés par des espaces (pour « un mot commence par… »). */
+    val searchWords: String by lazy(LazyThreadSafetyMode.NONE) { " " + NON_ALNUM.replace(searchKey, " ") }
+    /** Titre sans préfixe de langue (« FR | », « EN: »…) ni année finale. */
+    val searchCore: String by lazy(LazyThreadSafetyMode.NONE) { YEAR.replace(PREFIX.replace(searchKey, ""), "") }
 }
 
 data class Episode(
@@ -343,4 +347,17 @@ object Xtream {
     fun liveUrl(id: String) = "${Prefs.server}/live/${creds()}/$id.${Prefs.liveFormat}"
     fun movieUrl(id: String, ext: String) = "${Prefs.server}/movie/${creds()}/$id.$ext"
     fun episodeUrl(id: String, ext: String) = "${Prefs.server}/series/${creds()}/$id.$ext"
+}
+
+private val NON_ALNUM = Regex("[^a-z0-9]+")
+private val PREFIX = Regex("^\\s*[a-z0-9+]{1,6}\\s*[|:\\-]\\s*")
+private val YEAR = Regex("\\s*[(\\[]?\\d{4}[)\\]]?\\s*$")
+
+/** Pertinence d'un élément pour la recherche : 0 (meilleur) à 3, ou -1 s'il ne correspond pas. */
+fun searchRank(it: Item, q: String): Int = when {
+    it.searchCore == q || it.searchKey == q -> 0
+    it.searchCore.startsWith(q) || it.searchKey.startsWith(q) -> 1
+    it.searchWords.contains(" $q") -> 2
+    q.length > 1 && it.searchKey.contains(q) -> 3
+    else -> -1
 }

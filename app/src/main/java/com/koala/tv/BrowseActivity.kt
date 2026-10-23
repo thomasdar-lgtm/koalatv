@@ -273,11 +273,17 @@ class BrowseActivity : AppCompatActivity() {
 
     private fun runSearch(raw: String) {
         val q = fold(raw.trim())
-        if (q.length < 2) {
+        if (q.isEmpty()) {
             if (catIdx >= 0) selectCategory(catIdx, clearSearch = false)
             return
         }
-        val list = pool.filter { it.searchKey.contains(q) }
+        // classement : titre exact, début de titre, début de mot, puis (dès 2 lettres) titre qui contient la saisie
+        val groups = Array(4) { ArrayList<Item>() }
+        for (it in pool) {
+            val g = searchRank(it, q)
+            if (g >= 0) groups[g].add(it)
+        }
+        val list = groups.flatMap { it }
         catAdapter.setSelected(-1)
         showItems(list, "Recherche : ${raw.trim()}", "Aucun résultat")
     }

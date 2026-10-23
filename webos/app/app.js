@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.12.2';
+  var VERSION = '1.12.3';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -1390,18 +1390,28 @@
       this.msg(list.length ? '' : empty);
     },
     runSearch: function (raw) {
-      var q = fold(str(raw));
+      var q = fold(str(raw)).replace(/^\s+|\s+$/g, '');
       this.query = q;
-      if (q.length < 2) {
+      if (!q) {
         this.pickCat(this.catIdx, true, true);
         return;
       }
-      var out = [];
+      // classement : titre exact, titre qui commence par la saisie, mot qui commence par la saisie,
+      // puis (à partir de 2 lettres) titre qui contient la saisie
+      var groups = [[], [], [], []], wq = ' ' + q;
       for (var i = 0; i < this.pool.length; i++) {
         var it = this.pool[i];
-        if (it._f === undefined) it._f = fold(it.name);
-        if (it._f.indexOf(q) >= 0) out.push(it);
+        if (it._f === undefined) {
+          it._f = fold(it.name);
+          it._w = ' ' + it._f.replace(/[^a-z0-9]+/g, ' ');
+          // sans préfixe de langue (« FR | », « EN: »…) ni année finale
+          it._c = it._f.replace(/^\s*[a-z0-9+]{1,6}\s*[|:\-]\s*/, '').replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/, '');
+        }
+        var g = it._c === q || it._f === q ? 0 : it._c.indexOf(q) === 0 || it._f.indexOf(q) === 0 ? 1 :
+          it._w.indexOf(wq) >= 0 ? 2 : q.length > 1 && it._f.indexOf(q) >= 0 ? 3 : -1;
+        if (g >= 0) groups[g].push(it);
       }
+      var out = groups[0].concat(groups[1], groups[2], groups[3]);
       this.cats.select(-1);
       this.showItems(out, 'Recherche : ' + str(raw), 'Aucun résultat');
     },

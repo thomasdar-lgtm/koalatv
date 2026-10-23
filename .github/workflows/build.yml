@@ -31,6 +31,10 @@ jobs:
           set -o pipefail
           ./gradlew assembleRelease --stacktrace --no-daemon 2>&1 | tee build.log
 
+      - name: Screenshots
+        continue-on-error: true
+        run: ./gradlew testDebugUnitTest --tests 'com.koala.tv.ScreenshotTest' --no-daemon 2>&1 | tail -80 > shots.log
+
       - name: Prepare APK
         run: |
           VERSION=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
@@ -62,6 +66,8 @@ jobs:
             grep -E "^e: |error:|FAILURE|What went wrong|BUILD (SUCCESSFUL|FAILED)|\.kt:[0-9]+|\.xml:[0-9]+|AAPT|Could not" build.log | head -200 > /tmp/report/errors.txt || true
             tail -150 build.log > /tmp/report/tail.txt
           fi
+          cp app/build/shots/*.png /tmp/report/ 2>/dev/null || true
+          cp shots.log /tmp/report/ 2>/dev/null || true
           DB="https://koalatv-dae7b-default-rtdb.europe-west1.firebasedatabase.app"
           {
             echo "ecriture: $(curl -s -m 20 -X PUT -d '{"at":1}' "$DB/h/ci-check/e/ping.json")"

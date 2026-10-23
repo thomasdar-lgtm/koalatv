@@ -15,4 +15,5 @@
     <color name="faint">#6B7482</color>
     <color name="error">#FF8A8A</color>
     <color name="overlay">#D90E1116</color>
+    <color name="icon_bg">#021A55</color>
 </resources>

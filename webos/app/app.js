@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.12.0';
+  var VERSION = '1.12.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {

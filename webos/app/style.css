@@ -41,18 +41,18 @@ input { font-family: inherit; }
 .top { position: absolute; top: 2rem; left: 3.5rem; right: 3.5rem; height: 5rem;
   display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center; }
 #h-account { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; text-align: right; font-size: 1.2rem; color: #8B95A3; }
-.tiles { position: absolute; left: 3.5rem; right: 3.5rem; top: 50%; height: 21rem; margin-top: -9rem;
+.tiles { position: absolute; left: 2.3rem; right: 2.3rem; top: 50%; margin-top: -9.5rem;
   display: -webkit-box; display: -webkit-flex; display: flex; }
-.tile { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; margin: 0 .8rem;
+.tile { -webkit-box-flex: 1; -webkit-flex: 1; flex: 1; margin: 0 1.2rem;
   display: -webkit-box; display: -webkit-flex; display: flex;
   -webkit-box-orient: vertical; -webkit-flex-direction: column; flex-direction: column;
   -webkit-box-pack: center; -webkit-justify-content: center; justify-content: center;
   -webkit-box-align: center; -webkit-align-items: center; align-items: center;
   -webkit-transition: -webkit-transform .15s ease-out; transition: transform .15s ease-out; }
 /* L'icône est la tuile : liseré autour de ses coins arrondis quand elle est sélectionnée */
-.tile img { display: block; height: 16.5rem; width: 17.34rem; border-radius: 3.87rem; box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .4); }
+.tile img { display: block; width: 100%; height: auto; border-radius: 22.3% / 23.4%; box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .4); }
 .tile span { margin-top: 1.1rem; font-size: 1.6rem; font-weight: 600; color: #EDEFF2; }
-.tile.focus { -webkit-transform: scale(1.06); transform: scale(1.06); }
+.tile.focus { -webkit-transform: scale(1.04); transform: scale(1.04); }
 .tile.focus img { box-shadow: 0 0 0 .3rem #0E1116, 0 0 0 .5rem #3DDC97, 0 1.2rem 3rem rgba(0, 0, 0, .5); }
 
 /* Rangée « Reprendre » */
@@ -73,9 +73,7 @@ input { font-family: inherit; }
 .rc .bar { margin-top: .55rem; height: .25rem; }
 .rc .bar div { height: 100%; background: #3DDC97; }
 .rl { margin-top: .45rem; font-size: .85rem; color: #8B95A3; }
-.has-resume .tiles { top: 19.6rem; height: 15rem; margin-top: 0; }
-.has-resume .tile img { height: 11rem; width: 11.56rem; border-radius: 2.58rem; }
-.has-resume .tile span { margin-top: .8rem; font-size: 1.4rem; }
+.has-resume .tiles { top: 19.8rem; margin-top: 0; }
 
 /* Listes */
 .side { position: absolute; top: 0; left: 0; bottom: 0; width: 21rem; background: #12161C; }

@@ -56,6 +56,7 @@ class GuideActivity : AppCompatActivity() {
             finish(); return
         }
         setContentView(R.layout.activity_guide)
+        setupBack()
         win.span = if (isWide) 3 * 3600L else 90 * 60L
         win.start = floor30(Epg.nowSec())
         val days = channels.maxOf { it.archive }.coerceIn(0, 7)

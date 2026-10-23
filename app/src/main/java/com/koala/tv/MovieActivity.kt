@@ -28,6 +28,7 @@ class MovieActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_movie)
+        setupBack()
         id = intent.getStringExtra("id") ?: ""
         name = intent.getStringExtra("name") ?: ""
         icon = intent.getStringExtra("icon") ?: ""

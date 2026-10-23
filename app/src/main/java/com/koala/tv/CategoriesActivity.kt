@@ -22,6 +22,7 @@ class CategoriesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_categories)
+        setupBack()
         kind = try {
             Kind.valueOf(intent.getStringExtra("kind") ?: "LIVE")
         } catch (e: Exception) {

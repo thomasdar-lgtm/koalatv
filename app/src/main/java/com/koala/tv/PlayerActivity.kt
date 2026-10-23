@@ -96,6 +96,7 @@ class PlayerActivity : AppCompatActivity() {
             finish(); return
         }
         setContentView(R.layout.activity_player)
+        setupBack { finish() }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {

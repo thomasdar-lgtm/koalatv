@@ -14,17 +14,27 @@
         android:paddingTop="22dp"
         android:paddingEnd="14dp">
 
-        <TextView
-            android:id="@+id/tv_title"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:ellipsize="end"
-            android:fontFamily="@font/inter_bold"
-            android:paddingStart="8dp"
-            android:paddingBottom="14dp"
-            android:singleLine="true"
-            android:textColor="@color/text"
-            android:textSize="26sp" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="14dp">
+
+            <include layout="@layout/view_back" />
+
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:fontFamily="@font/inter_bold"
+                android:paddingStart="8dp"
+                android:singleLine="true"
+                android:textColor="@color/text"
+                android:textSize="26sp" />
+        </LinearLayout>
 
         <include layout="@layout/view_search" />
 

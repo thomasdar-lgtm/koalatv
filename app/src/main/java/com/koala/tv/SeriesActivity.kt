@@ -35,6 +35,7 @@ class SeriesActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_series)
+        setupBack()
         seriesId = intent.getStringExtra("id") ?: ""
         seriesName = intent.getStringExtra("name") ?: ""
         cover = intent.getStringExtra("cover") ?: ""

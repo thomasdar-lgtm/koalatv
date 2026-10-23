@@ -68,6 +68,7 @@ class BrowseActivity : AppCompatActivity() {
         }
         restoreCat = savedInstanceState?.getInt("cat", -1) ?: -1
         setContentView(R.layout.activity_browse)
+        setupBack()
 
         rvCats = findViewById(R.id.rv_cats)
         rvItems = findViewById(R.id.rv_items)

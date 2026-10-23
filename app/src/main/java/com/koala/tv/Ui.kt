@@ -49,3 +49,15 @@ fun cleanEpisodeTitle(title: String, series: String): String {
     t = EP_CODE.replace(t, "")
     return EDGES.replace(t, "")
 }
+
+/** Appareil tactile (téléphone, tablette), par opposition à une TV pilotée à la télécommande. */
+val Context.isTouch: Boolean
+    get() = !packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_LEANBACK)
+
+/** Affiche le bouton retour de l'écran (s'il y en a un) sur téléphone et tablette. */
+fun androidx.activity.ComponentActivity.setupBack(action: () -> Unit = { onBackPressedDispatcher.onBackPressed() }) {
+    val b = findViewById<android.view.View?>(R.id.btn_back) ?: return
+    if (!isTouch) return
+    b.visibility = android.view.View.VISIBLE
+    b.setOnClickListener { action() }
+}

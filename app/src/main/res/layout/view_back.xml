@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bouton retour : affiché seulement sur téléphone et tablette (la télécommande a sa touche retour) -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/btn_back"
+    android:layout_width="42dp"
+    android:layout_height="42dp"
+    android:layout_marginEnd="12dp"
+    android:background="@drawable/btn_bg"
+    android:clickable="true"
+    android:contentDescription="Retour"
+    android:focusable="false"
+    android:padding="9dp"
+    android:src="@drawable/ic_back"
+    android:visibility="gone" />

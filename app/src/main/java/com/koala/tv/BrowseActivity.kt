@@ -135,8 +135,21 @@ class BrowseActivity : AppCompatActivity() {
         outState.putInt("cat", catIdx)
     }
 
+    private val epgTicker = object : Runnable {
+        override fun run() {
+            itemAdapter.epgTick()
+            handler.postDelayed(this, 60_000)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
+        if (kind == Kind.LIVE) {
+            Epg.onLoaded = { id -> itemAdapter.epgLoaded(id) }
+            handler.removeCallbacks(epgTicker)
+            handler.postDelayed(epgTicker, 60_000)
+            itemAdapter.epgTick()
+        }
         Lists.onUpdated = { k ->
             val d = Lists.peek(k)
             if (k == kind && d != null && allItems.isNotEmpty() && etSearch.text.isEmpty()) apply(d, initial = false)
@@ -324,6 +337,8 @@ class BrowseActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         Lists.onUpdated = null
+        Epg.onLoaded = null
+        handler.removeCallbacks(epgTicker)
     }
 
     override fun onDestroy() {

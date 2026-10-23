@@ -240,7 +240,7 @@ class PlayerActivity : AppCompatActivity() {
                 ovEpg.tag = sid
                 epgJob?.cancel()
                 epgJob = lifecycleScope.launch {
-                    val txt = Xtream.nowPlaying(sid)
+                    val txt = Xtream.shortEpg(sid, 2).joinToString("\n") { p -> Epg.hm(p.start) + "  " + p.title }
                     if (current.streamId == sid && txt.isNotEmpty()) {
                         ovEpg.text = formatEpg(txt)
                         ovEpg.visibility = View.VISIBLE

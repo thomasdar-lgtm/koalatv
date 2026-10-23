@@ -12,9 +12,6 @@ import org.json.JSONObject
 import java.io.IOException
 import java.io.InputStreamReader
 import java.net.URLEncoder
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 enum class Kind { LIVE, MOVIE, SERIES }
@@ -47,6 +44,12 @@ data class Episode(
     val num: Int,
     val plot: String,
 )
+
+/** Programme du guide TV (heures en secondes depuis 1970). */
+data class Program(val title: String, val start: Long, val end: Long, val desc: String = "") {
+    fun progress(nowSec: Long): Int =
+        if (end > start) (((nowSec - start) * 1000) / (end - start)).toInt().coerceIn(0, 1000) else 0
+}
 
 data class PlayItem(
     val title: String,
@@ -206,25 +209,24 @@ object Xtream {
         out
     }
 
-    /** Programme en cours / suivant (EPG courte). Renvoie "" si indisponible. */
-    suspend fun nowPlaying(streamId: String): String = withContext(Dispatchers.IO) {
+    /** Programmes à venir d'une chaîne (le premier est celui en cours). Liste vide si pas de guide. */
+    suspend fun shortEpg(streamId: String, limit: Int): List<Program> = withContext(Dispatchers.IO) {
         try {
-            val root = JSONObject(fetch(api("get_short_epg", "&stream_id=$streamId&limit=2")))
-            val l = root.optJSONArray("epg_listings") ?: return@withContext ""
-            val fmt = SimpleDateFormat("HH:mm", Locale.FRANCE)
-            val sb = StringBuilder()
+            val root = JSONObject(fetch(api("get_short_epg", "&stream_id=$streamId&limit=$limit")))
+            val l = root.optJSONArray("epg_listings") ?: return@withContext emptyList()
+            val now = System.currentTimeMillis() / 1000
+            val out = ArrayList<Program>()
             for (i in 0 until l.length()) {
                 val e = l.optJSONObject(i) ?: continue
                 val title = b64(e.s("title"))
-                if (title.isEmpty()) continue
-                if (sb.isNotEmpty()) sb.append("\n")
-                val start = e.s("start_timestamp").toLongOrNull()
-                if (start != null) sb.append(fmt.format(Date(start * 1000))).append("  ")
-                sb.append(title)
+                val start = e.s("start_timestamp").toLongOrNull() ?: continue
+                val end = e.s("stop_timestamp").toLongOrNull() ?: e.s("end_timestamp").toLongOrNull() ?: continue
+                if (title.isEmpty() || end <= now) continue
+                out.add(Program(title, start, end, b64(e.s("description"))))
             }
-            sb.toString()
+            out
         } catch (e: Exception) {
-            ""
+            emptyList()
         }
     }
 

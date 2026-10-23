@@ -80,17 +80,59 @@ class ItemAdapter(
     var items: List<Item> = emptyList()
         private set
     private var favs: Set<String> = emptySet()
+    private var positions: Map<String, Int> = emptyMap()
 
     class VH(v: View) : RecyclerView.ViewHolder(v) {
         val img: ImageView = v.findViewById(R.id.iv)
         val name: TextView = v.findViewById(R.id.tv_name)
         val fav: View = v.findViewById(R.id.iv_fav)
+        val epg: TextView? = v.findViewById(R.id.tv_epg)
+        val epgBar: android.widget.ProgressBar? = v.findViewById(R.id.pb_epg)
+        var id: String = ""
     }
 
     fun submit(l: List<Item>) {
         items = l
         favs = Prefs.favs()
+        if (kind == Kind.LIVE) positions = HashMap<String, Int>(l.size).also { m -> l.forEachIndexed { i, it -> m[it.id] = i } }
         notifyDataSetChanged()
+    }
+
+    /** Le programme d'une chaîne est arrivé : on met à jour sa ligne. */
+    fun epgLoaded(id: String) {
+        positions[id]?.let { notifyItemChanged(it, EPG) }
+    }
+
+    /** Toutes les minutes : avance des barres de progression. */
+    fun epgTick() {
+        if (kind == Kind.LIVE && items.isNotEmpty()) notifyItemRangeChanged(0, items.size, EPG)
+    }
+
+    private fun bindEpg(h: VH, item: Item) {
+        val epg = h.epg ?: return
+        val p = Epg.now(item.id)
+        if (p == null) {
+            epg.visibility = View.GONE
+            h.epgBar?.visibility = View.GONE
+            return
+        }
+        epg.text = Epg.line(p)
+        epg.visibility = View.VISIBLE
+        h.epgBar?.progress = p.progress(System.currentTimeMillis() / 1000)
+        h.epgBar?.visibility = View.VISIBLE
+    }
+
+    override fun onViewRecycled(h: VH) {
+        if (kind == Kind.LIVE && h.id.isNotEmpty()) Epg.drop(h.id)
+    }
+
+    override fun onBindViewHolder(h: VH, position: Int, payloads: MutableList<Any>) {
+        if (payloads.isNotEmpty() && payloads.all { it == EPG }) bindEpg(h, items[position])
+        else onBindViewHolder(h, position)
+    }
+
+    companion object {
+        private const val EPG = "epg"
     }
 
     fun refreshFavs(position: Int) {
@@ -114,8 +156,10 @@ class ItemAdapter(
 
     override fun onBindViewHolder(h: VH, position: Int) {
         val item = items[position]
+        h.id = item.id
         h.name.text = item.name
         h.fav.visibility = if (favs.contains(item.favKey)) View.VISIBLE else View.GONE
+        if (kind == Kind.LIVE) bindEpg(h, item)
         if (item.icon.startsWith("http", true)) {
             h.img.load(item.icon) { crossfade(150) }
         } else {

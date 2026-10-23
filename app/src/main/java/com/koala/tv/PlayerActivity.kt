@@ -91,6 +91,41 @@ class PlayerActivity : AppCompatActivity() {
     }
     private val zapRunnable = Runnable { playCurrent(askResume = false) }
 
+    // ---------- Encart « Épisode suivant » (15 dernières secondes) ----------
+    private lateinit var nextCard: View
+    private var nextOn = false
+    private var nextOff = false
+    private val nextTick = object : Runnable {
+        override fun run() {
+            checkNext()
+            handler.postDelayed(this, 500)
+        }
+    }
+
+    private fun checkNext() {
+        val p = player ?: return
+        if (nextOff || current.live || index >= items.size - 1) return
+        val dur = p.duration
+        if (dur <= 60_000) return
+        val left = dur - p.currentPosition
+        if (left in 1..15_000) {
+            if (!nextOn) {
+                nextOn = true
+                findViewById<TextView>(R.id.tv_next_title).text = items[index + 1].title
+                nextCard.visibility = View.VISIBLE
+                pv.hideController()
+                findViewById<View>(R.id.btn_next_go).requestFocus()
+            }
+            findViewById<TextView>(R.id.tv_next_label).text = "Épisode suivant dans ${((left + 999) / 1000)} s"
+        }
+    }
+
+    private fun hideNext(cancelled: Boolean) {
+        nextOn = false
+        nextOff = cancelled
+        if (::nextCard.isInitialized) nextCard.visibility = View.GONE
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Playback.items.isEmpty()) {
@@ -98,6 +133,9 @@ class PlayerActivity : AppCompatActivity() {
         }
         setContentView(R.layout.activity_player)
         setupBack { finish() }
+        nextCard = findViewById(R.id.next_card)
+        findViewById<View>(R.id.btn_next_go).setOnClickListener { next() }
+        findViewById<View>(R.id.btn_next_stay).setOnClickListener { hideNext(true) }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
@@ -149,7 +187,8 @@ class PlayerActivity : AppCompatActivity() {
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                if (pv.isControllerFullyVisible) pv.hideController() else finish()
+                if (nextOn) hideNext(true)
+                else if (pv.isControllerFullyVisible) pv.hideController() else finish()
             }
         })
     }
@@ -224,6 +263,8 @@ class PlayerActivity : AppCompatActivity() {
         }
         handler.removeCallbacks(saveLoop)
         handler.postDelayed(saveLoop, 10_000)
+        handler.removeCallbacks(nextTick)
+        handler.postDelayed(nextTick, 1000)
     }
 
     /** Boutons « épisode précédent / suivant » des commandes, actifs seulement entre deux épisodes d'une saison. */
@@ -261,6 +302,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun releasePlayer() {
         handler.removeCallbacks(saveLoop)
+        handler.removeCallbacks(nextTick)
         handler.removeCallbacks(retryRunnable)
         handler.removeCallbacks(zapRunnable)
         epgJob?.cancel()
@@ -274,6 +316,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun playCurrent(askResume: Boolean) {
         val p = player ?: return
+        hideNext(false)
         val item = current
         tvStatus.visibility = View.GONE
         val b = MediaItem.Builder()
@@ -414,7 +457,7 @@ class PlayerActivity : AppCompatActivity() {
                     tvStatus.visibility = View.GONE
                 }
                 Player.STATE_ENDED -> {
-                    if (current.live) scheduleRetry() else next()
+                    if (current.live) scheduleRetry() else next(stay = nextOff)
                 }
                 else -> {}
             }
@@ -457,12 +500,15 @@ class PlayerActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun next() {
+    /** Fin de l'épisode : marqué comme vu, puis le suivant (sauf si on a choisi de rester). */
+    private fun next(stay: Boolean = false) {
         current.resumeKey?.let {
             Prefs.setPos(it, 0)
             History.remove(it)
+            Seen.mark(it)
         }
-        if (index < items.size - 1) {
+        hideNext(false)
+        if (!stay && index < items.size - 1) {
             index++
             Playback.index = index
             retries = 0
@@ -550,6 +596,7 @@ class PlayerActivity : AppCompatActivity() {
             dur > 0 && pos >= dur - 120_000 -> {
                 Prefs.setPos(key, 0)
                 History.remove(key)
+                Seen.mark(key)
             }
             pos > 30_000 -> {
                 Prefs.setPos(key, pos)
@@ -559,6 +606,7 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (nextOn && event.keyCode != KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
         if (event.action == KeyEvent.ACTION_DOWN && ::pv.isInitialized && items.isNotEmpty()) {
             val controls = pv.isControllerFullyVisible
             when (event.keyCode) {

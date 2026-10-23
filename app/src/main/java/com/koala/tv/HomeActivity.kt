@@ -99,6 +99,8 @@ class HomeActivity : AppCompatActivity() {
         // historique et catégories masquées partagés avec les autres appareils
         lifecycleScope.launch { if (Sync.pull()) refreshResume() }
         lifecycleScope.launch { Sync.pullCats() }
+        lifecycleScope.launch { Sync.pullFavs() }
+        lifecycleScope.launch { Sync.pullSeen() }
         if (reopenCategories) {
             reopenCategories = false
             chooseCategories()

@@ -17,6 +17,7 @@ class App : Application() {
         Lists.init(this)
         History.init(this)
         Hidden.init(this)
+        Seen.init(this)
     }
 }
 
@@ -84,14 +85,41 @@ object Prefs {
     fun favs(): Set<String> = HashSet(sp.getStringSet("favs", emptySet()) ?: emptySet())
 
     fun toggleFav(key: String): Boolean {
-        val s = favs().toMutableSet()
-        val added = if (s.contains(key)) {
-            s.remove(key); false
-        } else {
-            s.add(key); true
-        }
-        sp.edit().putStringSet("favs", s).apply()
+        val added = !favs().contains(key)
+        setFav(key, added, System.currentTimeMillis())
+        Sync.pushFav(key, added, favAt(key))
         return added
+    }
+
+    /** Date du dernier changement de chaque favori (pour le partage entre appareils : le plus récent gagne). */
+    fun favAt(key: String): Long = try {
+        org.json.JSONObject(sp.getString("fav_at", "{}") ?: "{}").optLong(key)
+    } catch (e: Exception) {
+        0L
+    }
+
+    fun favAll(): Map<String, Long> = try {
+        val o = org.json.JSONObject(sp.getString("fav_at", "{}") ?: "{}")
+        val m = HashMap<String, Long>()
+        for (k in o.keys()) m[k] = o.optLong(k)
+        // favoris d'avant le partage : date minimale, pour être envoyés sans écraser un changement plus récent
+        for (k in favs()) if (!m.containsKey(k)) m[k] = 1L
+        m
+    } catch (e: Exception) {
+        emptyMap()
+    }
+
+    @Synchronized
+    fun setFav(key: String, on: Boolean, at: Long) {
+        val s = favs().toMutableSet()
+        if (on) s.add(key) else s.remove(key)
+        val o = try {
+            org.json.JSONObject(sp.getString("fav_at", "{}") ?: "{}")
+        } catch (e: Exception) {
+            org.json.JSONObject()
+        }
+        o.put(key, at)
+        sp.edit().putStringSet("favs", s).putString("fav_at", o.toString()).apply()
     }
 
     fun getPos(key: String): Long = sp.getLong("pos_$key", 0L)

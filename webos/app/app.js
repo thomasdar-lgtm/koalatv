@@ -193,6 +193,40 @@
         if (changed && cb) cb();
       });
     },
+    pullSeen: function (cb) {
+      var self = this;
+      if (!this.enabled()) return;
+      getJson(this.url('w'), function (err, remote) {
+        if (err) return;
+        remote = remote || {};
+        var changed = Seen.merge(remote), k;
+        for (k in Seen.m) if (Seen.m.hasOwnProperty(k) && !remote[k]) self.put('w/' + k, { at: Seen.m[k] });
+        if (changed && cb) cb();
+      });
+    },
+    favPath: function (k) { return 'f/' + k.replace(/[.$#\[\]\/:]/g, '_'); },
+    pullFavs: function (cb) {
+      var self = this;
+      if (!this.enabled()) return;
+      getJson(this.url('f'), function (err, remote) {
+        if (err) return;
+        remote = remote || {};
+        var seen = {}, changed = false, p, v, k;
+        for (p in remote) {
+          if (!remote.hasOwnProperty(p)) continue;
+          v = remote[p];
+          if (!v || !v.k || !(v.at > 0)) continue;
+          seen[v.k] = v.at;
+          if (v.at > (Favs.at[v.k] || 0)) {
+            if (!!P.favs[v.k] !== !!v.on) changed = true;
+            Favs.set(v.k, !!v.on, v.at);
+          }
+        }
+        var all = Favs.all();
+        for (k in all) if (all.hasOwnProperty(k) && !(seen[k] >= all[k])) self.put(self.favPath(k), { k: k, on: !!P.favs[k], at: all[k] });
+        if (changed && cb) cb();
+      });
+    },
     pull: function (cb) {
       var self = this;
       if (!this.enabled()) return;
@@ -274,6 +308,46 @@
       this.timer = setTimeout(poll, 1500);
     },
     stop: function () { clearTimeout(this.timer); this.timer = null; }
+  };
+
+  /* Favoris partagés entre appareils : chaque favori garde la date de son dernier changement, le plus récent gagne */
+  var Favs = {
+    at: load('favat', {}),
+    toggle: function (key) {
+      this.set(key, !P.favs[key], Date.now());
+      Sync.put(Sync.favPath(key), { k: key, on: !!P.favs[key], at: this.at[key] });
+    },
+    set: function (key, on, at) {
+      if (on) P.favs[key] = 1; else delete P.favs[key];
+      this.at[key] = at;
+      save('favs', P.favs);
+      save('favat', this.at);
+    },
+    /* tous les favoris connus ici (y compris retirés), avec leur date ; ceux d'avant le partage ont la date 1 */
+    all: function () {
+      var m = {}, k;
+      for (k in this.at) if (this.at.hasOwnProperty(k)) m[k] = this.at[k];
+      for (k in P.favs) if (P.favs.hasOwnProperty(k) && !m[k]) m[k] = 1;
+      return m;
+    }
+  };
+
+  /* Films et épisodes vus jusqu'au bout (partagés entre appareils) */
+  var Seen = {
+    m: load('seen', {}),
+    has: function (key) { return !!this.m[key]; },
+    mark: function (key) {
+      if (!key || this.m[key]) return;
+      this.m[key] = Date.now();
+      save('seen', this.m);
+      Sync.put('w/' + key, { at: this.m[key] });
+    },
+    merge: function (remote) {
+      var changed = false, k;
+      for (k in remote) if (remote.hasOwnProperty(k) && remote[k] && remote[k].at > 0 && !this.m[k]) { this.m[k] = remote[k].at; changed = true; }
+      if (changed) save('seen', this.m);
+      return changed;
+    }
   };
 
   function liveItem(it) { return { title: it.name, url: X.url('live', it.id), live: true, id: it.id, num: it.num || 0, icon: it.icon }; }
@@ -1082,11 +1156,16 @@
       if (!this.accountDone) { this.accountDone = true; X.refreshAccount(); }
       this.pullHistory();
       Sync.pullCats();
+      Sync.pullFavs();
+      Sync.pullSeen();
     },
     resume: function () {
       this.drawResume();
       this.paint();
       this.pullHistory();
+      Sync.pullCats();
+      Sync.pullFavs();
+      Sync.pullSeen();
       if (this.backToCats !== undefined) { var i = this.backToCats; delete this.backToCats; this.catChooser(i); }
     },
     pullHistory: function () {
@@ -1526,9 +1605,7 @@
       var it = this.current();
       if (!it) return;
       var key = it.kind + ':' + it.id;
-      if (P.favs[key]) delete P.favs[key];
-      else P.favs[key] = 1;
-      save('favs', P.favs);
+      Favs.toggle(key);
       toast(P.favs[key] ? 'Ajouté aux favoris' : 'Retiré des favoris');
       this.items.refresh(this.items.idx);
       this.catList[0].n = this.countFavs();
@@ -1642,10 +1719,11 @@
       this.eList = new VList($('sr-eps'), {
         rowH: 6.4,
         render: function (e) {
-          var pos = P.pos['e' + e.id] || 0;
+          var pos = P.pos['e' + e.id] || 0, seen = !pos && Seen.has('e' + e.id);
           var title = cleanEpTitle(e.title, self.it.name) || 'Épisode ' + e.num;
-          return '<div class="ep"><div class="t"><span class="num">' + e.num + '</span><span class="tt">' + esc(title) +
-            '</span>' + (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') + '</div>' +
+          return '<div class="ep' + (seen ? ' seen' : '') + '"><div class="t"><span class="num">' + e.num + '</span><span class="tt">' + esc(title) +
+            '</span>' + (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') +
+            (seen ? '<span class="vu"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Vu</span>' : '') + '</div>' +
             '<div class="p">' + esc(e.plot) + '</div></div>';
         },
         onPointer: function () { self.setZone('eps'); },
@@ -1682,14 +1760,38 @@
         }
         self.seasons = list;
         self.sList.set(list, 0);
-        self.pickSeason(0);
+        // on se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu
+        var t = self.nextToWatch(eps), si = 0;
+        for (i = 0; i < list.length; i++) if (list[i].id === eps[t].season) si = i;
+        self.pickSeason(si);
+        if (t > 0 || P.pos['e' + eps[0].id] || Seen.has('e' + eps[0].id)) {
+          for (i = 0; i < self.eList.items.length; i++) if (self.eList.items[i] === eps[t]) self.eList.set(self.eList.items, i);
+          self.setZone('eps');
+        }
       });
+      Sync.pullSeen(function () { if (cur === self) self.eList.redraw(); });
     },
     resume: function () {
       this.eList.redraw();
       this.paintZone();
     },
     leave: function () { spinner(false); },
+    /* Index de l'épisode à proposer : le plus récemment commencé, sinon celui après le dernier vu */
+    nextToWatch: function (eps) {
+      var best = -1, bestAt = 0, lastSeen = -1, i, k, h;
+      for (i = 0; i < eps.length; i++) {
+        k = 'e' + eps[i].id;
+        if (P.pos[k]) {
+          var at = 1;
+          for (h = 0; h < P.hist.length; h++) if (P.hist[h].k === k) at = P.hist[h].a || 1;
+          if (at > bestAt) { bestAt = at; best = i; }
+        }
+        if (Seen.has(k)) lastSeen = i;
+      }
+      if (best >= 0) return best;
+      if (lastSeen >= 0 && lastSeen < eps.length - 1) return lastSeen + 1;
+      return 0;
+    },
     head: function (t, c) { $('sr-head').textContent = t; $('sr-count').textContent = c; },
     msg: function (txt) { var m = $('sr-msg'); m.textContent = txt; cls(m, 'on', !!txt); },
     pickSeason: function (i) {
@@ -2009,8 +2111,7 @@
       var it = this.it, pos = P.pos[this.key0()] || 0;
       if (this.idx === 2) {
         var key = it.kind + ':' + it.id;
-        if (P.favs[key]) delete P.favs[key]; else P.favs[key] = 1;
-        save('favs', P.favs);
+        Favs.toggle(key);
         toast(P.favs[key] ? 'Ajouté aux favoris' : 'Retiré des favoris');
         this.paint();
         return;
@@ -2075,12 +2176,14 @@
       v.addEventListener('ended', function () {
         if (!self.active) return;
         if (self.cur().live) self.fail();
+        else if (self.nextOff) self.next(true);
         else self.next();
       });
       v.addEventListener('timeupdate', function () {
         if (!self.active || self.cur().live) return;
         if (v.currentTime > 0) self.lastPos = v.currentTime;
         self.paintProgress();
+        self.checkNext();
         var now = Date.now();
         if (now - self.lastSave > 10000) { self.lastSave = now; self.saveProgress(); }
       });
@@ -2132,6 +2235,29 @@
       else if (a === 'audio') { this.cycleAudio(); this.showInfo(this.v.paused); }
       else if (a === 'subs') { this.cycleSubs(); this.showInfo(this.v.paused); }
     },
+    /* Encart « Épisode suivant » dans les 15 dernières secondes ; OK lance tout de suite, Retour annule */
+    checkNext: function () {
+      var v = this.v, dur = v.duration, left = dur - v.currentTime;
+      if (this.nextOff || this.i >= this.list.length - 1 || !(dur > 60) || !isFinite(dur)) return;
+      if (left <= 15 && left > 0) {
+        if (!this.nextOn) {
+          var nx = this.list[this.i + 1];
+          $('pn-title').textContent = nx.title;
+          this.nextOn = true;
+          cls($('p-next'), 'on', true);
+        }
+        $('pn-left').textContent = 'dans ' + Math.max(1, Math.ceil(left)) + ' s';
+      }
+    },
+    hideNext: function (cancelled) {
+      this.nextOn = false;
+      this.nextOff = !!cancelled;
+      cls($('p-next'), 'on', false);
+    },
+    back: function () {
+      if (this.nextOn) { this.hideNext(true); return true; }
+      return false;
+    },
     /* Épisode précédent / suivant choisi à la main : la progression de l'épisode en cours est gardée */
     goTo: function (i) {
       if (i < 0 || i >= this.list.length || i === this.i) return;
@@ -2164,6 +2290,7 @@
       this.stopVideo();
       this.status('');
       cls($('p-info'), 'on', false);
+      this.hideNext(false);
       this.ctl = false;
       cls($('p-info'), 'ctl-on', false);
       cls($('p-info'), 'bar-on', false);
@@ -2178,6 +2305,7 @@
       var self = this, it = this.cur();
       this.retries = 0;
       this.lastPos = 0;
+      this.hideNext(false);
       if (this.forcedStart >= 0) {
         var at = this.forcedStart;
         this.forcedStart = -1;
@@ -2250,10 +2378,11 @@
         this.lastT = v.currentTime;
       }
     },
-    next: function () {
+    /* Fin de l'épisode : marqué comme vu, puis le suivant (sauf si on a choisi de rester) */
+    next: function (stay) {
       var it = this.cur();
-      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.remove(it.key); }
-      if (this.i < this.list.length - 1) { this.i++; this.start(true); }
+      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.remove(it.key); Seen.mark(it.key); }
+      if (!stay && this.i < this.list.length - 1) { this.i++; this.start(true); }
       else back();
     },
     /* Changement de chaîne : le titre s'affiche tout de suite, le flux démarre quand on arrête de zapper */
@@ -2320,6 +2449,7 @@
       if (dur > 0 && isFinite(dur) && pos > dur - 120) {
         delete P.pos[it.key];
         Hist.remove(it.key);
+        Seen.mark(it.key);
       } else if (pos > 30) {
         P.pos[it.key] = Math.floor(pos);
         Hist.update(it, pos, isFinite(dur) ? dur : 0);
@@ -2435,6 +2565,7 @@
         else if (c === K.INFO || c === K.LEFT || c === K.RIGHT) this.showInfo();
         return true;
       }
+      if (this.nextOn && c === K.OK) { if (!(e && e.repeat)) this.next(); return true; }
       // Films et séries : la barre de progression est au-dessus des boutons.
       // Haut : barre (gauche/droite reculent/avancent) · bas : boutons · bas depuis les boutons : on cache.
       if (c === K.PLAY || c === K.PAUSE) {

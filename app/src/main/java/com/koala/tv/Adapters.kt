@@ -213,8 +213,14 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         h.plot.text = e.plot
         h.plot.visibility = if (e.plot.isEmpty()) View.GONE else View.VISIBLE
         val pos = Prefs.getPos("e${e.id}")
-        h.resume.visibility = if (pos > 0) View.VISIBLE else View.GONE
-        h.resume.text = "Reprendre à ${fmtTime(pos)}"
+        val seen = pos <= 0 && Seen.has("e${e.id}")
+        h.resume.visibility = if (pos > 0 || seen) View.VISIBLE else View.GONE
+        h.resume.text = if (seen) "Vu" else "Reprendre à ${fmtTime(pos)}"
+        val ctx = h.itemView.context
+        h.resume.setTextColor(androidx.core.content.ContextCompat.getColor(ctx, if (seen) R.color.muted else R.color.accent))
+        h.resume.setCompoundDrawablesRelativeWithIntrinsicBounds(if (seen) R.drawable.ic_check else 0, 0, 0, 0)
+        h.resume.compoundDrawablePadding = ctx.dp(4)
+        h.name.alpha = if (seen) 0.6f else 1f
         h.itemView.setOnClickListener {
             val p = h.bindingAdapterPosition
             if (p != RecyclerView.NO_POSITION) onClick(p)

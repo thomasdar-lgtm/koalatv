@@ -39,7 +39,7 @@ class SeriesActivity : AppCompatActivity() {
         seriesId = intent.getStringExtra("id") ?: ""
         seriesName = intent.getStringExtra("name") ?: ""
         cover = intent.getStringExtra("cover") ?: ""
-        seasonIdx = savedInstanceState?.getInt("season", 0) ?: 0
+        seasonIdx = savedInstanceState?.getInt("season", -1) ?: -1
 
         findViewById<TextView>(R.id.tv_title).text = seriesName
         if (cover.startsWith("http", true)) findViewById<ImageView>(R.id.iv_cover).load(cover) { crossfade(150) }
@@ -90,6 +90,7 @@ class SeriesActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 episodes = Xtream.seriesEpisodes(seriesId)
+                Sync.pullSeen()
                 seasons = episodes.map { it.season }.distinct().sorted()
                 if (episodes.isEmpty()) {
                     showMessage("Aucun épisode disponible.", false)
@@ -97,16 +98,49 @@ class SeriesActivity : AppCompatActivity() {
                     seasonAdapter.submit(seasons.map { s ->
                         Category(s.toString(), if (s <= 0) "Épisodes" else "Saison $s", episodes.count { it.season == s })
                     })
-                    val start = seasonIdx.coerceIn(0, seasons.size - 1)
+                    // on se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu
+                    val target = if (seasonIdx < 0) nextToWatch() else -1
+                    val start = if (target >= 0) seasons.indexOf(episodes[target].season).coerceAtLeast(0) else seasonIdx.coerceIn(0, seasons.size - 1)
                     showSeason(start)
                     rvSeasons.scrollToPosition(start)
-                    if (sidePanel) rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+                    val epPos = if (target >= 0) epAdapter.items.indexOf(episodes[target]) else -1
+                    if (epPos > 0 || (epPos == 0 && target > 0) || (target >= 0 && started(episodes[target]))) {
+                        rvEpisodes.scrollToPosition(epPos)
+                        rvEpisodes.post { rvEpisodes.findViewHolderForAdapterPosition(epPos)?.itemView?.requestFocus() }
+                    } else if (sidePanel) {
+                        rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+                    }
                 }
             } catch (e: Exception) {
                 showMessage("Impossible de charger la série.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
             } finally {
                 progress.visibility = View.GONE
             }
+        }
+    }
+
+    private fun started(e: Episode) = Prefs.getPos("e${e.id}") > 0 || Seen.has("e${e.id}")
+
+    /** Index de l'épisode à proposer : le plus récemment commencé, sinon celui après le dernier vu. */
+    private fun nextToWatch(): Int {
+        val hist = History.all().associate { it.key to it.at }
+        var best = -1
+        var bestAt = 0L
+        var lastSeen = -1
+        episodes.forEachIndexed { i, e ->
+            val k = "e${e.id}"
+            if (Prefs.getPos(k) > 0) {
+                val at = hist[k] ?: 1L
+                if (at > bestAt) {
+                    bestAt = at; best = i
+                }
+            }
+            if (Seen.has(k)) lastSeen = i
+        }
+        return when {
+            best >= 0 -> best
+            lastSeen in 0 until episodes.size - 1 -> lastSeen + 1
+            else -> 0
         }
     }
 

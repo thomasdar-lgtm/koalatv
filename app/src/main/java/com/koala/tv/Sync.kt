@@ -55,6 +55,68 @@ object Sync {
 
     fun pushGone(key: String, at: Long) = put("e/$key", JSONObject().put("gone", true).put("at", at).toString())
 
+    fun pushSeen(key: String, at: Long) = put("w/$key", JSONObject().put("at", at).toString())
+
+    /** Récupère les films et épisodes vus ailleurs. Renvoie true si quelque chose a changé ici. */
+    suspend fun pullSeen(): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext false
+        try {
+            val body = Xtream.http.newCall(Request.Builder().url(url("w")).build()).execute().use { r ->
+                if (!r.isSuccessful) return@withContext false
+                r.body?.string() ?: return@withContext false
+            }
+            val o = if (body.trim() == "null") JSONObject() else JSONObject(body)
+            val remote = HashMap<String, Long>()
+            for (k in o.keys()) o.optJSONObject(k)?.optLong("at")?.takeIf { it > 0 }?.let { remote[k] = it }
+            val changed = Seen.merge(remote)
+            for ((k, at) in Seen.all()) if (!remote.containsKey(k)) pushSeen(k, at)
+            changed
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /** Favoris : clé partagée « live:123 » (identique sur LG), clé locale « LIVE:123 ». */
+    private fun favPath(localKey: String) = "f/" + localKey.lowercase().replace(Regex("[.$#\\[\\]/:]"), "_")
+
+    fun pushFav(localKey: String, on: Boolean, at: Long) =
+        put(favPath(localKey), JSONObject().put("k", localKey.lowercase()).put("on", on).put("at", at).toString())
+
+    /** Récupère les favoris partagés. Renvoie true si quelque chose a changé ici. */
+    suspend fun pullFavs(): Boolean = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext false
+        try {
+            val body = Xtream.http.newCall(Request.Builder().url(url("f")).build()).execute().use { r ->
+                if (!r.isSuccessful) return@withContext false
+                r.body?.string() ?: return@withContext false
+            }
+            val o = if (body.trim() == "null") JSONObject() else JSONObject(body)
+            val remoteAt = HashMap<String, Long>()
+            var changed = false
+            val favs = Prefs.favs()
+            for (p in o.keys()) {
+                val v = o.optJSONObject(p) ?: continue
+                val k = v.optString("k")
+                val at = v.optLong("at")
+                val i = k.indexOf(':')
+                if (i <= 0 || at <= 0) continue
+                val local = k.substring(0, i).uppercase() + k.substring(i)
+                remoteAt[local] = at
+                if (at > Prefs.favAt(local)) {
+                    val on = v.optBoolean("on")
+                    if (favs.contains(local) != on) changed = true
+                    Prefs.setFav(local, on, at)
+                }
+            }
+            for ((k, at) in Prefs.favAll()) {
+                if ((remoteAt[k] ?: 0L) < at) pushFav(k, Prefs.favs().contains(k), at)
+            }
+            changed
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     /** Clé Firebase d'une catégorie (les caractères . $ # [ ] / y sont interdits). */
     private fun catPath(k: String) = "c/" + k.replace(Regex("[.$#\\[\\]/:]"), "_")
 

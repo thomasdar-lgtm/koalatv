@@ -5,7 +5,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOGO = Image.open(os.path.join(ROOT, "brand", "logo.png")).convert("RGBA")
-BG, ACCENT, TEXT = (14, 17, 22, 255), (61, 220, 151, 255), (237, 239, 242, 255)
+BG, ACCENT, TEXT = (14, 17, 22, 255), (76, 154, 255, 255), (237, 239, 242, 255)
 NAVY = (2, 26, 85, 255)  # couleur du bord du logo, fond de l'icône adaptative
 FONT = "/usr/share/fonts/opentype/inter/Inter-Bold.otf"
 

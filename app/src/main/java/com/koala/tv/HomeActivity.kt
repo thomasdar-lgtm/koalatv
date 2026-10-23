@@ -212,12 +212,69 @@ class HomeActivity : AppCompatActivity() {
             .show()
     }
 
+    /** Envoie les identifiants vers le code affiché sur l'écran de connexion d'un autre appareil. */
+    private fun pairDevice() {
+        val et = android.widget.EditText(this).apply {
+            hint = "ABCD EFGH"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS or
+                android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            filters = arrayOf(android.text.InputFilter.AllCaps(), android.text.InputFilter.LengthFilter(9))
+            gravity = android.view.Gravity.CENTER
+            textSize = 26f
+            letterSpacing = 0.15f
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@HomeActivity, R.color.text))
+            background = androidx.core.content.ContextCompat.getDrawable(this@HomeActivity, R.drawable.field_bg)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        val box = android.widget.FrameLayout(this).apply {
+            setPadding(dp(24), dp(8), dp(24), 0)
+            addView(et)
+        }
+        val d = AlertDialog.Builder(this)
+            .setTitle("Connecter un appareil")
+            .setMessage("Saisis le code affiché sur l'écran de connexion de l'autre appareil.")
+            .setView(box)
+            .setPositiveButton("Envoyer", null)
+            .setNegativeButton("Retour") { _, _ -> showSettings() }
+            .setOnCancelListener { showSettings() }
+            .create()
+        d.setOnShowListener {
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val code = Pair.clean(et.text.toString())
+                if (code == null) {
+                    et.error = "Code incorrect"
+                    return@setOnClickListener
+                }
+                d.dismiss()
+                toast("Envoi des identifiants…")
+                lifecycleScope.launch {
+                    if (!Pair.send(code)) {
+                        toast("Envoi impossible, vérifie la connexion"); return@launch
+                    }
+                    // l'autre appareil récupère les identifiants en quelques secondes
+                    repeat(20) {
+                        kotlinx.coroutines.delay(3000)
+                        if (Pair.consumed(code)) {
+                            toast("Appareil connecté"); return@launch
+                        }
+                    }
+                    Pair.cancel(code)
+                    toast("L'appareil n'a pas répondu, vérifie le code")
+                }
+            }
+        }
+        d.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        d.show()
+        et.requestFocus()
+    }
+
     private fun showSettings() {
         val labels = arrayOf(
             "Format du direct : " + if (Prefs.liveFormat == "ts") "MPEG-TS (recommandé)" else "HLS",
             "Lecteur : " + if (Prefs.externalPlayer) "externe (VLC)" else "intégré (recommandé)",
             "Actualiser les listes",
             "Catégories visibles",
+            "Connecter un appareil",
             "Rechercher une mise à jour",
             "Se déconnecter",
         )
@@ -238,8 +295,9 @@ class HomeActivity : AppCompatActivity() {
                         Lists.refreshAll { ok -> toast(if (ok) "Listes à jour" else "Actualisation impossible, réessaie plus tard") }
                     }
                     3 -> chooseCategories()
-                    4 -> checkUpdate(force = true)
-                    5 -> AlertDialog.Builder(this)
+                    4 -> pairDevice()
+                    5 -> checkUpdate(force = true)
+                    6 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->

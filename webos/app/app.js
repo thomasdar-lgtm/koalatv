@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.12.3';
+  var VERSION = '1.13.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -208,6 +208,72 @@
         if (changed && cb) cb();
       });
     }
+  };
+
+  /*
+   * Connexion rapide : l'écran de connexion affiche un code ; un appareil déjà connecté y envoie les identifiants.
+   * Ils transitent chiffrés (clé tirée du code) par la base Firebase, à une adresse tirée du code, et sont effacés dès réception.
+   */
+  var Pair = {
+    ABC: 'ABCDEFGHJKMNPQRSTUVWXYZ23456789',
+    code: '',
+    since: 0,
+    timer: null,
+    newCode: function () {
+      var c = '', i, rnd = [];
+      try { var a = new Uint8Array(8); window.crypto.getRandomValues(a); for (i = 0; i < 8; i++) rnd.push(a[i]); } catch (e) { rnd = []; }
+      for (i = 0; i < 8; i++) c += this.ABC.charAt((rnd.length ? rnd[i] : Math.floor(Math.random() * 256)) % this.ABC.length);
+      this.code = c;
+      this.since = Date.now();
+      return c;
+    },
+    url: function (code) { return Sync.DB.replace(/\/+$/, '') + '/h/p' + sha256('koalatv-pair|' + code).substr(0, 40) + '/x.json'; },
+    /* Chiffrement par flux : octets XOR SHA-256(code, n° de bloc) */
+    xor: function (code, bytes) {
+      var out = [], block = '', b = -1;
+      for (var i = 0; i < bytes.length; i++) {
+        if (Math.floor(i / 32) !== b) { b = Math.floor(i / 32); block = sha256('koalatv-key|' + code + '|' + b); }
+        out.push(bytes[i] ^ parseInt(block.substr((i % 32) * 2, 2), 16));
+      }
+      return out;
+    },
+    decrypt: function (code, hex) {
+      var bytes = [];
+      for (var i = 0; i + 1 < hex.length; i += 2) bytes.push(parseInt(hex.substr(i, 2), 16));
+      var plain = this.xor(code, bytes), s = '';
+      for (i = 0; i < plain.length; i++) s += String.fromCharCode(plain[i]);
+      return JSON.parse(decodeURIComponent(escape(s)));
+    },
+    remove: function (code) {
+      try {
+        var x = new XMLHttpRequest();
+        x.open('POST', this.url(code) + '?x-http-method-override=DELETE', true);
+        x.setRequestHeader('Content-Type', 'text/plain');
+        x.send('');
+      } catch (e) { /* hors ligne */ }
+    },
+    /* Attend des identifiants pour le code affiché ; un nouveau code toutes les 10 minutes */
+    start: function (onCode, onCreds) {
+      var self = this;
+      this.stop();
+      onCode(this.newCode());
+      function poll() {
+        if (Date.now() - self.since > 600000) onCode(self.newCode());
+        var code = self.code;
+        getJson(self.url(code), function (err, rec) {
+          if (!self.timer) return;
+          if (!err && rec && rec.d && code === self.code) {
+            var creds = null;
+            try { creds = self.decrypt(code, rec.d); } catch (e) { creds = null; }
+            self.remove(code);
+            if (creds && creds.s && creds.u && creds.p) { self.stop(); onCreds(creds); return; }
+          }
+          self.timer = setTimeout(poll, 3000);
+        });
+      }
+      this.timer = setTimeout(poll, 1500);
+    },
+    stop: function () { clearTimeout(this.timer); this.timer = null; }
   };
 
   function liveItem(it) { return { title: it.name, url: X.url('live', it.id), live: true, id: it.id, num: it.num || 0, icon: it.icon }; }
@@ -889,7 +955,18 @@
       this.status('', false);
       this.idx = P.server && P.user ? 2 : 0;
       this.paint();
+      var self = this;
+      Pair.start(function (code) {
+        $('l-code').textContent = code.substr(0, 4) + ' ' + code.substr(4);
+      }, function (c) {
+        self.fields[0].value = c.s;
+        self.fields[1].value = c.u;
+        self.fields[2].value = c.p;
+        self.status('Identifiants reçus', false);
+        self.submit();
+      });
     },
+    leave: function () { Pair.stop(); },
     paint: function () {
       for (var i = 0; i < this.rows.length; i++) cls(this.rows[i], 'focus', i === this.idx);
     },

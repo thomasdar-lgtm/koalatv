@@ -8,7 +8,10 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class LoginActivity : AppCompatActivity() {
@@ -71,6 +74,27 @@ class LoginActivity : AppCompatActivity() {
                     btn.isEnabled = true
                     progress.visibility = View.GONE
                     btn.requestFocus()
+                }
+            }
+        }
+
+        // Connexion rapide : on attend des identifiants envoyés par un autre appareil vers le code affiché
+        val tvCode = findViewById<TextView>(R.id.tv_code)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                var code = Pair.newCode()
+                var since = System.currentTimeMillis()
+                tvCode.text = Pair.display(code)
+                while (true) {
+                    delay(3000)
+                    if (System.currentTimeMillis() - since > 600_000) {
+                        code = Pair.newCode(); since = System.currentTimeMillis(); tvCode.text = Pair.display(code)
+                    }
+                    val c = Pair.receive(code) ?: continue
+                    etServer.setText(c.server)
+                    etUser.setText(c.user)
+                    etPass.setText(c.pass)
+                    if (btn.isEnabled) submit()
                 }
             }
         }

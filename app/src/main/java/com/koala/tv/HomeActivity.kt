@@ -64,7 +64,8 @@ class HomeActivity : AppCompatActivity() {
         resumeBox = findViewById(R.id.resume_box)
         resumeAdapter = ResumeAdapter(::resume, ::forget)
         findViewById<RecyclerView>(R.id.rv_resume).apply {
-            layoutManager = LinearLayoutManager(this@HomeActivity, RecyclerView.HORIZONTAL, false)
+            val vertical = tag == "vertical" // téléphone en paysage : colonne à droite
+            layoutManager = LinearLayoutManager(this@HomeActivity, if (vertical) RecyclerView.VERTICAL else RecyclerView.HORIZONTAL, false)
             adapter = resumeAdapter
             itemAnimator = null
         }

@@ -56,6 +56,9 @@ class BrowseActivity : AppCompatActivity() {
             Kind.SERIES -> "série" to "séries"
         }
 
+    /** Catégories en colonne à gauche (grand écran) ou en puces au-dessus (téléphone). */
+    private val sidePanel: Boolean get() = rvCats.tag != "chips"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         kind = try {
@@ -79,7 +82,7 @@ class BrowseActivity : AppCompatActivity() {
             Kind.SERIES -> "Séries"
         }
 
-        val wide = isWide
+        val wide = sidePanel
         catAdapter = CatAdapter(
             if (wide) R.layout.item_category else R.layout.item_chip,
             onFocus = { pos -> scheduleSelect(pos) },
@@ -213,7 +216,7 @@ class BrowseActivity : AppCompatActivity() {
             }
             selectCategory(start)
             rvCats.scrollToPosition(start)
-            if (isWide) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+            if (sidePanel) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
         } else {
             // liste rafraîchie en arrière-plan : on reste sur la même catégorie, sans remonter en haut
             val idx = built.indexOfFirst { it.id == prevId }.takeIf { it >= 0 } ?: 1
@@ -260,7 +263,7 @@ class BrowseActivity : AppCompatActivity() {
             "Aucun favori pour le moment.\nAppui long sur une chaîne, un film ou une série pour l'ajouter."
         } else "Cette catégorie est vide."
         showItems(list, c.name, empty, keepScroll)
-        if (!isWide && !keepScroll) rvCats.smoothScrollToPosition(pos)
+        if (!sidePanel && !keepScroll) rvCats.smoothScrollToPosition(pos)
     }
 
     private fun runSearch(raw: String) {

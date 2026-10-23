@@ -29,6 +29,9 @@ class SeriesActivity : AppCompatActivity() {
     private lateinit var tvHead: TextView
     private lateinit var tvCount: TextView
 
+    /** Catégories en colonne à gauche (grand écran) ou en puces au-dessus (téléphone). */
+    private val sidePanel: Boolean get() = rvSeasons.tag != "chips"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_series)
@@ -47,7 +50,7 @@ class SeriesActivity : AppCompatActivity() {
         tvHead = findViewById(R.id.tv_head)
         tvCount = findViewById(R.id.tv_count)
 
-        val wide = isWide
+        val wide = sidePanel
         seasonAdapter = CatAdapter(
             if (wide) R.layout.item_category else R.layout.item_chip,
             onFocus = { pos -> if (pos != seasonAdapter.selected) showSeason(pos) },
@@ -96,7 +99,7 @@ class SeriesActivity : AppCompatActivity() {
                     val start = seasonIdx.coerceIn(0, seasons.size - 1)
                     showSeason(start)
                     rvSeasons.scrollToPosition(start)
-                    if (isWide) rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+                    if (sidePanel) rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
                 }
             } catch (e: Exception) {
                 showMessage("Impossible de charger la série.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
@@ -123,7 +126,7 @@ class SeriesActivity : AppCompatActivity() {
         rvEpisodes.scrollToPosition(0)
         tvHead.text = if (s <= 0) "Épisodes" else "Saison $s"
         tvCount.text = plural(list.size, "épisode", "épisodes")
-        if (!isWide) rvSeasons.smoothScrollToPosition(pos)
+        if (!sidePanel) rvSeasons.smoothScrollToPosition(pos)
     }
 
     private fun playEpisode(pos: Int) {

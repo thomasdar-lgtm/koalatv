@@ -1,81 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- TV et tablette : 4 tuiles alignées -->
+<!-- Téléphone en paysage : tuiles 2 × 2 à gauche, « Reprendre » en colonne à droite -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="@dimen/page_pad">
+    android:paddingStart="@dimen/page_pad"
+    android:paddingTop="14dp"
+    android:paddingEnd="@dimen/page_pad"
+    android:paddingBottom="14dp">
 
     <include layout="@layout/view_brand" />
 
     <include layout="@layout/view_update" />
 
-    <include layout="@layout/view_resume" />
-
-    <FrameLayout
-        android:id="@+id/tiles_area"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:orientation="horizontal">
 
         <LinearLayout
-            android:id="@+id/tiles_row"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/tile_row"
-            android:layout_gravity="center"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp">
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
 
             <LinearLayout
-                android:id="@+id/tile_live"
-                style="@style/Tile"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="20dp"
-                android:layout_weight="1">
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_tv" app:tint="@color/tile_icon" />
-                <TextView style="@style/TileLabel" android:text="TV en direct" />
+                <LinearLayout
+                    android:id="@+id/tile_live"
+                    style="@style/Tile"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1">
+
+                    <ImageView style="@style/TileIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_tv" app:tint="@color/tile_icon" />
+                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="TV en direct" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tile_movies"
+                    style="@style/Tile"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:layout_weight="1">
+
+                    <ImageView style="@style/TileIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_film" app:tint="@color/tile_icon" />
+                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Films" />
+                </LinearLayout>
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/tile_movies"
-                style="@style/Tile"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="20dp"
-                android:layout_weight="1">
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="horizontal">
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_film" app:tint="@color/tile_icon" />
-                <TextView style="@style/TileLabel" android:text="Films" />
-            </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/tile_series"
+                    style="@style/Tile"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1">
 
-            <LinearLayout
-                android:id="@+id/tile_series"
-                style="@style/Tile"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_marginEnd="20dp"
-                android:layout_weight="1">
+                    <ImageView style="@style/TileIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_series" app:tint="@color/tile_icon" />
+                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Séries" />
+                </LinearLayout>
 
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_series" app:tint="@color/tile_icon" />
-                <TextView style="@style/TileLabel" android:text="Séries" />
-            </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/tile_settings"
+                    style="@style/Tile"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginStart="6dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_weight="1">
 
-            <LinearLayout
-                android:id="@+id/tile_settings"
-                style="@style/Tile"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1">
-
-                <ImageView style="@style/TileIcon" android:src="@drawable/ic_settings" app:tint="@color/tile_icon" />
-                <TextView style="@style/TileLabel" android:text="Réglages" />
+                    <ImageView style="@style/TileIcon" android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_settings" app:tint="@color/tile_icon" />
+                    <TextView style="@style/TileLabel" android:layout_marginTop="10dp" android:textSize="16sp" android:text="Réglages" />
+                </LinearLayout>
             </LinearLayout>
         </LinearLayout>
-    </FrameLayout>
+
+        <LinearLayout
+            android:id="@+id/resume_box"
+            android:layout_width="300dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="16dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/inter_semibold"
+                android:text="Reprendre"
+                android:textColor="@color/text"
+                android:textSize="16sp" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_resume"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_marginStart="-6dp"
+                android:layout_marginTop="4dp"
+                android:layout_marginEnd="-6dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:scrollbars="none"
+                android:tag="vertical" />
+        </LinearLayout>
+    </LinearLayout>
 </LinearLayout>

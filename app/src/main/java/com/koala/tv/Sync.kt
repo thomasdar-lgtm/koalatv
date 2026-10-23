@@ -16,7 +16,7 @@ import java.security.MessageDigest
  */
 object Sync {
     /** Adresse de la base Firebase (vide = partage désactivé). */
-    const val DB = ""
+    const val DB = "https://koalatv-dae7b-default-rtdb.europe-west1.firebasedatabase.app"
 
     /** Élément distant : `entry` null = supprimé sur un autre appareil. */
     class Remote(val key: String, val at: Long, val entry: History.Entry?)

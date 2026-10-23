@@ -158,7 +158,7 @@
    * Adresse calculée à partir des identifiants : impossible à deviner sans eux.
    */
   var Sync = {
-    DB: '',
+    DB: 'https://koalatv-dae7b-default-rtdb.europe-west1.firebasedatabase.app',
     enabled: function () { return !!(this.DB && loggedIn()); },
     url: function (path) {
       var acc = sha256('koalatv|' + P.server.toLowerCase() + '|' + P.user + '|' + P.pass).substr(0, 40);

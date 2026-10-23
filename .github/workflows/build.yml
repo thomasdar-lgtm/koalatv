@@ -61,6 +61,13 @@ jobs:
             grep -E "^e: |error:|FAILURE|What went wrong|BUILD (SUCCESSFUL|FAILED)|\.kt:[0-9]+|\.xml:[0-9]+|AAPT|Could not" build.log | head -200 > /tmp/report/errors.txt || true
             tail -150 build.log > /tmp/report/tail.txt
           fi
+          DB="https://koalatv-dae7b-default-rtdb.europe-west1.firebasedatabase.app"
+          {
+            echo "ecriture: $(curl -s -m 20 -X PUT -d '{"at":1}' "$DB/h/ci-check/e/ping.json")"
+            echo "lecture: $(curl -s -m 20 "$DB/h/ci-check/e.json")"
+            echo "liste racine (doit etre refusee): $(curl -s -m 20 "$DB/h.json")"
+            echo "nettoyage: $(curl -s -m 20 -X DELETE "$DB/h/ci-check.json")"
+          } > /tmp/report/firebase.txt 2>&1 || true
           cd /tmp/report
           git init -q -b build-logs
           git config user.name "build-bot"

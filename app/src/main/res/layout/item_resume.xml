@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="280dp"
-    android:layout_height="100dp"
+    android:layout_width="@dimen/resume_w"
+    android:layout_height="@dimen/resume_h"
     android:layout_margin="6dp"
     android:background="@drawable/item_bg"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:padding="8dp">
+    android:padding="@dimen/resume_pad">
 
     <ImageView
         android:id="@+id/iv"
-        android:layout_width="56dp"
-        android:layout_height="84dp"
+        android:layout_width="@dimen/resume_img_w"
+        android:layout_height="@dimen/resume_img_h"
         android:background="@drawable/poster_bg"
         android:contentDescription="@null"
         android:scaleType="centerCrop" />
@@ -33,14 +33,14 @@
             android:fontFamily="@font/inter_semibold"
             android:maxLines="2"
             android:textColor="@color/text"
-            android:textSize="14sp" />
+            android:textSize="@dimen/resume_title" />
 
         <ProgressBar
             android:id="@+id/pb"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="4dp"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="6dp"
             android:max="1000"
             android:progressDrawable="@drawable/progress_bar" />
 
@@ -48,8 +48,8 @@
             android:id="@+id/tv_left"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="4dp"
             android:textColor="@color/muted"
-            android:textSize="12sp" />
+            android:textSize="@dimen/resume_meta" />
     </LinearLayout>
 </LinearLayout>

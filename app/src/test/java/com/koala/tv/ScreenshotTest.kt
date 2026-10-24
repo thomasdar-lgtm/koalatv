@@ -80,6 +80,12 @@ class ScreenshotTest {
     }
 
     @Test
+    @Config(sdk = [34], qualifiers = "w891dp-h411dp-land-xxhdpi")
+    fun homePhoneLand() {
+        login(tv = false, resume = true); shoot("home_phone_land")
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "w411dp-h891dp-port-xxhdpi")
     fun homePhone() {
         login(tv = false, resume = true); shoot("home_phone")

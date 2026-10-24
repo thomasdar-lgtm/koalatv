@@ -3,4 +3,17 @@
     <dimen name="tile_row">280dp</dimen>
     <dimen name="brand_logo">50dp</dimen>
     <dimen name="brand_text">30sp</dimen>
+    <!-- tablette et TV : tailles normales -->
+    <dimen name="tile_gap">12dp</dimen>
+    <dimen name="tile_text">22sp</dimen>
+    <dimen name="page_pad">36dp</dimen>
+    <dimen name="resume_w">280dp</dimen>
+    <dimen name="resume_h">100dp</dimen>
+    <dimen name="resume_img_w">56dp</dimen>
+    <dimen name="resume_img_h">84dp</dimen>
+    <dimen name="resume_pad">8dp</dimen>
+    <dimen name="resume_title">14sp</dimen>
+    <dimen name="resume_meta">12sp</dimen>
+    <dimen name="resume_label">17sp</dimen>
+    <dimen name="resume_top">20dp</dimen>
 </resources>

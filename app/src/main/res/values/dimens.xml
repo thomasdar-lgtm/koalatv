@@ -9,4 +9,13 @@
     <dimen name="guide_channel">128dp</dimen>
     <dimen name="brand_logo">44dp</dimen>
     <dimen name="brand_text">26sp</dimen>
+    <dimen name="resume_w">280dp</dimen>
+    <dimen name="resume_h">100dp</dimen>
+    <dimen name="resume_img_w">56dp</dimen>
+    <dimen name="resume_img_h">84dp</dimen>
+    <dimen name="resume_pad">8dp</dimen>
+    <dimen name="resume_title">14sp</dimen>
+    <dimen name="resume_meta">12sp</dimen>
+    <dimen name="resume_label">17sp</dimen>
+    <dimen name="resume_top">20dp</dimen>
 </resources>

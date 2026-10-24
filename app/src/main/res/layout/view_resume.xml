@@ -6,7 +6,7 @@
     android:clipToPadding="false"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="20dp"
+    android:layout_marginTop="@dimen/resume_top"
     android:orientation="vertical"
     android:visibility="gone">
 
@@ -16,7 +16,7 @@
         android:fontFamily="@font/inter_semibold"
         android:text="Reprendre"
         android:textColor="@color/text"
-        android:textSize="17sp" />
+        android:textSize="@dimen/resume_label" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_resume"

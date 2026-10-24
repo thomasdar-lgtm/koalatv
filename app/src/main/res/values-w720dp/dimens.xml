@@ -1,10 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <bool name="wide">true</bool>
-    <dimen name="tile_gap">12dp</dimen>
-    <dimen name="tile_text">22sp</dimen>
-    <dimen name="page_pad">36dp</dimen>
+    <dimen name="tile_gap">6dp</dimen>
+    <dimen name="tile_text">15sp</dimen>
+    <dimen name="page_pad">20dp</dimen>
     <dimen name="poster_min">140dp</dimen>
     <dimen name="tile_row">190dp</dimen>
     <dimen name="guide_channel">210dp</dimen>
+    <!-- téléphone en paysage : en-tête et « Reprendre » compacts -->
+    <dimen name="brand_logo">34dp</dimen>
+    <dimen name="brand_text">21sp</dimen>
+    <dimen name="resume_w">200dp</dimen>
+    <dimen name="resume_h">60dp</dimen>
+    <dimen name="resume_img_w">32dp</dimen>
+    <dimen name="resume_img_h">48dp</dimen>
+    <dimen name="resume_pad">6dp</dimen>
+    <dimen name="resume_title">12sp</dimen>
+    <dimen name="resume_meta">10sp</dimen>
+    <dimen name="resume_label">13sp</dimen>
+    <dimen name="resume_top">8dp</dimen>
 </resources>

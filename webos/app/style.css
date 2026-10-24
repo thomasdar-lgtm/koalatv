@@ -87,6 +87,9 @@ input { font-family: inherit; }
 #ps-status { margin-top: 1.2rem; min-height: 3rem; text-align: center; font-size: 1.05rem; color: #8B95A3; }
 #ps-status.err { color: #FF8A8A; }
 
+#h-busy { display: none; margin-top: .3rem; font-size: 1rem; color: #FFB347; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#h-busy.on { display: block; }
+
 /* Bouton Rechercher de l'accueil */
 .hsearch { display: -webkit-box; display: -webkit-flex; display: flex; -webkit-box-align: center; -webkit-align-items: center; align-items: center;
   margin-left: 1.6rem; height: 3.2rem; padding: 0 1.3rem; border-radius: 1.6rem; background: #1B222C; border: .16rem solid transparent;

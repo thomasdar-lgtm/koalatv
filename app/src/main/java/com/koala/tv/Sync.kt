@@ -39,6 +39,23 @@ object Sync {
         .put("sid", e.seriesId).put("sn", e.seriesName)
         .toString()
 
+    /** Écriture brute (présence de lecture). */
+    fun putRaw(path: String, body: String) = put(path, body)
+
+    /** Lecture brute d'un nœud de l'historique partagé, ou null. */
+    suspend fun getRaw(path: String): JSONObject? = withContext(Dispatchers.IO) {
+        if (!enabled) return@withContext null
+        try {
+            Xtream.http.newCall(Request.Builder().url(url(path)).build()).execute().use { r ->
+                if (!r.isSuccessful) return@withContext null
+                val t = r.body?.string()?.trim() ?: return@withContext null
+                if (t == "null") JSONObject() else JSONObject(t)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun put(path: String, body: String) {
         if (!enabled) return
         Lists.scope.launch {

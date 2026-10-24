@@ -365,6 +365,49 @@
     }
   };
 
+  /*
+   * Lecture sur les autres appareils : chaque appareil KoalaTV signale ce qu'il lit (toutes les 30 s),
+   * et le serveur Xtream donne le nombre de connexions actives de l'abonnement.
+   */
+  var Presence = {
+    id: load('devid', ''),
+    name: 'TV LG',
+    lastStop: 0,
+    timer: null,
+    init: function () {
+      if (!this.id) { this.id = 'lg' + Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36); save('devid', this.id); }
+    },
+    start: function (title) {
+      var self = this;
+      this.stop(true);
+      function beat() { Sync.put('p/' + self.id, { n: self.name, t: title, at: Date.now() }); }
+      beat();
+      this.timer = setInterval(beat, 30000);
+    },
+    stop: function (quiet) {
+      if (this.timer) { clearInterval(this.timer); this.timer = null; if (!quiet) { this.lastStop = Date.now(); Sync.put('p/' + this.id, null); } }
+    },
+    /* Autres lectures en cours : cb({ others: [{n, t}], cons, max }) ; 2,5 s au plus */
+    check: function (useServer, cb) {
+      var done = false, out = { others: [], cons: 0, max: 0 }, n = 0, need = useServer ? 2 : 1, self = this;
+      function fin() { if (!done) { done = true; cb(out); } }
+      function part() { if (++n >= need) fin(); }
+      setTimeout(fin, 2500);
+      if (!Sync.enabled()) part();
+      else getJson(Sync.url('p'), function (err, all) {
+        if (!err && all) for (var k in all) {
+          if (all.hasOwnProperty(k) && k !== self.id && all[k] && Date.now() - all[k].at < 75000) out.others.push(all[k]);
+        }
+        part();
+      });
+      if (useServer) getJson(apiUrl(P.server, P.user, P.pass, ''), function (err, j) {
+        var ui = j && j.user_info;
+        if (!err && ui) { out.cons = parseInt(ui.active_cons, 10) || 0; out.max = parseInt(ui.max_connections, 10) || 0; }
+        part();
+      });
+    }
+  };
+
   /* Films et épisodes vus jusqu'au bout (partagés entre appareils) */
   var Seen = {
     m: load('seen', {}),
@@ -423,6 +466,7 @@
     }
   };
   Hidden.init();
+  Presence.init();
 
   /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
   function episodeList(sid, sname, icon, eps) {
@@ -886,8 +930,8 @@
     open: false, opts: [], idx: 0, onCancel: null,
     show: function (title, msg, opts, onCancel, idx) {
       this.open = true;
-      // OK n'est pris en compte qu'après relâchement de la touche (appui long qui a ouvert ce menu)
-      this.armed = false;
+      // si ce menu s'ouvre pendant qu'une touche est enfoncée (appui long), OK n'agit qu'après son relâchement
+      this.armed = !keyHeld;
       this.opts = opts;
       this.idx = idx || 0;
       this.onCancel = onCancel || null;
@@ -1234,7 +1278,7 @@
         var d = new Date(exp * 1000);
         txt += ' · expire le ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear();
       }
-      $('h-account').textContent = txt;
+      $('h-acc-t').textContent = txt;
       this.zone = 'tiles';
       this.drawResume();
       this.paint();
@@ -1257,8 +1301,17 @@
       if (this.backToCats !== undefined) { var i = this.backToCats; delete this.backToCats; this.catChooser(i); }
       else if (this.backToSettings !== undefined) { var j = this.backToSettings; delete this.backToSettings; this.settings(j); }
     },
+    /* Lecture en cours sur un autre appareil : indiquée sous le nom du compte */
+    showOthers: function () {
+      Presence.check(false, function (o) {
+        var t = o.others.length ? 'En lecture sur ' + o.others[0].n + ' : ' + o.others[0].t : '';
+        $('h-busy').textContent = t;
+        cls($('h-busy'), 'on', !!t);
+      });
+    },
     pullHistory: function () {
       var self = this;
+      this.showOthers();
       Sync.pull(function () { if (cur === self) { self.drawResume(); self.paint(); } });
     },
     /* « Ajoutés récemment » : les 24 films et séries les plus récents, hors catégories masquées */
@@ -2716,13 +2769,29 @@
       this.ctl = false;
       this.cIdx = 2;
       this.active = true;
-      this.start(true);
+      var self0 = this;
+      // déjà en lecture ailleurs sur le compte ? (le serveur peut encore compter cette TV juste après une lecture)
+      spinner(true);
+      Presence.check(Date.now() - Presence.lastStop > 60000, function (o) {
+        if (!self0.active) return;
+        spinner(false);
+        var busy = o.others.length >= Math.max(1, o.max) || (o.max > 0 && o.cons >= o.max);
+        if (!busy) { self0.start(true); return; }
+        var who = o.others.length ? '« ' + o.others[0].t + ' » est en cours sur ' + o.others[0].n + '.' :
+          'Ton abonnement est déjà utilisé (' + o.cons + ' / ' + o.max + ').';
+        Dialog.show('Déjà en lecture sur un autre appareil', who + ' Ton abonnement n\'autorise ' +
+          (o.max > 1 ? o.max + ' appareils' : 'qu\'un appareil') + ' à la fois : regarder ici risque de couper l\'autre.', [
+          { label: 'Regarder ici', fn: function () { self0.start(true); } },
+          { label: 'Annuler', fn: function () { back(); } }
+        ], function () { back(); });
+      });
       var self = this;
       this.timers.watch = setInterval(function () { self.watchdog(); }, 2000);
     },
     leave: function () {
       this.saveProgress();
       this.active = false;
+      Presence.stop();
       for (var k in this.timers) if (this.timers.hasOwnProperty(k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
       this.timers = {};
       this.stopVideo();
@@ -2762,6 +2831,7 @@
     },
     load: function (at) {
       var v = this.v, it = this.cur();
+      Presence.start(it.title);
       clearTimeout(this.timers.retry);
       this.timers.retry = null;
       this.startAt = at || 0;
@@ -3062,8 +3132,10 @@
 
   function isBack(c) { return c === K.BACK || c === K.ESC; }
 
+  var keyHeld = false;
   document.addEventListener('keydown', function (e) {
     var c = e.keyCode || e.which, t = e.target;
+    keyHeld = true;
     var typing = t && t.tagName === 'INPUT' && document.activeElement === t;
     if (typing) {
       // droite en fin de saisie : on sort du champ (vers les résultats)
@@ -3085,6 +3157,7 @@
   }, true);
 
   document.addEventListener('keyup', function (e) {
+    keyHeld = false;
     if (Dialog.open) { Dialog.armed = true; return; }
     if (cur && cur.keyup) cur.keyup(e.keyCode || e.which);
   }, true);

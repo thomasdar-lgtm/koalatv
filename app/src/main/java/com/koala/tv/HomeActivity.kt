@@ -149,6 +149,7 @@ class HomeActivity : BaseActivity() {
         lifecycleScope.launch { Sync.pullCats() }
         lifecycleScope.launch { Sync.pullFavs() }
         lifecycleScope.launch { Sync.pullSeen() }
+        showOthers()
         if (reopenCategories) {
             reopenCategories = false
             chooseCategories()
@@ -161,6 +162,22 @@ class HomeActivity : BaseActivity() {
             startUpdate()
         } else if (!downloading) {
             checkUpdate(force = false)
+        }
+    }
+
+    /** Lecture en cours sur un autre appareil : indiquée sous le nom du compte. */
+    private fun showOthers() {
+        lifecycleScope.launch {
+            val o = Presence.check(server = false).others.firstOrNull()
+            val tv = findViewById<TextView>(R.id.tv_account)
+            val base = tv.text.toString().substringBefore("\n")
+            if (o == null) {
+                tv.text = base; return@launch
+            }
+            val line = "En lecture sur ${o.name} : ${o.title}"
+            val sb = android.text.SpannableString("$base\n$line")
+            sb.setSpan(android.text.style.ForegroundColorSpan(0xFFFFB347.toInt()), base.length + 1, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            tv.text = sb
         }
     }
 

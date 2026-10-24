@@ -195,9 +195,37 @@ class PlayerActivity : BaseActivity() {
         })
     }
 
+    /** Vérification « déjà en lecture ailleurs » faite (une fois, à l'ouverture du lecteur). */
+    private var checked = false
+
     override fun onStart() {
         super.onStart()
-        if (Playback.items.isNotEmpty() && player == null && ::pv.isInitialized) initPlayer()
+        if (Playback.items.isNotEmpty() && player == null && ::pv.isInitialized) {
+            if (checked) initPlayer() else checkOthers()
+        }
+    }
+
+    /** Avant la première lecture : prévient si l'abonnement est déjà utilisé sur un autre appareil. */
+    private fun checkOthers() {
+        lifecycleScope.launch {
+            val o = Presence.check(server = System.currentTimeMillis() - Presence.lastStop > 60_000)
+            checked = true
+            if (isFinishing) return@launch
+            if (!o.busy) {
+                if (player == null && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) initPlayer()
+                return@launch
+            }
+            val who = o.others.firstOrNull()?.let { "« ${it.title} » est en cours sur ${it.name}." }
+                ?: "Ton abonnement est déjà utilisé (${o.cons} / ${o.max})."
+            val allowed = if (o.max > 1) "${o.max} appareils" else "qu'un appareil"
+            AlertDialog.Builder(this@PlayerActivity)
+                .setTitle("Déjà en lecture sur un autre appareil")
+                .setMessage("$who Ton abonnement n'autorise $allowed à la fois : regarder ici risque de couper l'autre.")
+                .setPositiveButton("Regarder ici") { _, _ -> if (player == null) initPlayer() }
+                .setNegativeButton("Annuler") { _, _ -> finish() }
+                .setOnCancelListener { finish() }
+                .show()
+        }
     }
 
     override fun onStop() {
@@ -303,6 +331,7 @@ class PlayerActivity : BaseActivity() {
     }
 
     private fun releasePlayer() {
+        Presence.stop()
         handler.removeCallbacks(saveLoop)
         handler.removeCallbacks(nextTick)
         handler.removeCallbacks(retryRunnable)
@@ -332,6 +361,7 @@ class PlayerActivity : BaseActivity() {
     private fun playCurrent(askResume: Boolean) {
         val p = player ?: return
         hideNext(false)
+        Presence.start(current.title)
         langsApplied = false
         applyLangs(p)
         val item = current

@@ -18,6 +18,7 @@ class App : Application() {
         History.init(this)
         Hidden.init(this)
         Seen.init(this)
+        Presence.init(this)
     }
 }
 

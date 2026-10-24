@@ -29,7 +29,7 @@
         android:layout_weight="1"
         android:ellipsize="end"
         android:gravity="end"
-        android:maxLines="2"
+        android:maxLines="3"
         android:textColor="@color/muted"
         android:textSize="13sp" />
 

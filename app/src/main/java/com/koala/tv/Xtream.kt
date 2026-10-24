@@ -193,6 +193,20 @@ object Xtream {
         Account(ui.s("exp_date"), serverOffset(root.optJSONObject("server_info")))
     }
 
+    /** Infos du compte (connexions actives, maximum, état), en une seule tentative ; null si le serveur ne répond pas. */
+    suspend fun userInfo(timeoutMs: Long = 8000): JSONObject? = withContext(Dispatchers.IO) {
+        try {
+            val c = http.newBuilder().callTimeout(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS).build()
+            val req = Request.Builder().url(apiUrl(Prefs.server, Prefs.user, Prefs.pass, null)).header("User-Agent", Prefs.userAgent).build()
+            c.newCall(req).execute().use { r ->
+                if (!r.isSuccessful) return@withContext null
+                JSONObject(r.body?.string() ?: return@withContext null).optJSONObject("user_info")
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** Remet à jour l'expiration et le fuseau du serveur (une fois par lancement). */
     suspend fun refreshAccount() {
         try {

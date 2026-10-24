@@ -54,6 +54,7 @@
         <activity android:name=".MovieActivity" />
         <activity android:name=".CategoriesActivity" />
         <activity android:name=".GuideActivity" />
+        <activity android:name=".DiagActivity" />
         <activity
             android:name=".SearchActivity"
             android:windowSoftInputMode="stateVisible|adjustResize" />

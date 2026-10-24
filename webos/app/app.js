@@ -490,6 +490,47 @@
     try { x.send(); } catch (e) { fallback(); }
   }
 
+  /* Mesure de débit (test de connexion) : par le service de la TV, sinon directement */
+  function speedTest(url, seconds, maxBytes, cb) {
+    var done = false;
+    function fin(err, r) { if (!done) { done = true; cb(err, r); } }
+    if (window.PalmServiceBridge) {
+      try {
+        var b = new window.PalmServiceBridge();
+        bridges.push(b);
+        b.onservicecallback = function (raw) {
+          var i = bridges.indexOf(b);
+          if (i >= 0) bridges.splice(i, 1);
+          var m;
+          try { m = JSON.parse(raw); } catch (e) { return fin(new Error('Réponse invalide')); }
+          if (m.returnValue === false) return fin(new Error(m.errorText || 'Serveur injoignable'));
+          fin(null, { ttfb: m.ttfb, bytes: m.bytes, ms: m.ms });
+        };
+        b.call('luna://com.koala.tv.service/speed', JSON.stringify({ url: url, seconds: seconds, maxBytes: maxBytes }));
+        return;
+      } catch (e) { /* on passe au téléchargement direct */ }
+    }
+    var x = new XMLHttpRequest(), t0 = Date.now(), tFirst = 0, bytes = 0, stop = null;
+    function end() {
+      clearTimeout(stop);
+      try { x.abort(); } catch (e) { /* déjà fermé */ }
+      if (!tFirst) return fin(new Error('Serveur injoignable'));
+      fin(null, { ttfb: tFirst - t0, bytes: bytes, ms: Date.now() - tFirst });
+    }
+    x.open('GET', url, true);
+    x.responseType = 'arraybuffer';
+    x.onprogress = function (e) {
+      if (!tFirst) { tFirst = Date.now(); stop = setTimeout(end, seconds * 1000); }
+      bytes = e.loaded;
+      if (bytes >= maxBytes) end();
+    };
+    x.onload = function () { if (x.status >= 200 && x.status < 300) { if (!tFirst) tFirst = Date.now(); bytes = Math.max(bytes, x.response ? x.response.byteLength : 0); end(); } else fin(new Error('Erreur du serveur (' + x.status + ')')); };
+    x.onerror = function () { if (tFirst) end(); else fin(new Error('Serveur injoignable')); };
+    setTimeout(function () { if (!tFirst) { try { x.abort(); } catch (e) { /* déjà fermé */ } fin(new Error('Le serveur ne répond pas')); } }, (seconds + 8) * 1000);
+    try { x.send(); } catch (e) { fin(new Error('Serveur injoignable')); }
+  }
+  function mbps(r) { return r && r.ms > 0 ? r.bytes * 8 / r.ms / 1000 : 0; }
+
   function getJson(url, cb) {
     httpGet(url, function (err, txt) {
       if (err) return cb(err);
@@ -1393,6 +1434,7 @@
         },
         { label: 'Catégories visibles', fn: function () { self.catChooser(0); } },
         { label: 'Connecter un appareil', fn: function () { self.backToSettings = 3; go('pairsend'); } },
+        { label: 'Tester la connexion', fn: function () { self.backToSettings = 4; go('diag'); } },
         {
           label: 'Se déconnecter',
           fn: function () {
@@ -1401,8 +1443,8 @@
                 label: 'Se déconnecter',
                 fn: function () { setP('pass', ''); Lists.clear(); reset('login'); }
               },
-              { label: 'Annuler', fn: function () { self.settings(4); } }
-            ], function () { self.settings(4); });
+              { label: 'Annuler', fn: function () { self.settings(5); } }
+            ], function () { self.settings(5); });
           }
         },
         { label: 'Fermer' }
@@ -1526,6 +1568,126 @@
     return '<div class="poster"><div class="img">' + imgTag(it.icon) + (isFav(it) ? STAR : '') +
       '</div><div class="n">' + esc(it.name) + '</div></div>';
   }
+
+  /* ---------- Test de connexion : internet, serveur Xtream, abonnement, débit du serveur ---------- */
+
+
+  screens.diag = {
+    el: $('s-diag'),
+    /* serveur de référence pour mesurer internet (rapide, partout) */
+    net: 'https://speed.cloudflare.com/__down?bytes=',
+    token: 0,
+    init: function () {
+      var self = this;
+      $('dg-btn').addEventListener('click', function () { self.run(); });
+    },
+    enter: function () { this.run(); },
+    leave: function () { this.token++; },
+    row: function (id, state, value) {
+      var el = $(id);
+      el.className = 'dg-row ' + state;
+      el.querySelector('.v').textContent = value;
+    },
+    run: function () {
+      var self = this, token = ++this.token, res = {};
+      function alive() { return token === self.token && cur === self; }
+      this.row('dg-net', 'wait', 'Mesure…');
+      this.row('dg-srv', 'wait', 'En attente');
+      this.row('dg-acc', 'wait', 'En attente');
+      this.row('dg-str', 'wait', 'En attente');
+      $('dg-verdict').textContent = '';
+      cls($('dg-verdict'), 'on', false);
+      cls($('dg-btn'), 'focus', false);
+      // 1. internet : temps de réponse puis débit (6 s au plus)
+      speedTest(self.net + '0', 1, 1, function (e0, ping) {
+        if (!alive()) return;
+        speedTest(self.net + '50000000', 6, 50000000, function (e1, r1) {
+          if (!alive()) return;
+          if (e1) { res.net = -1; self.row('dg-net', 'bad', 'Pas d\'accès à internet'); }
+          else {
+            res.net = mbps(r1);
+            res.ping = ping ? ping.ttfb : r1.ttfb;
+            self.row('dg-net', res.net < 8 ? 'warn' : 'ok', fmtMbps(res.net) + ' · réponse en ' + res.ping + ' ms');
+          }
+          step2();
+        });
+      });
+      // 2. serveur Xtream et abonnement
+      function step2() {
+        self.row('dg-srv', 'wait', 'Mesure…');
+        var t0 = Date.now();
+        getJson(apiUrl(P.server, P.user, P.pass, ''), function (err, j) {
+          if (!alive()) return;
+          res.srvMs = Date.now() - t0;
+          var ui = j && j.user_info;
+          if (err || !ui) {
+            res.srv = false;
+            self.row('dg-srv', 'bad', err ? err.message : 'Réponse invalide');
+            self.row('dg-acc', 'bad', 'Inconnu');
+            self.row('dg-str', 'bad', 'Non mesuré');
+            return verdict();
+          }
+          res.srv = true;
+          self.row('dg-srv', res.srvMs > 2000 ? 'warn' : 'ok', 'Répond en ' + res.srvMs + ' ms');
+          res.auth = str(ui.auth) === '1' && /active/i.test(str(ui.status) || 'active');
+          res.cons = parseInt(ui.active_cons, 10) || 0;
+          res.max = parseInt(ui.max_connections, 10) || 0;
+          var exp = parseInt(ui.exp_date, 10), txt = res.auth ? 'Actif' : 'Inactif (' + (str(ui.status) || 'refusé') + ')';
+          if (res.max) txt += ' · ' + res.cons + ' / ' + res.max + ' connexion' + (res.max > 1 ? 's' : '');
+          if (exp > 0) { var d = new Date(exp * 1000); txt += ' · expire le ' + pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); }
+          self.row('dg-acc', !res.auth ? 'bad' : (res.max && res.cons >= res.max) ? 'warn' : 'ok', txt);
+          step3();
+        });
+      }
+      // 3. débit réel depuis le serveur Xtream : un film (le plus rapide possible), sinon une chaîne
+      function step3() {
+        self.row('dg-str', 'wait', 'Mesure…');
+        Lists.get('movie', function (err, d) {
+          if (!alive()) return;
+          var m = !err && d.items.length ? d.items[0] : null;
+          if (m) return measure(X.url('movie', m.id, m.ext || 'mp4'), false);
+          Lists.get('live', function (err2, d2) {
+            if (!alive()) return;
+            var c = !err2 && d2.items.length ? d2.items[0] : null;
+            if (!c) { self.row('dg-str', 'warn', 'Aucun contenu pour mesurer'); return verdict(); }
+            measure(P.server + '/live/' + encodeURIComponent(P.user) + '/' + encodeURIComponent(P.pass) + '/' + c.id + '.ts', true);
+          });
+        });
+      }
+      function measure(url, live) {
+        res.live = live;
+        speedTest(url, 6, 50000000, function (e, r) {
+          if (!alive()) return;
+          if (e) { res.str = -1; self.row('dg-str', 'bad', e.message); }
+          else {
+            res.str = mbps(r);
+            self.row('dg-str', res.str < 6 ? 'warn' : 'ok', fmtMbps(res.str) + (live ? ' (chaîne en direct)' : ''));
+          }
+          verdict();
+        });
+      }
+      function verdict() {
+        var v;
+        if (res.net === -1) v = 'Pas d\'accès à internet : vérifie ta box ou le Wi-Fi.';
+        else if (res.srv === false) v = 'Internet fonctionne, mais le serveur Xtream ne répond pas : le souci vient du fournisseur.';
+        else if (res.auth === false) v = 'L\'abonnement Xtream est refusé ou inactif : contacte ton fournisseur.';
+        else if (res.max && res.cons >= res.max) v = 'L\'abonnement est déjà utilisé au maximum (' + res.cons + ' / ' + res.max + ') : ferme l\'appli sur un autre appareil.';
+        else if (res.net >= 0 && res.net < 8) v = 'Ta connexion internet est lente (' + fmtMbps(res.net) + ') : la HD demande au moins 8 Mbit/s.';
+        else if (res.str === -1) v = 'Internet fonctionne, mais le serveur Xtream n\'envoie pas de vidéo : le souci vient du fournisseur.';
+        else if (res.str >= 0 && res.str < 6 && !res.live) v = 'Le serveur Xtream est lent (' + fmtMbps(res.str) + ' contre ' + fmtMbps(res.net) + ' pour internet) : le souci vient du fournisseur.';
+        else if (res.srvMs > 2000) v = 'Le serveur Xtream met du temps à répondre : les listes et le zapping peuvent être lents.';
+        else v = 'Tout va bien : ta connexion et le serveur Xtream sont rapides.';
+        $('dg-verdict').textContent = v;
+        cls($('dg-verdict'), 'on', true);
+        cls($('dg-btn'), 'focus', true);
+      }
+    },
+    key: function (c) {
+      if (c === K.OK) this.run();
+      return true;
+    }
+  };
+  function fmtMbps(v) { return (v >= 100 ? Math.round(v) : v.toFixed(1).replace('.', ',')) + ' Mbit/s'; }
 
   /* ---------- Connecter un appareil (envoi du code depuis la TV) ---------- */
 

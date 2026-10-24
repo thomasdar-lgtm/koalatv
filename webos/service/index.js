@@ -73,3 +73,55 @@ service.register('fetch', function (message) {
     }
   });
 });
+
+/*
+ * Mesure de débit : télécharge l'adresse pendant `seconds` secondes au plus (ou `maxBytes` octets)
+ * et renvoie le temps jusqu'au premier octet, les octets reçus et la durée de réception.
+ */
+service.register('speed', function (message) {
+  var p = message.payload || {}, url = p.url, seconds = Math.min(15, p.seconds || 6), maxBytes = p.maxBytes || 60000000;
+  if (!url || !/^https?:\/\//i.test(url)) {
+    message.respond({ returnValue: false, errorText: 'Adresse invalide' });
+    return;
+  }
+  var t0 = Date.now(), tFirst = 0, bytes = 0, done = false, req = null, timer = null;
+  function finish(err) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    try { if (req) req.abort(); } catch (e) { /* déjà fermé */ }
+    if (err && !bytes) { message.respond({ returnValue: false, errorText: err.message }); return; }
+    message.respond({ returnValue: true, ttfb: tFirst ? tFirst - t0 : -1, bytes: bytes, ms: tFirst ? Date.now() - tFirst : 0 });
+  }
+  function open(u, redirects) {
+    var o = urlLib.parse(u), lib = o.protocol === 'https:' ? https : http;
+    req = lib.request({
+      hostname: o.hostname, port: o.port, path: o.path, method: 'GET',
+      headers: { 'User-Agent': UA, 'Accept': '*/*' }, rejectUnauthorized: false
+    }, function (res) {
+      var code = res.statusCode;
+      if (code >= 300 && code < 400 && res.headers.location && redirects < 5) {
+        res.resume();
+        open(urlLib.resolve(u, res.headers.location), redirects + 1);
+        return;
+      }
+      if (code < 200 || code >= 300) { res.resume(); finish(new Error('Erreur du serveur (' + code + ')')); return; }
+      res.on('data', function (d) {
+        if (!tFirst) tFirst = Date.now();
+        bytes += d.length;
+        if (bytes >= maxBytes) finish(null);
+      });
+      res.on('end', function () { finish(null); });
+      res.on('error', function (e) { finish(e); });
+    });
+    req.on('error', function () { finish(new Error('Serveur injoignable')); });
+    req.end();
+  }
+  timer = setTimeout(function () { finish(tFirst ? null : new Error('Le serveur ne répond pas')); }, (seconds + 8) * 1000);
+  open(url, 0);
+  // fin de la mesure : `seconds` secondes après le premier octet
+  var watch = setInterval(function () {
+    if (done) { clearInterval(watch); return; }
+    if (tFirst && Date.now() - tFirst >= seconds * 1000) { clearInterval(watch); finish(null); }
+  }, 100);
+});

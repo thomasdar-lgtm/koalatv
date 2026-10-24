@@ -28,6 +28,7 @@ class HomeActivity : BaseActivity() {
     private var waitingPermission = false
     /** Retour depuis l'écran des catégories : on rouvre le menu d'où l'on venait. */
     private var reopenCategories = false
+    private var reopenSettings = false
     private lateinit var resumeBox: View
     private lateinit var resumeAdapter: ResumeAdapter
     private var recentAdapter: RecentAdapter? = null
@@ -151,6 +152,9 @@ class HomeActivity : BaseActivity() {
         if (reopenCategories) {
             reopenCategories = false
             chooseCategories()
+        } else if (reopenSettings) {
+            reopenSettings = false
+            showSettings()
         }
         if (waitingPermission) {
             waitingPermission = false
@@ -342,6 +346,7 @@ class HomeActivity : BaseActivity() {
             "Actualiser les listes",
             "Catégories visibles",
             "Connecter un appareil",
+            "Tester la connexion",
             "Rechercher une mise à jour",
             "Se déconnecter",
         )
@@ -363,8 +368,12 @@ class HomeActivity : BaseActivity() {
                     }
                     3 -> chooseCategories()
                     4 -> pairDevice()
-                    5 -> checkUpdate(force = true)
-                    6 -> AlertDialog.Builder(this)
+                    5 -> {
+                        reopenSettings = true
+                        startActivity(Intent(this, DiagActivity::class.java))
+                    }
+                    6 -> checkUpdate(force = true)
+                    7 -> AlertDialog.Builder(this)
                         .setTitle("Se déconnecter ?")
                         .setMessage("Tes favoris et reprises de lecture sont conservés.")
                         .setPositiveButton("Se déconnecter") { _, _ ->

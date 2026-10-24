@@ -77,6 +77,8 @@ jobs:
             echo "lecture apres TV: $(curl -s -m 20 "$DB/h/ci-check/e.json")"
             echo "CORS: $(curl -s -m 20 -I -H 'Origin: null' "$DB/h/ci-check/e.json" | grep -i access-control-allow-origin)"
             echo "nettoyage: $(curl -s -m 20 -X DELETE "$DB/h/ci-check.json")"
+            echo "cloudflare debit: $(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download} octets %{speed_download} o/s' 'https://speed.cloudflare.com/__down?bytes=20000000')"
+            echo "cloudflare CORS: $(curl -s -m 20 -D - -o /dev/null -H 'Origin: null' 'https://speed.cloudflare.com/__down?bytes=10' | grep -i 'access-control-allow-origin')"
           } > /tmp/report/firebase.txt 2>&1 || true
           cd /tmp/report
           git init -q -b build-logs

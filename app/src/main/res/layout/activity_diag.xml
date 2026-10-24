@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <LinearLayout
+            android:id="@+id/box"
+            android:layout_width="560dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:paddingTop="24dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="18dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <include layout="@layout/view_back" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/inter_bold"
+                    android:text="Test de connexion"
+                    android:textColor="@color/text"
+                    android:textSize="24sp" />
+            </LinearLayout>
+
+            <include android:id="@+id/r_net" layout="@layout/item_diag" />
+            <include android:id="@+id/r_srv" layout="@layout/item_diag" />
+            <include android:id="@+id/r_acc" layout="@layout/item_diag" />
+            <include android:id="@+id/r_str" layout="@layout/item_diag" />
+
+            <TextView
+                android:id="@+id/tv_verdict"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:fontFamily="@font/inter_semibold"
+                android:lineSpacingExtra="3dp"
+                android:minHeight="52dp"
+                android:textColor="@color/text"
+                android:textSize="17sp" />
+
+            <TextView
+                android:id="@+id/btn_again"
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/button_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center"
+                android:text="Relancer le test"
+                android:textColor="@color/button_text"
+                android:textSize="17sp" />
+        </LinearLayout>
+    </FrameLayout>
+</ScrollView>

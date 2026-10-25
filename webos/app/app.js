@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.16.1';
+  var VERSION = '1.16.2';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -535,6 +535,32 @@
   }
 
   /*
+   * Journal technique pour le dépannage : envoyé dans la base partagée à une adresse fixe, sans identifiants
+   * ni adresse de flux (les adresses sont réduites à leur action ou à leur extension).
+   */
+  var Dbg = {
+    lines: [], timer: null, id: 'lg' + Date.now().toString(36),
+    log: function (what, data) {
+      var t = new Date(), txt = what + (data === undefined ? '' : ' ' + (typeof data === 'string' ? data : JSON.stringify(data)));
+      txt = txt.replace(/\/(live|movie|series|timeshift)\/[^\s"]+/g, '/$1/…').replace(/username=[^&\s"]*/g, 'username=…').replace(/password=[^&\s"]*/g, 'password=…');
+      this.lines.push(pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()) + ' ' + txt.substr(0, 3000));
+      if (this.lines.length > 80) this.lines.shift();
+      var self = this;
+      clearTimeout(this.timer);
+      this.timer = setTimeout(function () { self.flush(); }, 1500);
+    },
+    flush: function () {
+      if (!Sync.DB) return;
+      try {
+        var x = new XMLHttpRequest();
+        x.open('POST', Sync.DB.replace(/\/+$/, '') + '/h/dbgkoalatv/' + this.id + '.json?x-http-method-override=PUT', true);
+        x.setRequestHeader('Content-Type', 'text/plain');
+        x.send(JSON.stringify({ v: VERSION, ua: navigator.userAgent, at: Date.now(), l: this.lines }));
+      } catch (e) { /* hors ligne */ }
+    }
+  };
+
+  /*
    * Pistes audio et sous-titres. Sur la TV, les pistes intégrées aux fichiers (MKV…) ne sont visibles que par
    * le service média de webOS (luna://com.webos.media) ; ailleurs, on utilise les pistes standard du lecteur.
    */
@@ -553,15 +579,19 @@
       try {
         var b = new window.PalmServiceBridge();
         bridges.push(b);
+        var n = 0;
         b.onservicecallback = function (raw) {
           var m = null;
           try { m = JSON.parse(raw); } catch (e) { /* ignoré */ }
+          // on garde les premières réponses de chaque appel (et toutes celles qui parlent de pistes)
+          if (++n <= 6 || /TrackInfo|numSubtitle|numAudio|returnValue":false/.test(raw)) Dbg.log('media.' + method + ' ←', String(raw).substr(0, 2500));
           if (!params.subscribe) { var i = bridges.indexOf(b); if (i >= 0) bridges.splice(i, 1); }
           if (cb) cb(m);
         };
+        Dbg.log('media.' + method + ' →', params);
         b.call('luna://com.webos.media/' + method, JSON.stringify(params));
         return b;
-      } catch (e) { return null; }
+      } catch (e) { Dbg.log('media.' + method + ' exception', String(e)); return null; }
     },
     /* Nouvelle vidéo : on oublie les pistes de la précédente et on attend celles-ci */
     reset: function (v) {
@@ -573,11 +603,14 @@
     /* Appelé quand la vidéo est chargée : identifiant du lecteur webOS, puis abonnement aux infos des pistes */
     attach: function () {
       var self = this, token = this.token, tries = 0;
+      var v0 = this.v, tt = v0 && v0.textTracks, at = v0 && v0.audioTracks;
+      Dbg.log('vidéo chargée', { bridge: !!window.PalmServiceBridge, mediaId: v0 && v0.mediaId, textTracks: tt ? tt.length : -1, audioTracks: at ? at.length : -1,
+        src: String(v0 && v0.getAttribute('src') || '').replace(/^.*\./, '.') });
       if (!window.PalmServiceBridge) { this.applyPrefs(); return; }
       (function poll() {
         if (token !== self.token) return;
         var id = self.v && self.v.mediaId;
-        if (!id) { if (++tries < 10) setTimeout(poll, 300); else self.applyPrefs(); return; }
+        if (!id) { if (++tries < 10) setTimeout(poll, 300); else { Dbg.log('pas de mediaId'); self.applyPrefs(); } return; }
         self.mediaId = id;
         self.sub = self.luna('subscribe', { mediaId: id, subscribe: true }, function (m) {
           if (token !== self.token || !m) return;
@@ -710,7 +743,11 @@
 
   function getJson(url, cb) {
     httpGet(url, function (err, txt) {
-      if (err) return cb(err);
+      if (err) {
+        var act = /action=([a-z_]+)/.exec(url);
+        Dbg.log('erreur réseau', (act ? act[1] : /player_api/.test(url) ? 'login' : url.replace(/^https?:\/\/[^\/]+/, '')) + ' : ' + err.message);
+        return cb(err);
+      }
       var j;
       try { j = JSON.parse(txt); } catch (e) { return cb(new Error('Réponse invalide du serveur')); }
       cb(null, j);
@@ -784,9 +821,14 @@
       return P.server + '/timeshift/' + encodeURIComponent(P.user) + '/' + encodeURIComponent(P.pass) + '/' + minutes + '/' + start + '/' + id + '.ts';
     },
 
+    epCache: {},
     episodes: function (id, cb) {
+      var c = this.epCache[id], self = this;
+      if (c && Date.now() - c.at < 600000) return setTimeout(function () { cb(null, c.eps); }, 0);
       getJson(api('get_series_info', '&series_id=' + encodeURIComponent(id)), function (err, j) {
         if (err) return cb(err);
+        var done = cb;
+        cb = function (e, out) { if (!e) self.epCache[id] = { at: Date.now(), eps: out }; done(e, out); };
         var out = [], eps = j && j.episodes, k, i;
         function add(arr, hint) {
           for (var n = 0; n < arr.length; n++) {
@@ -2823,7 +2865,10 @@
           self.startAt = 0;
         }
       });
-      v.addEventListener('error', function () { if (self.active && v.getAttribute('src')) self.fail(); });
+      v.addEventListener('error', function () {
+        Dbg.log('erreur lecture', { code: v.error && v.error.code, msg: v.error && v.error.message });
+        if (self.active && v.getAttribute('src')) self.fail();
+      });
       v.addEventListener('ended', function () {
         if (!self.active) return;
         if (self.cur().live) self.fail();
@@ -3190,6 +3235,7 @@
     /* Menus des pistes : la liste complète, la piste en cours est présélectionnée */
     trackMenu: function (kind) {
       var self = this, list = Tracks.list(kind), cur = Tracks.current(kind), opts = [], i;
+      Dbg.log('menu ' + kind, { mediaId: Tracks.mediaId, pistes: list, actuelle: cur, html5: kind === 'text' ? (this.v.textTracks ? this.v.textTracks.length : -1) : (this.v.audioTracks ? this.v.audioTracks.length : -1) });
       if (kind === 'text') {
         if (!list.length) { toast('Aucun sous-titre dans cette vidéo'); return; }
         opts.push({ label: 'Aucun', fn: function () { Tracks.select('text', -1); Tracks.remember('text', -1); self.showInfo(self.v.paused); } });

@@ -80,6 +80,12 @@ jobs:
             echo "cloudflare debit: $(curl -s -m 30 -o /dev/null -w '%{http_code} %{size_download} octets %{speed_download} o/s' 'https://speed.cloudflare.com/__down?bytes=20000000')"
             echo "cloudflare CORS: $(curl -s -m 20 -D - -o /dev/null -H 'Origin: null' 'https://speed.cloudflare.com/__down?bytes=10' | grep -i 'access-control-allow-origin')"
           } > /tmp/report/firebase.txt 2>&1 || true
+          # journal technique des TV (dépannage, sans identifiants)
+          curl -s -m 30 "$DB/h/dbgkoalatv.json" | python3 -c "import json,sys
+d=json.load(sys.stdin) or {}
+for k,v in sorted(d.items(), key=lambda kv: kv[1].get('at',0))[-4:]:
+    print('=====', k, v.get('v'), v.get('ua'))
+    print('\n'.join(v.get('l', [])))" > /tmp/report/dbg.txt 2>&1 || true
           cd /tmp/report
           git init -q -b build-logs
           git config user.name "build-bot"

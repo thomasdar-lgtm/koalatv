@@ -36,28 +36,27 @@ class ScreenshotTest {
 
     /** Mini serveur Xtream local pour les écrans qui chargent des données (fiche série). */
     private fun fakeServer(): String {
-        val srv = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
-        srv.createContext("/") { ex ->
-            val eps = StringBuilder("{\"info\":{\"name\":\"Game of Thrones\"},\"episodes\":{")
-            for (season in 1..3) {
-                if (season > 1) eps.append(',')
-                eps.append("\"$season\":[")
-                for (e in 1..10) {
-                    if (e > 1) eps.append(',')
-                    val title = if (e % 2 == 1) "Game of Thrones" else "Game of Thrones S0${season}E0$e"
-                    val name = if (e % 3 != 0) "Le titre de l'épisode $e" else ""
-                    eps.append("{\"id\":\"${season * 100 + e}\",\"episode_num\":$e,\"season\":$season,\"title\":\"$title\",\"container_extension\":\"mkv\",\"info\":{\"name\":\"$name\",\"duration\":\"00:5$e:10\",\"plot\":\"Résumé de l'épisode $e. Une intrigue qui tient sur deux lignes au maximum, le reste est coupé.\"}}")
-                }
-                eps.append(']')
+        val eps = StringBuilder("{\"info\":{\"name\":\"Game of Thrones\"},\"episodes\":{")
+        for (season in 1..3) {
+            if (season > 1) eps.append(',')
+            eps.append("\"$season\":[")
+            for (e in 1..10) {
+                if (e > 1) eps.append(',')
+                val title = if (e % 2 == 1) "Game of Thrones" else "Game of Thrones S0${season}E0$e"
+                val name = if (e % 3 != 0) "Le titre de l'épisode $e" else ""
+                eps.append("{\"id\":\"${season * 100 + e}\",\"episode_num\":$e,\"season\":$season,\"title\":\"$title\",\"container_extension\":\"mkv\",\"info\":{\"name\":\"$name\",\"duration\":\"00:5$e:10\",\"plot\":\"Résumé de l'épisode $e. Une intrigue qui tient sur deux lignes au maximum, le reste est coupé.\"}}")
             }
-            eps.append("}}")
-            val b = eps.toString().toByteArray()
-            ex.responseHeaders.add("Content-Type", "application/json")
-            ex.sendResponseHeaders(200, b.size.toLong())
-            ex.responseBody.use { it.write(b) }
+            eps.append(']')
+        }
+        eps.append("}}")
+        val body = eps.toString()
+        val srv = okhttp3.mockwebserver.MockWebServer()
+        srv.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
+            override fun dispatch(request: okhttp3.mockwebserver.RecordedRequest) =
+                okhttp3.mockwebserver.MockResponse().setHeader("Content-Type", "application/json").setBody(body)
         }
         srv.start()
-        return "http://127.0.0.1:${srv.address.port}"
+        return srv.url("/").toString().trimEnd('/')
     }
 
     private fun shootSeries(name: String) {

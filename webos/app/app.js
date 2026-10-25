@@ -474,7 +474,7 @@
     for (var i = 0; i < eps.length; i++) {
       var e = eps[i];
       list.push({
-        title: sname + ' · ' + (e.season > 0 ? 'S' + e.season + ' ' : '') + 'É' + e.num,
+        title: sname + ' · ' + (e.season > 0 ? 'S' + e.season + ' ' : '') + 'É' + e.num + (epTitle(e, sname) ? ' · ' + epTitle(e, sname) : ''),
         url: X.url('episode', e.id, e.ext), live: false, key: 'e' + e.id, icon: icon, sid: sid, sname: sname
       });
     }
@@ -533,6 +533,139 @@
     x.ontimeout = function () { fin(new Error('Le serveur ne répond pas')); };
     try { x.send(); } catch (e) { fallback(); }
   }
+
+  /*
+   * Pistes audio et sous-titres. Sur la TV, les pistes intégrées aux fichiers (MKV…) ne sont visibles que par
+   * le service média de webOS (luna://com.webos.media) ; ailleurs, on utilise les pistes standard du lecteur.
+   */
+  var LANG = { fre: 'Français', fra: 'Français', fr: 'Français', eng: 'Anglais', en: 'Anglais', spa: 'Espagnol', es: 'Espagnol',
+    ger: 'Allemand', deu: 'Allemand', de: 'Allemand', ita: 'Italien', it: 'Italien', por: 'Portugais', pt: 'Portugais',
+    dut: 'Néerlandais', nld: 'Néerlandais', nl: 'Néerlandais', ara: 'Arabe', ar: 'Arabe', jpn: 'Japonais', ja: 'Japonais',
+    rus: 'Russe', ru: 'Russe', tur: 'Turc', tr: 'Turc', pol: 'Polonais', pl: 'Polonais', chi: 'Chinois', zho: 'Chinois', zh: 'Chinois',
+    kor: 'Coréen', ko: 'Coréen', swe: 'Suédois', sv: 'Suédois', dan: 'Danois', da: 'Danois', nor: 'Norvégien', no: 'Norvégien',
+    fin: 'Finnois', fi: 'Finnois', gre: 'Grec', ell: 'Grec', el: 'Grec', heb: 'Hébreu', he: 'Hébreu', hin: 'Hindi', hi: 'Hindi' };
+  function langName(code) { var c = String(code || '').toLowerCase(); return LANG[c] || LANG[c.substr(0, 2)] || (c && c !== 'und' ? c.toUpperCase() : ''); }
+
+  var Tracks = {
+    v: null, mediaId: null, sub: null, token: 0,
+    audio: [], text: [], curAudio: 0, curText: -1, applied: false,
+    luna: function (method, params, cb) {
+      try {
+        var b = new window.PalmServiceBridge();
+        bridges.push(b);
+        b.onservicecallback = function (raw) {
+          var m = null;
+          try { m = JSON.parse(raw); } catch (e) { /* ignoré */ }
+          if (!params.subscribe) { var i = bridges.indexOf(b); if (i >= 0) bridges.splice(i, 1); }
+          if (cb) cb(m);
+        };
+        b.call('luna://com.webos.media/' + method, JSON.stringify(params));
+        return b;
+      } catch (e) { return null; }
+    },
+    /* Nouvelle vidéo : on oublie les pistes de la précédente et on attend celles-ci */
+    reset: function (v) {
+      this.token++;
+      if (this.sub) { var i = bridges.indexOf(this.sub); if (i >= 0) bridges.splice(i, 1); this.sub = null; }
+      if (this.mediaId && window.PalmServiceBridge) this.luna('unsubscribe', { mediaId: this.mediaId });
+      this.v = v; this.mediaId = null; this.audio = []; this.text = []; this.curAudio = 0; this.curText = -1; this.applied = false;
+    },
+    /* Appelé quand la vidéo est chargée : identifiant du lecteur webOS, puis abonnement aux infos des pistes */
+    attach: function () {
+      var self = this, token = this.token, tries = 0;
+      if (!window.PalmServiceBridge) { this.applyPrefs(); return; }
+      (function poll() {
+        if (token !== self.token) return;
+        var id = self.v && self.v.mediaId;
+        if (!id) { if (++tries < 10) setTimeout(poll, 300); else self.applyPrefs(); return; }
+        self.mediaId = id;
+        self.sub = self.luna('subscribe', { mediaId: id, subscribe: true }, function (m) {
+          if (token !== self.token || !m) return;
+          var info = self.find(m, 'subtitleTrackInfo'), ainfo = self.find(m, 'audioTrackInfo');
+          if (!info && !ainfo) return;
+          if (info) self.text = self.label(info);
+          if (ainfo) self.audio = self.label(ainfo);
+          if (!self.applied) self.applyPrefs();
+        });
+      })();
+    },
+    find: function (o, key) {
+      if (!o || typeof o !== 'object') return null;
+      if (o[key] && o[key].length !== undefined) return o[key];
+      for (var k in o) if (o.hasOwnProperty(k) && typeof o[k] === 'object') { var r = this.find(o[k], key); if (r) return r; }
+      return null;
+    },
+    /* Noms lisibles : « Français », « Français · 2 »… (et le titre de la piste s'il existe, ex. « Forced ») */
+    label: function (list) {
+      var out = [], seen = {}, i, t, name, n;
+      for (i = 0; i < list.length; i++) {
+        t = list[i] || {};
+        name = langName(t.language) || 'Piste ' + (i + 1);
+        n = seen[name] = (seen[name] || 0) + 1;
+        var extra = str(t.title || t.name || t.label || '');
+        if (/forc/i.test(extra)) extra = 'forcés';
+        out.push({ lang: str(t.language).toLowerCase(), n: n, label: name + (extra ? ' · ' + extra : n > 1 ? ' · ' + n : '') });
+      }
+      return out;
+    },
+    /* Pistes connues : service webOS si disponible, sinon pistes standard du lecteur */
+    list: function (kind) {
+      if (this.mediaId) return kind === 'text' ? this.text : this.audio;
+      var v = this.v, tr = kind === 'text' ? (v && v.textTracks) : (v && v.audioTracks), arr = [], i;
+      if (!tr) return arr;
+      for (i = 0; i < tr.length; i++) arr.push({ language: tr[i].language, title: tr[i].label });
+      return this.label(arr);
+    },
+    current: function (kind) {
+      if (this.mediaId) return kind === 'text' ? this.curText : this.curAudio;
+      var tr = kind === 'text' ? this.v.textTracks : this.v.audioTracks, i;
+      if (!tr) return kind === 'text' ? -1 : 0;
+      for (i = 0; i < tr.length; i++) if (kind === 'text' ? tr[i].mode === 'showing' : tr[i].enabled) return i;
+      return kind === 'text' ? -1 : 0;
+    },
+    select: function (kind, i) {
+      var self = this, tr, k;
+      if (this.mediaId) {
+        if (kind === 'text') {
+          this.curText = i;
+          if (i < 0) { this.luna('setSubtitleEnable', { mediaId: this.mediaId, enable: false }); return; }
+          this.luna('setSubtitleEnable', { mediaId: this.mediaId, enable: true });
+          // le service demande un court délai avant de choisir la piste
+          setTimeout(function () { if (self.mediaId) self.luna('selectTrack', { mediaId: self.mediaId, type: 'text', index: i }); }, 500);
+        } else {
+          this.curAudio = i;
+          this.luna('selectTrack', { mediaId: this.mediaId, type: 'audio', index: i });
+        }
+        return;
+      }
+      if (kind === 'text') { tr = this.v.textTracks; for (k = 0; tr && k < tr.length; k++) tr[k].mode = k === i ? 'showing' : 'disabled'; }
+      else { tr = this.v.audioTracks; for (k = 0; tr && k < tr.length; k++) tr[k].enabled = k === i; }
+    },
+    /* Langue retenue : { l: code, n: n-ième piste de cette langue } ou « off » */
+    pref: function (key) { var p = load(key, ''); return typeof p === 'string' ? (p ? { l: p, n: 1 } : null) : p; },
+    remember: function (kind, i) {
+      var l = this.list(kind)[i];
+      save(kind === 'text' ? 'slang' : 'alang', i < 0 ? 'off' : l ? { l: l.lang, n: l.n } : '');
+    },
+    match: function (list, p) {
+      var best = -1, i;
+      if (!p || !p.l) return -1;
+      for (i = 0; i < list.length; i++) {
+        var lang = list[i].lang;
+        if (lang === p.l || langName(lang) === langName(p.l)) { if (best < 0) best = i; if (list[i].n === p.n) return i; }
+      }
+      return best;
+    },
+    applyPrefs: function () {
+      this.applied = true;
+      var sp = load('slang', ''), ap = this.pref('alang');
+      var ai = this.match(this.list('audio'), ap);
+      if (ai >= 0 && ai !== this.current('audio')) this.select('audio', ai);
+      if (sp === 'off') { if (!this.mediaId && this.current('text') >= 0) this.select('text', -1); return; }
+      var ti = this.match(this.list('text'), this.pref('slang'));
+      if (ti >= 0 && ti !== this.current('text')) this.select('text', ti);
+    }
+  };
 
   /* Mesure de débit (test de connexion) : par le service de la TV, sinon directement */
   function speedTest(url, seconds, maxBytes, cb) {
@@ -661,9 +794,12 @@
             if (!e || !str(e.id)) continue;
             var info = e.info || {};
             out.push({
-              id: str(e.id), title: str(e.title), ext: str(e.container_extension) || 'mp4',
+              id: str(e.id), title: str(e.title), name: str(info.name || info.title), ext: str(e.container_extension) || 'mp4',
               season: parseInt(e.season, 10) || hint, num: parseInt(e.episode_num, 10) || (n + 1),
-              plot: str(info.plot || info.description)
+              plot: str(info.plot || info.description),
+              // miniature de l'épisode et durée (minutes)
+              img: str(info.movie_image || info.cover_big || info.thumbnail || ''),
+              dur: Math.round((parseInt(info.duration_secs, 10) || durSecs(info.duration)) / 60)
             });
           }
         }
@@ -2182,6 +2318,18 @@
 
   /* ---------- Série : saisons et épisodes ---------- */
 
+  function durSecs(d) {
+    var m = /^(\d+):(\d+)(?::(\d+))?$/.exec(str(d));
+    if (!m) return 0;
+    return m[3] !== undefined ? (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]) : (+m[1]) * 60 + (+m[2]);
+  }
+  /* Vrai titre de l'épisode : le nom donné par le serveur, sans le nom de la série ni « S01E03 » ; vide s'il n'y en a pas */
+  function epTitle(e, series) {
+    var a = cleanEpTitle(e.name, series), b = cleanEpTitle(e.title, series), bad = /^(episode|épisode|ep\.?)\s*\d+$/i;
+    if (a && !bad.test(a)) return a;
+    if (b && !bad.test(b) && fold(b) !== fold(series)) return b;
+    return '';
+  }
   function cleanEpTitle(t, series) {
     t = str(t);
     var low = fold(t), sl = fold(series);
@@ -2205,14 +2353,20 @@
         onOk: function (i) { self.pickSeason(i); self.setZone('eps'); }
       });
       this.eList = new VList($('sr-eps'), {
-        rowH: 6.4,
+        rowH: 8.2,
         render: function (e) {
           var pos = P.pos['e' + e.id] || 0, seen = !pos && Seen.has('e' + e.id);
-          var title = cleanEpTitle(e.title, self.it.name) || 'Épisode ' + e.num;
-          return '<div class="ep' + (seen ? ' seen' : '') + '"><div class="t"><span class="num">' + e.num + '</span><span class="tt">' + esc(title) +
-            '</span>' + (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') +
+          var title = epTitle(e, self.it.name);
+          // miniature (ou grand numéro si le serveur n'en donne pas), « Épisode 3 · 52 min », titre, résumé
+          var hasImg = /^https?:\/\//i.test(e.img);
+          var img = hasImg ? '<img src="' + esc(e.img) + '" onerror="this.style.display=\'none\';this.previousSibling.style.display=\'block\'">' : '';
+          return '<div class="ep' + (seen ? ' seen' : '') + '"><div class="th"><b' + (hasImg ? ' style="display:none"' : '') + '>' + e.num + '</b>' + img +
+            (pos && e.dur ? '<i style="width:' + Math.min(100, pos / 60 / e.dur * 100).toFixed(1) + '%"></i>' : '') + '</div>' +
+            '<div class="bd"><div class="t"><span class="en">Épisode ' + e.num + (e.dur ? ' · ' + e.dur + ' min' : '') + '</span>' +
+            (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') +
             (seen ? '<span class="vu"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Vu</span>' : '') + '</div>' +
-            '<div class="p">' + esc(e.plot) + '</div></div>';
+            '<div class="tt">' + esc(title || (self.it.name + ' · Épisode ' + e.num)) + '</div>' +
+            '<div class="p">' + esc(e.plot) + '</div></div></div>';
         },
         onPointer: function () { self.setZone('eps'); },
         onOk: function () { self.play(); }
@@ -2654,10 +2808,10 @@
         self.ctl = 'btn';
         self.act(a);
       };
-      if (v.audioTracks && v.audioTracks.addEventListener) v.audioTracks.addEventListener('addtrack', function () { self.applyLangs(); });
-      if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', function () { self.applyLangs(); });
+      if (v.audioTracks && v.audioTracks.addEventListener) v.audioTracks.addEventListener('addtrack', function () { if (!Tracks.mediaId) Tracks.applyPrefs(); });
+      if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', function () { if (!Tracks.mediaId) Tracks.applyPrefs(); });
       v.addEventListener('loadedmetadata', function () {
-        self.applyLangs();
+        Tracks.attach();
         if (self.startAt > 0) {
           try { v.currentTime = self.startAt; } catch (e) { /* ignoré */ }
           self.startAt = 0;
@@ -2723,8 +2877,8 @@
       else if (a === 'fwd') this.seek(30);
       else if (a === 'prev') this.goTo(this.i - 1);
       else if (a === 'next') this.goTo(this.i + 1);
-      else if (a === 'audio') { this.cycleAudio(); this.showInfo(this.v.paused); }
-      else if (a === 'subs') { this.cycleSubs(); this.showInfo(this.v.paused); }
+      else if (a === 'audio') this.trackMenu('audio');
+      else if (a === 'subs') this.trackMenu('text');
     },
     /* Encart « Épisode suivant » dans les 15 dernières secondes ; OK lance tout de suite, Retour annule */
     checkNext: function () {
@@ -2840,6 +2994,7 @@
       this.lastT = -1;
       spinner(true);
       cls($('p-pause'), 'on', false);
+      Tracks.reset(v);
       v.setAttribute('src', it.url);
       v.load();
       var pr = v.play();
@@ -3026,42 +3181,18 @@
       this.showInfo(v.paused);
     },
     /* Réapplique la langue audio et les sous-titres choisis la dernière fois */
-    applyLangs: function () {
-      var v = this.v, a = load('alang', ''), t = load('slang', ''), i;
-      var at = v.audioTracks;
-      if (a && at && at.length > 1) {
-        var hit = -1;
-        for (i = 0; i < at.length; i++) if ((at[i].language || at[i].label) === a) hit = i;
-        if (hit >= 0 && !at[hit].enabled) for (i = 0; i < at.length; i++) at[i].enabled = i === hit;
-      }
-      var tt = v.textTracks;
-      if (t && tt && tt.length) {
-        for (i = 0; i < tt.length; i++) {
-          var want = t !== 'off' && (tt[i].language || tt[i].label) === t ? 'showing' : 'disabled';
-          if (tt[i].mode !== want) tt[i].mode = want;
-        }
-      }
-    },
-    cycleAudio: function () {
-      var tr = this.v.audioTracks;
-      if (!tr || tr.length < 2) { toast('Une seule piste audio'); return; }
-      var cur = 0, i;
-      for (i = 0; i < tr.length; i++) if (tr[i].enabled) cur = i;
-      var nx = (cur + 1) % tr.length;
-      for (i = 0; i < tr.length; i++) tr[i].enabled = i === nx;
-      // langue retenue pour les prochaines lectures
-      save('alang', tr[nx].language || tr[nx].label || '');
-      toast('Audio : ' + (tr[nx].label || tr[nx].language || 'piste ' + (nx + 1)));
-    },
-    cycleSubs: function () {
-      var tr = this.v.textTracks;
-      if (!tr || !tr.length) { toast('Aucun sous-titre'); return; }
-      var cur = -1, i;
-      for (i = 0; i < tr.length; i++) if (tr[i].mode === 'showing') cur = i;
-      var nx = cur + 1 >= tr.length ? -1 : cur + 1;
-      for (i = 0; i < tr.length; i++) tr[i].mode = i === nx ? 'showing' : 'disabled';
-      save('slang', nx < 0 ? 'off' : (tr[nx].language || tr[nx].label || ''));
-      toast(nx < 0 ? 'Sous-titres désactivés' : 'Sous-titres : ' + (tr[nx].label || tr[nx].language || 'piste ' + (nx + 1)));
+    /* Menus des pistes : la liste complète, la piste en cours est présélectionnée */
+    trackMenu: function (kind) {
+      var self = this, list = Tracks.list(kind), cur = Tracks.current(kind), opts = [], i;
+      if (kind === 'text') {
+        if (!list.length) { toast('Aucun sous-titre dans cette vidéo'); return; }
+        opts.push({ label: 'Aucun', fn: function () { Tracks.select('text', -1); Tracks.remember('text', -1); self.showInfo(self.v.paused); } });
+      } else if (list.length < 2) { toast('Une seule piste audio'); return; }
+      list.forEach(function (t, k) {
+        opts.push({ label: t.label, fn: function () { Tracks.select(kind, k); Tracks.remember(kind, k); self.showInfo(self.v.paused); } });
+      });
+      Dialog.show(kind === 'text' ? 'Sous-titres' : 'Langue audio', '', opts, function () { self.showInfo(self.v.paused); },
+        kind === 'text' ? cur + 1 : Math.max(0, cur));
     },
     keyup: function (c) {
       if (c !== K.OK || !this.okTimer) return;
@@ -3074,8 +3205,8 @@
     key: function (c, e) {
       var it = this.cur();
       if (c === K.STOP) { back(); return true; }
-      if (c === K.GREEN) { this.cycleAudio(); return true; }
-      if (c === K.YELLOW) { this.cycleSubs(); return true; }
+      if (c === K.GREEN) { this.trackMenu('audio'); return true; }
+      if (c === K.YELLOW) { this.trackMenu('text'); return true; }
       if (it.live) {
         var self = this;
         if (c >= 48 && c <= 57) this.typeDigit(c - 48);

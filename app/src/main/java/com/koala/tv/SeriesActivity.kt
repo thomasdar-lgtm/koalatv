@@ -96,7 +96,9 @@ class SeriesActivity : BaseActivity() {
                     showMessage("Aucun épisode disponible.", false)
                 } else {
                     seasonAdapter.submit(seasons.map { s ->
-                        Category(s.toString(), if (s <= 0) "Épisodes" else "Saison $s", episodes.count { it.season == s })
+                        // colonne étroite du téléphone : « S1 », « S2 »… sans le nombre d'épisodes
+                        if (rvSeasons.layoutParams.width !in 1..dp(150)) Category(s.toString(), if (s <= 0) "Épisodes" else "Saison $s", episodes.count { it.season == s })
+                        else Category(s.toString(), if (s <= 0) "Ép." else "S$s", -1)
                     })
                     // on se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu
                     val target = if (seasonIdx < 0) nextToWatch() else -1

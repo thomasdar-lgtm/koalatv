@@ -18,4 +18,6 @@
     <dimen name="resume_meta">12sp</dimen>
     <dimen name="resume_label">17sp</dimen>
     <dimen name="resume_top">20dp</dimen>
+    <dimen name="ep_thumb_w">112dp</dimen>
+    <dimen name="ep_thumb_h">63dp</dimen>
 </resources>

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Épisode : miniature (ou grand numéro), « Épisode 3 · 52 min », titre, résumé -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -6,58 +7,94 @@
     android:background="@drawable/item_bg"
     android:clickable="true"
     android:focusable="true"
-    android:orientation="vertical"
-    android:padding="14dp">
+    android:orientation="horizontal"
+    android:padding="10dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
+    <FrameLayout
+        android:layout_width="@dimen/ep_thumb_w"
+        android:layout_height="@dimen/ep_thumb_h"
+        android:background="@drawable/logo_box">
 
         <TextView
-            android:id="@+id/tv_num"
-            android:layout_width="wrap_content"
-            android:layout_height="24dp"
-            android:background="@drawable/badge_bg"
+            android:id="@+id/tv_big"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:fontFamily="@font/inter_bold"
             android:gravity="center"
-            android:minWidth="32dp"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:textColor="@color/accent"
-            android:textSize="13sp" />
+            android:textColor="#4D5664"
+            android:textSize="30sp" />
+
+        <ImageView
+            android:id="@+id/iv"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop" />
+
+        <ProgressBar
+            android:id="@+id/pb"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_gravity="bottom"
+            android:max="1000"
+            android:progressDrawable="@drawable/progress_bar"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/tv_num"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/inter_bold"
+                android:singleLine="true"
+                android:textColor="@color/accent"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tv_resume"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/accent"
+                android:textSize="12sp"
+                android:visibility="gone" />
+        </LinearLayout>
 
         <TextView
             android:id="@+id/tv_name"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_weight="1"
+            android:layout_marginTop="2dp"
             android:ellipsize="end"
             android:fontFamily="@font/inter_semibold"
-            android:singleLine="true"
+            android:maxLines="2"
             android:textColor="@color/text"
-            android:textSize="16sp" />
+            android:textSize="15sp" />
 
         <TextView
-            android:id="@+id/tv_resume"
-            android:layout_width="wrap_content"
+            android:id="@+id/tv_plot"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:textColor="@color/accent"
-            android:textSize="12sp"
-            android:visibility="gone" />
+            android:layout_marginTop="3dp"
+            android:ellipsize="end"
+            android:lineSpacingExtra="1dp"
+            android:maxLines="2"
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/tv_plot"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:ellipsize="end"
-        android:lineSpacingExtra="2dp"
-        android:maxLines="2"
-        android:textColor="@color/muted"
-        android:textSize="13sp" />
 </LinearLayout>

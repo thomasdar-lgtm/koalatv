@@ -57,6 +57,7 @@ class CatAdapter(
         val sel = position == selected
         h.name.text = c.name
         h.count?.text = fmtNum(c.count)
+        h.count?.visibility = if (c.count < 0) View.GONE else View.VISIBLE
         h.bar?.visibility = if (sel) View.VISIBLE else View.INVISIBLE
         h.itemView.isActivated = sel
         h.itemView.setOnClickListener {
@@ -191,6 +192,9 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         val name: TextView = v.findViewById(R.id.tv_name)
         val plot: TextView = v.findViewById(R.id.tv_plot)
         val resume: TextView = v.findViewById(R.id.tv_resume)
+        val big: TextView = v.findViewById(R.id.tv_big)
+        val img: ImageView = v.findViewById(R.id.iv)
+        val bar: android.widget.ProgressBar = v.findViewById(R.id.pb)
     }
 
     fun submit(l: List<Episode>) {
@@ -208,8 +212,17 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
 
     override fun onBindViewHolder(h: VH, position: Int) {
         val e = items[position]
-        h.num.text = e.num.toString()
-        h.name.text = cleanEpisodeTitle(e.title, seriesName).ifEmpty { "Épisode ${e.num}" }
+        // « Épisode 3 · 52 min », vrai titre (sinon « Série · Épisode 3 »), miniature ou grand numéro
+        h.num.text = "Épisode ${e.num}" + if (e.durMin > 0) " · ${e.durMin} min" else ""
+        h.name.text = episodeTitle(e, seriesName).ifEmpty { "$seriesName · Épisode ${e.num}" }
+        h.big.text = e.num.toString()
+        h.big.visibility = View.VISIBLE
+        h.img.dispose()
+        h.img.setImageDrawable(null)
+        if (e.img.startsWith("http", true)) h.img.load(e.img) {
+            crossfade(150)
+            listener(onSuccess = { _, _ -> h.big.visibility = View.INVISIBLE })
+        }
         h.plot.text = e.plot
         h.plot.visibility = if (e.plot.isEmpty()) View.GONE else View.VISIBLE
         val pos = Prefs.getPos("e${e.id}")
@@ -221,6 +234,9 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         h.resume.setCompoundDrawablesRelativeWithIntrinsicBounds(if (seen) R.drawable.ic_check else 0, 0, 0, 0)
         h.resume.compoundDrawablePadding = ctx.dp(4)
         h.name.alpha = if (seen) 0.6f else 1f
+        h.img.alpha = if (seen) 0.5f else 1f
+        h.bar.visibility = if (pos > 0 && e.durMin > 0) View.VISIBLE else View.GONE
+        if (pos > 0 && e.durMin > 0) h.bar.progress = (pos * 1000 / (e.durMin * 60_000L)).toInt().coerceIn(0, 1000)
         h.itemView.setOnClickListener {
             val p = h.bindingAdapterPosition
             if (p != RecyclerView.NO_POSITION) onClick(p)

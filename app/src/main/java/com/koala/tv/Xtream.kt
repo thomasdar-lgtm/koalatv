@@ -49,6 +49,12 @@ data class Episode(
     val season: Int,
     val num: Int,
     val plot: String,
+    /** Nom de l'épisode donné par le serveur (souvent plus juste que `title`). */
+    val name: String = "",
+    /** Miniature de l'épisode. */
+    val img: String = "",
+    /** Durée en minutes (0 si inconnue). */
+    val durMin: Int = 0,
 )
 
 data class MovieInfo(
@@ -89,8 +95,30 @@ fun liveItem(it: Item) = PlayItem(it.name, Xtream.liveUrl(it.id), true, null, it
 fun episodePlayList(seriesId: String, seriesName: String, cover: String, eps: List<Episode>): List<PlayItem> =
     eps.map { e ->
         val label = if (e.season > 0) "S${e.season} É${e.num}" else "É${e.num}"
-        PlayItem("$seriesName · $label", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id, cover, seriesId, seriesName)
+        val t = episodeTitle(e, seriesName)
+        PlayItem("$seriesName · $label" + if (t.isNotEmpty()) " · $t" else "", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id, cover, seriesId, seriesName)
     }
+
+/** Durée « 00:52:13 » ou « 52:13 » en secondes. */
+fun durSecs(d: String): Int {
+    val p = d.trim().split(':').map { it.toIntOrNull() ?: return 0 }
+    return when (p.size) {
+        3 -> p[0] * 3600 + p[1] * 60 + p[2]
+        2 -> p[0] * 60 + p[1]
+        else -> 0
+    }
+}
+
+private val EP_ONLY = Regex("^(episode|épisode|ep\\.?)\\s*\\d+$", RegexOption.IGNORE_CASE)
+
+/** Vrai titre de l'épisode : nom donné par le serveur, sans le nom de la série ni « S01E03 » ; vide s'il n'y en a pas. */
+fun episodeTitle(e: Episode, series: String): String {
+    val a = cleanEpisodeTitle(e.name, series)
+    if (a.isNotEmpty() && !EP_ONLY.matches(a)) return a
+    val b = cleanEpisodeTitle(e.title, series)
+    if (b.isNotEmpty() && !EP_ONLY.matches(b) && fold(b) != fold(series)) return b
+    return ""
+}
 
 /** Lit une valeur JSON en texte, en gérant les null / nombres renvoyés par certains panels. */
 fun JSONObject.s(k: String): String {
@@ -269,6 +297,9 @@ object Xtream {
                         season = e.s("season").toIntOrNull() ?: seasonHint,
                         num = e.s("episode_num").toIntOrNull() ?: (i + 1),
                         plot = info?.s("plot") ?: "",
+                        name = info?.s("name")?.ifEmpty { info.s("title") } ?: "",
+                        img = info?.s("movie_image")?.ifEmpty { info.s("cover_big") } ?: "",
+                        durMin = ((info?.s("duration_secs")?.toIntOrNull() ?: durSecs(info?.s("duration") ?: "")) / 60),
                     ),
                 )
             }

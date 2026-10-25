@@ -34,6 +34,63 @@ class ScreenshotTest {
         }
     }
 
+    /** Mini serveur Xtream local pour les écrans qui chargent des données (fiche série). */
+    private fun fakeServer(): String {
+        val srv = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        srv.createContext("/") { ex ->
+            val eps = StringBuilder("{\"info\":{\"name\":\"Game of Thrones\"},\"episodes\":{")
+            for (season in 1..3) {
+                if (season > 1) eps.append(',')
+                eps.append("\"$season\":[")
+                for (e in 1..10) {
+                    if (e > 1) eps.append(',')
+                    val title = if (e % 2 == 1) "Game of Thrones" else "Game of Thrones S0${season}E0$e"
+                    val name = if (e % 3 != 0) "Le titre de l'épisode $e" else ""
+                    eps.append("{\"id\":\"${season * 100 + e}\",\"episode_num\":$e,\"season\":$season,\"title\":\"$title\",\"container_extension\":\"mkv\",\"info\":{\"name\":\"$name\",\"duration\":\"00:5$e:10\",\"plot\":\"Résumé de l'épisode $e. Une intrigue qui tient sur deux lignes au maximum, le reste est coupé.\"}}")
+                }
+                eps.append(']')
+            }
+            eps.append("}}")
+            val b = eps.toString().toByteArray()
+            ex.responseHeaders.add("Content-Type", "application/json")
+            ex.sendResponseHeaders(200, b.size.toLong())
+            ex.responseBody.use { it.write(b) }
+        }
+        srv.start()
+        return "http://127.0.0.1:${srv.address.port}"
+    }
+
+    private fun shootSeries(name: String) {
+        val app = ApplicationProvider.getApplicationContext<App>()
+        val i = android.content.Intent(app, SeriesActivity::class.java)
+            .putExtra("id", "1").putExtra("name", "Game of Thrones").putExtra("cover", "")
+        val sc = ActivityScenario.launch<SeriesActivity>(i)
+        repeat(12) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(200)
+        }
+        sc.onActivity { a ->
+            val v = a.window.decorView
+            val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)
+            v.draw(Canvas(bmp))
+            val dir = File("build/shots").apply { mkdirs() }
+            File(dir, "$name.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        }
+        sc.close()
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w411dp-h891dp-port-xxhdpi")
+    fun seriesPhone() {
+        login(tv = false, resume = false); Prefs.server = fakeServer(); shootSeries("series_phone")
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun seriesTv() {
+        login(tv = true, resume = false); Prefs.server = fakeServer(); shootSeries("series_tv")
+    }
+
     private fun shoot(name: String, remote: Boolean = false, focusLive: Boolean = true) {
         // télécommande : pas de mode tactile, la tuile choisie est mise en avant
         if (remote) androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().setInTouchMode(false)

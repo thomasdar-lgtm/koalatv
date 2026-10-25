@@ -11,8 +11,8 @@ android {
         applicationId = "com.koala.tv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 34
-        versionName = "1.20.0"
+        versionCode = 35
+        versionName = "1.20.1"
     }
 
     signingConfigs {

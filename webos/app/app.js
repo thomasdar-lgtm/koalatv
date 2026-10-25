@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.16.0';
+  var VERSION = '1.16.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -1578,6 +1578,8 @@
         if (!ep) { go('player', { list: [single], index: 0 }); return; }
         var season = [];
         for (i = 0; i < eps.length; i++) if (eps[i].season === ep.season) season.push(eps[i]);
+        // la fiche de la série est placée sous le lecteur : le retour y mène
+        go('series', { kind: 'series', id: h.sid, name: h.sn, icon: h.i });
         go('player', { list: episodeList(h.sid, h.sn, h.i, season), index: season.indexOf(ep) });
       });
     },
@@ -2390,7 +2392,7 @@
       spinner(true);
       X.episodes(it.id, function (err, eps) {
         if (token !== self.token) return;
-        spinner(false);
+        if (cur === self) spinner(false);
         if (err) { self.msg('Impossible de charger la série.\n' + err.message + '\n\nOK pour réessayer'); self.zone = 'retry'; return; }
         if (!eps.length) { self.msg('Aucun épisode disponible.'); return; }
         self.eps = eps;
@@ -2402,20 +2404,24 @@
         }
         self.seasons = list;
         self.sList.set(list, 0);
-        // on se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu
-        var t = self.nextToWatch(eps), si = 0;
-        for (i = 0; i < list.length; i++) if (list[i].id === eps[t].season) si = i;
-        self.pickSeason(si);
-        if (t > 0 || P.pos['e' + eps[0].id] || Seen.has('e' + eps[0].id)) {
-          for (i = 0; i < self.eList.items.length; i++) if (self.eList.items[i] === eps[t]) self.eList.set(self.eList.items, i);
-          self.setZone('eps');
-        }
+        self.focusNext();
       });
       Sync.pullSeen(function () { if (cur === self) self.eList.redraw(); });
     },
     resume: function () {
-      this.eList.redraw();
+      // retour du lecteur : on se replace sur l'épisode à voir (en cours, ou le suivant du dernier vu)
+      if (this.eps.length) this.focusNext(); else this.eList.redraw();
       this.paintZone();
+    },
+    /* Se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu */
+    focusNext: function () {
+      var eps = this.eps, list = this.seasons, t = this.nextToWatch(eps), si = 0, i;
+      for (i = 0; i < list.length; i++) if (list[i].id === eps[t].season) si = i;
+      this.pickSeason(si);
+      if (t > 0 || P.pos['e' + eps[0].id] || Seen.has('e' + eps[0].id)) {
+        for (i = 0; i < this.eList.items.length; i++) if (this.eList.items[i] === eps[t]) this.eList.set(this.eList.items, i);
+        this.setZone('eps');
+      }
     },
     leave: function () { spinner(false); },
     /* Index de l'épisode à proposer : le plus récemment commencé, sinon celui après le dernier vu */

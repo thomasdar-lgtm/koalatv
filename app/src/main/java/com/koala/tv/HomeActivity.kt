@@ -224,6 +224,11 @@ class HomeActivity : BaseActivity() {
                 return@launch
             }
             val season = eps.filter { it.season == ep.season }
+            // la fiche de la série est placée sous le lecteur : le retour y mène
+            startActivity(
+                Intent(this@HomeActivity, SeriesActivity::class.java)
+                    .putExtra("id", e.seriesId).putExtra("name", e.seriesName).putExtra("cover", e.icon),
+            )
             Nav.play(this@HomeActivity, episodePlayList(e.seriesId, e.seriesName, e.icon, season), season.indexOf(ep))
         }
     }

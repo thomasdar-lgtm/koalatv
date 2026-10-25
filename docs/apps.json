@@ -13,17 +13,17 @@
       "manifestUrl": "https://raw.githubusercontent.com/thomasdar-lgtm/koalatv/main/docs/manifest.json",
       "manifest": {
         "id": "com.koala.tv",
-        "version": "1.16.0",
+        "version": "1.16.1",
         "type": "web",
         "title": "KoalaTV",
         "appDescription": "Lecteur IPTV pour abonnements Xtream",
         "iconUri": "https://raw.githubusercontent.com/thomasdar-lgtm/koalatv/main/docs/icon.png",
         "sourceUrl": "https://github.com/thomasdar-lgtm/koalatv",
         "rootRequired": false,
-        "ipkUrl": "https://raw.githubusercontent.com/thomasdar-lgtm/koalatv/main/docs/KoalaTV-1.16.0.ipk",
-        "ipkSize": 1624140,
+        "ipkUrl": "https://raw.githubusercontent.com/thomasdar-lgtm/koalatv/main/docs/KoalaTV-1.16.1.ipk",
+        "ipkSize": 1624212,
         "ipkHash": {
-          "sha256": "84dcbe72aba2b9fc38e6b3b6b38d2144e7d4df5484fa89c432674ee800cb3e16"
+          "sha256": "d15a803c88941f633895beca21bc59669e15a7259e816711f2a4241d11f38e07"
         }
       },
       "shortDescription": "Lecteur IPTV pour abonnements Xtream",

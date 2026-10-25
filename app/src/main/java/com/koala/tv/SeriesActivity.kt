@@ -81,7 +81,9 @@ class SeriesActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
-        epAdapter.notifyDataSetChanged()
+        // retour (du lecteur notamment) : on se replace sur l'épisode à voir, progression à jour
+        if (resumedOnce && episodes.isNotEmpty()) focusNext() else epAdapter.notifyDataSetChanged()
+        resumedOnce = true
     }
 
     private fun load() {
@@ -100,18 +102,7 @@ class SeriesActivity : BaseActivity() {
                         if (rvSeasons.layoutParams.width !in 1..dp(150)) Category(s.toString(), if (s <= 0) "Épisodes" else "Saison $s", episodes.count { it.season == s })
                         else Category(s.toString(), if (s <= 0) "Ép." else "S$s", -1)
                     })
-                    // on se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu
-                    val target = if (seasonIdx < 0) nextToWatch() else -1
-                    val start = if (target >= 0) seasons.indexOf(episodes[target].season).coerceAtLeast(0) else seasonIdx.coerceIn(0, seasons.size - 1)
-                    showSeason(start)
-                    rvSeasons.scrollToPosition(start)
-                    val epPos = if (target >= 0) epAdapter.items.indexOf(episodes[target]) else -1
-                    if (epPos > 0 || (epPos == 0 && target > 0) || (target >= 0 && started(episodes[target]))) {
-                        rvEpisodes.scrollToPosition(epPos)
-                        rvEpisodes.post { rvEpisodes.findViewHolderForAdapterPosition(epPos)?.itemView?.requestFocus() }
-                    } else if (sidePanel) {
-                        rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
-                    }
+                    focusNext(restore = seasonIdx >= 0)
                 }
             } catch (e: Exception) {
                 showMessage("Impossible de charger la série.\n${e.message ?: ""}\n\nToucher pour réessayer", true)
@@ -120,6 +111,24 @@ class SeriesActivity : BaseActivity() {
             }
         }
     }
+
+    /** Se place sur l'épisode en cours, sinon sur celui qui suit le dernier vu (`restore` : garder la saison affichée). */
+    private fun focusNext(restore: Boolean = false) {
+        if (episodes.isEmpty()) return
+        val target = if (!restore) nextToWatch() else -1
+        val start = if (target >= 0) seasons.indexOf(episodes[target].season).coerceAtLeast(0) else seasonIdx.coerceIn(0, seasons.size - 1)
+        showSeason(start)
+        rvSeasons.scrollToPosition(start)
+        val epPos = if (target >= 0) epAdapter.items.indexOf(episodes[target]) else -1
+        if (epPos > 0 || (epPos == 0 && target > 0) || (target >= 0 && started(episodes[target]))) {
+            rvEpisodes.scrollToPosition(epPos)
+            rvEpisodes.post { rvEpisodes.findViewHolderForAdapterPosition(epPos)?.itemView?.requestFocus() }
+        } else if (sidePanel) {
+            rvSeasons.post { rvSeasons.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
+        }
+    }
+
+    private var resumedOnce = false
 
     private fun started(e: Episode) = Prefs.getPos("e${e.id}") > 0 || Seen.has("e${e.id}")
 

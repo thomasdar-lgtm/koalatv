@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.15.0';
+  var VERSION = '1.16.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -2362,10 +2362,10 @@
           var img = hasImg ? '<img src="' + esc(e.img) + '" onerror="this.style.display=\'none\';this.previousSibling.style.display=\'block\'">' : '';
           return '<div class="ep' + (seen ? ' seen' : '') + '"><div class="th"><b' + (hasImg ? ' style="display:none"' : '') + '>' + e.num + '</b>' + img +
             (pos && e.dur ? '<i style="width:' + Math.min(100, pos / 60 / e.dur * 100).toFixed(1) + '%"></i>' : '') + '</div>' +
-            '<div class="bd"><div class="t"><span class="en">Épisode ' + e.num + (e.dur ? ' · ' + e.dur + ' min' : '') + '</span>' +
+            '<div class="bd"><div class="t"><span class="en">' + (title ? 'Épisode ' + e.num + (e.dur ? ' · ' + e.dur + ' min' : '') : (e.dur ? e.dur + ' min' : '')) + '</span>' +
             (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') +
             (seen ? '<span class="vu"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Vu</span>' : '') + '</div>' +
-            '<div class="tt">' + esc(title || (self.it.name + ' · Épisode ' + e.num)) + '</div>' +
+            '<div class="tt">' + esc(title || 'Épisode ' + e.num) + '</div>' +
             '<div class="p">' + esc(e.plot) + '</div></div></div>';
         },
         onPointer: function () { self.setZone('eps'); },

@@ -213,8 +213,12 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
     override fun onBindViewHolder(h: VH, position: Int) {
         val e = items[position]
         // « Épisode 3 · 52 min », vrai titre (sinon « Série · Épisode 3 »), miniature ou grand numéro
-        h.num.text = "Épisode ${e.num}" + if (e.durMin > 0) " · ${e.durMin} min" else ""
-        h.name.text = episodeTitle(e, seriesName).ifEmpty { "$seriesName · Épisode ${e.num}" }
+        val title = episodeTitle(e, seriesName)
+        val dur = if (e.durMin > 0) "${e.durMin} min" else ""
+        // sans titre connu : « Épisode 3 » devient le titre, la durée reste au-dessus
+        h.num.text = if (title.isNotEmpty()) "Épisode ${e.num}" + (if (dur.isNotEmpty()) " · $dur" else "") else dur
+        h.num.visibility = if (h.num.text.isEmpty()) View.GONE else View.VISIBLE
+        h.name.text = title.ifEmpty { "Épisode ${e.num}" }
         h.big.text = e.num.toString()
         h.big.visibility = View.VISIBLE
         h.img.dispose()

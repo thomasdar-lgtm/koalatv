@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.17.0';
+  var VERSION = '1.18.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -80,6 +80,16 @@
       this.gone[key] = at;
       save('hgone', this.gone);
       Sync.put('e/' + key, { gone: true, at: at });
+    },
+    /* Rangée « Reprendre » : une seule carte par série, son dernier épisode regardé */
+    shown: function () {
+      var out = [], sids = {}, i, h;
+      for (i = 0; i < P.hist.length; i++) {
+        h = P.hist[i];
+        if (h.sid) { if (sids[h.sid]) continue; sids[h.sid] = 1; }
+        out.push(h);
+      }
+      return out;
     },
     update: function (it, pos, dur) {
       var e = { k: it.key, t: it.title, u: it.url, i: it.icon || '', p: Math.floor(pos), d: Math.floor(dur || 0), sid: it.sid || '', sn: it.sname || '', a: Date.now() };
@@ -916,6 +926,7 @@
           for (k in eps) if (eps.hasOwnProperty(k) && eps[k] && eps[k].length) add(eps[k], parseInt(k, 10) || 0);
         }
         out.sort(function (a, b) { return a.season - b.season || a.num - b.num; });
+        setTitles(out, str(j && j.info && j.info.name));
         cb(null, out);
       });
     },
@@ -1209,6 +1220,20 @@
       else if (c === K.BACK || c === K.ESC || c === K.BKSP) this.cancel();
     }
   };
+  /*
+   * Pointeur de la télécommande : le cadre bleu suit le curseur.
+   * hoverOn(élément, fn) : fn(cible) est appelée quand le curseur bouge au-dessus de l'élément ;
+   * attrOf(cible, attr, haut) remonte jusqu'au nœud qui porte l'attribut.
+   */
+  function hoverOn(el, fn) { el._hover = fn; }
+  function attrOf(n, attr, top) {
+    while (n && n !== top && n.getAttribute) { if (n.getAttribute(attr) !== null) return n; n = n.parentNode; }
+    return null;
+  }
+  hoverOn($('d-opts'), function (t) {
+    var n = attrOf(t, 'data-i', $('d-opts')), i = n ? parseInt(n.getAttribute('data-i'), 10) : -1;
+    if (i >= 0 && i !== Dialog.idx) { Dialog.idx = i; Dialog.paint(); }
+  });
   $('d-opts').addEventListener('click', function (e) {
     var n = e.target;
     while (n && n.getAttribute && n.getAttribute('data-i') === null) n = n.parentNode;
@@ -1230,6 +1255,14 @@
     this.inner = document.createElement('div');
     this.inner.className = 'vinner';
     box.appendChild(this.inner);
+    hoverOn(this.inner, function (t) {
+      var n = t;
+      while (n && n !== self.inner && n._i === undefined) n = n.parentNode;
+      if (!n || n._i === undefined || (self.idx === n._i && self.active)) return;
+      self.idx = n._i;
+      self.hovering = true;
+      try { if (self.o.onPointer) self.o.onPointer(); self.render(true); } finally { self.hovering = false; }
+    });
     this.inner.addEventListener('click', function (e) {
       var n = e.target;
       while (n && n !== self.inner && n._i === undefined) n = n.parentNode;
@@ -1265,10 +1298,12 @@
     this.render();
   };
   VList.prototype.redraw = function () { this.set(this.items, this.idx, true); };
-  VList.prototype.render = function () {
+  /* keepTop : survol au pointeur, la liste ne défile pas sous le curseur */
+  VList.prototype.render = function (keepTop) {
     var n = this.items.length, cols = this.cols, rowH = this.rowH, vis = this.vis;
     var rows = Math.ceil(n / cols), fr = Math.floor(this.idx / cols), margin = vis >= 4 ? 1 : 0;
-    if (fr - margin < this.top) this.top = Math.max(0, fr - margin);
+    if (keepTop === true || this.hovering) { /* position conservée */ }
+    else if (fr - margin < this.top) this.top = Math.max(0, fr - margin);
     else if (fr + margin > this.top + vis - 1) this.top = fr + margin - vis + 1;
     this.top = Math.max(0, Math.min(this.top, Math.max(0, rows - vis)));
     this.inner.style.height = rows * rowH + 'px';
@@ -1374,6 +1409,10 @@
       var self = this;
       this.rows = this.el.querySelectorAll('[data-i]');
       for (var i = 0; i < this.rows.length; i++) {
+        hoverOn(this.rows[i], function () {
+          var i2 = parseInt(this.getAttribute('data-i'), 10);
+          if (i2 !== self.idx) { self.idx = i2; self.paint(); }
+        });
         this.rows[i].addEventListener('click', function (e) {
           e.preventDefault();
           self.idx = parseInt(this.getAttribute('data-i'), 10);
@@ -1488,6 +1527,10 @@
       var self = this;
       this.tiles = this.el.querySelectorAll('.tile');
       for (var i = 0; i < this.tiles.length; i++) {
+        hoverOn(this.tiles[i], function () {
+          var i2 = parseInt(this.getAttribute('data-i'), 10);
+          if (self.zone !== 'tiles' || self.idx !== i2) { self.zone = 'tiles'; self.idx = i2; self.paint(); }
+        });
         this.tiles[i].addEventListener('click', function () {
           self.zone = 'tiles';
           self.idx = parseInt(this.getAttribute('data-i'), 10);
@@ -1496,6 +1539,15 @@
         });
       }
       $('h-search').addEventListener('click', function () { go('gsearch'); });
+      hoverOn($('h-search'), function () { if (self.zone !== 'search') { self.zone = 'search'; self.paint(); } });
+      hoverOn($('h-new'), function (t) {
+        var n = attrOf(t, 'data-n', $('h-new')), i2 = n ? parseInt(n.getAttribute('data-n'), 10) : -1;
+        if (i2 >= 0 && (self.zone !== 'recent' || self.nIdx !== i2)) { self.zone = 'recent'; self.nIdx = i2; self.paint(); }
+      });
+      hoverOn($('h-row'), function (t) {
+        var n = attrOf(t, 'data-r', $('h-row')), i2 = n ? parseInt(n.getAttribute('data-r'), 10) : -1;
+        if (i2 >= 0 && (self.zone !== 'resume' || self.rIdx !== i2)) { self.zone = 'resume'; self.rIdx = i2; self.paint(); }
+      });
       $('h-new').addEventListener('click', function (e) {
         var n = e.target;
         while (n && n.getAttribute && n.getAttribute('data-n') === null) n = n.parentNode;
@@ -1592,7 +1644,7 @@
       if (it) go(it.kind === 'series' ? 'series' : 'movie', it);
     },
     drawResume: function () {
-      var l = P.hist, h = '';
+      var l = this.hl = Hist.shown(), h = '';
       for (var i = 0; i < l.length; i++) {
         var it = l[i], pct = it.d > 0 ? Math.min(100, it.p / it.d * 100) : 0;
         h += '<div class="rc" data-r="' + i + '"><div class="rp">' + imgTag(it.i) + '</div><div class="rt">' +
@@ -1636,7 +1688,7 @@
       }
     },
     key: function (c) {
-      var n = P.hist.length;
+      var n = (this.hl || []).length;
       if (this.zone === 'resume') {
         if (c === K.LEFT && this.rIdx > 0) { this.rIdx--; this.paint(); }
         else if (c === K.RIGHT && this.rIdx < n - 1) { this.rIdx++; this.paint(); }
@@ -1671,7 +1723,7 @@
       return false;
     },
     resumeItem: function () {
-      var h = P.hist[this.rIdx];
+      var h = this.hl[this.rIdx];
       if (!h) return;
       var single = { title: h.t, url: h.u, live: false, key: h.k, icon: h.i, sid: h.sid, sname: h.sn };
       if (!h.sid) { go('player', { list: [single], index: 0 }); return; }
@@ -1691,12 +1743,18 @@
       });
     },
     forget: function () {
-      var self = this, h = P.hist[this.rIdx];
+      var self = this, h = this.hl[this.rIdx];
       if (!h) return;
       Dialog.show(h.t, '', [
         {
           label: 'Retirer de « Reprendre »',
-          fn: function () { Hist.remove(h.k); delete P.pos[h.k]; save('pos', P.pos); self.drawResume(); self.paint(); }
+          fn: function () {
+            // une série : tous ses épisodes commencés sortent de la rangée
+            var keys = [], i;
+            for (i = 0; i < P.hist.length; i++) if (P.hist[i].k === h.k || (h.sid && P.hist[i].sid === h.sid)) keys.push(P.hist[i].k);
+            for (i = 0; i < keys.length; i++) { Hist.remove(keys[i]); delete P.pos[keys[i]]; }
+            save('pos', P.pos); self.drawResume(); self.paint();
+          }
         },
         { label: 'Annuler' }
       ]);
@@ -1997,6 +2055,8 @@
       this.input = $('ps-code');
       this.input.addEventListener('blur', function () { cls(self.input.parentNode, 'editing', false); });
       $('ps-btn').addEventListener('click', function () { self.idx = 1; self.paint(); self.send(); });
+      hoverOn($('ps-btn'), function () { if (self.idx !== 1) { self.idx = 1; self.paint(); } });
+      hoverOn(this.input.parentNode, function () { if (self.idx !== 0) { self.idx = 0; self.paint(); } });
       this.input.parentNode.addEventListener('click', function () { self.idx = 0; self.paint(); self.edit(); });
     },
     enter: function () {
@@ -2059,6 +2119,7 @@
       });
       this.input.addEventListener('blur', function () { cls($('gs-box'), 'editing', false); });
       $('gs-box').addEventListener('click', function () { self.setZone('input'); self.edit(); });
+      hoverOn($('gs-box'), function () { if (self.zone !== 'input') self.setZone('input'); });
     },
     enter: function () {
       var self = this, n = 0, got = {};
@@ -2176,6 +2237,8 @@
       this.search.addEventListener('blur', function () { cls($('b-search-box'), 'editing', false); });
       $('b-search-box').addEventListener('click', function () { self.setZone('search'); self.editSearch(); });
       $('b-guide').addEventListener('click', function () { self.openGuide(); });
+      hoverOn($('b-search-box'), function () { if (self.zone !== 'search') self.setZone('search'); });
+      hoverOn($('b-guide'), function () { if (self.zone !== 'gbtn') self.setZone('gbtn'); });
     },
     enter: function (p) {
       var self = this, token = ++this.token;
@@ -2427,6 +2490,10 @@
 
   /* ---------- Série : saisons et épisodes ---------- */
 
+  /* Générique de fin : au-delà, le film ou l'épisode est considéré comme vu (film : 8 % de la durée, entre 3 et 12 min) */
+  function endMargin(dur, episode) {
+    return episode ? Math.max(120, dur * 0.04) : Math.min(720, Math.max(180, dur * 0.08));
+  }
   function durSecs(d) {
     var m = /^(\d+):(\d+)(?::(\d+))?$/.exec(str(d));
     if (!m) return 0;
@@ -2434,17 +2501,55 @@
   }
   /* Vrai titre de l'épisode : le nom donné par le serveur, sans le nom de la série ni « S01E03 » ; vide s'il n'y en a pas */
   function epTitle(e, series) {
-    var a = cleanEpTitle(e.name, series), b = cleanEpTitle(e.title, series), bad = /^(episode|épisode|ep\.?)\s*\d+$/i;
+    if (e.t !== undefined) return e.t && cleanEpTitle(e.t, [series]);
+    return rawEpTitle(e, [series]);
+  }
+  function rawEpTitle(e, names) {
+    var a = cleanEpTitle(e.name, names), b = cleanEpTitle(e.title, names), bad = /^(episode|épisode|ep\.?)?\s*\d+$/i;
     if (a && !bad.test(a)) return a;
-    if (b && !bad.test(b) && fold(b) !== fold(series)) return b;
+    if (b && !bad.test(b)) return b;
     return '';
   }
-  function cleanEpTitle(t, series) {
+  /* Nom de la série sans étiquette de langue ni année : « FR - Game of Thrones (2011) » → « game of thrones » */
+  function seriesCore(n) {
+    return fold(str(n)).replace(/^\s*[|\[(]?\s*[a-z]{2,4}\s*[|\])\-:]\s*/, '').replace(/\(?\b(19|20)\d{2}\b\)?/g, '')
+      .replace(/[^a-z0-9]+/g, ' ').replace(/^\s+|\s+$/g, '');
+  }
+  function cleanEpTitle(t, names) {
     t = str(t);
-    var low = fold(t), sl = fold(series);
-    if (sl && low.indexOf(sl) === 0) t = t.substr(series.length);
-    t = t.replace(/\b[sS]\d{1,2}\s*[eE]\d{1,3}\b/g, '').replace(/^[\s\-–—:|.·]+|[\s\-–—:|.·]+$/g, '');
+    var i, core, words, re;
+    for (i = 0; i < names.length; i++) {
+      core = seriesCore(names[i]);
+      if (!core) continue;
+      // le nom de la série, où qu'il soit, ponctuation et accents ignorés
+      words = core.split(' ');
+      re = new RegExp(words.join('[^A-Za-z0-9]+'), 'i');
+      if (re.test(fold(t))) { var m = re.exec(fold(t)); t = t.substr(0, m.index) + ' ' + t.substr(m.index + m[0].length); }
+    }
+    t = t.replace(/^\s*[|\[(]?\s*[A-Za-z]{2,3}\s*[|\])]\s*/, '')                       // « |FR| », « [FR] »
+      .replace(/\(?\b(19|20)\d{2}\b\)?/g, ' ')                                            // année
+      .replace(/\b[sS]\d{1,2}\s*[-.]?\s*[eE][pP]?\s*\d{1,3}\b/g, ' ')                     // S01E03, S01 E03, S01-EP03
+      .replace(/(^|[^A-Za-z\u00C0-\u017F])(saison|season|episode|[ée]pisode|ep\.?)\s*\d+\b/gi, '$1 ')
+      .replace(/\s{2,}/g, ' ').replace(/^[\s\-–—:|.·,]+|[\s\-–—:|.·,]+$/g, '');
     return t;
+  }
+  /* Titres de tous les épisodes d'une série : un même texte répété sur plusieurs épisodes est le nom de la série, pas un titre */
+  function setTitles(eps, infoName) {
+    var count = {}, i, t;
+    for (i = 0; i < eps.length; i++) {
+      t = rawEpTitle(eps[i], [infoName]);
+      eps[i].t = t;
+      if (t) count[eps[i].season + '|' + fold(t)] = (count[eps[i].season + '|' + fold(t)] || 0) + 1;
+    }
+    // (compté par saison : deux saisons peuvent avoir un épisode du même nom)
+    for (i = 0; i < eps.length; i++) if (eps[i].t && count[eps[i].season + '|' + fold(eps[i].t)] > 1) eps[i].t = '';
+    // même règle pour le résumé : un texte identique partout (souvent le nom de la série) n'est pas un résumé
+    var pc = {}, core = seriesCore(infoName);
+    for (i = 0; i < eps.length; i++) if (eps[i].plot) pc[eps[i].season + '|' + fold(eps[i].plot)] = (pc[eps[i].season + '|' + fold(eps[i].plot)] || 0) + 1;
+    for (i = 0; i < eps.length; i++) {
+      var pl = eps[i].plot;
+      if (pl && (pc[eps[i].season + '|' + fold(pl)] > 1 || (core && seriesCore(pl) === core))) eps[i].plot = '';
+    }
   }
 
   screens.series = {
@@ -2808,6 +2913,10 @@
     token: 0,
     init: function () {
       var self = this;
+      hoverOn($('m-btns'), function (t) {
+        var n = attrOf(t, 'data-b', $('m-btns')), i2 = n ? parseInt(n.getAttribute('data-b'), 10) : -1;
+        if (i2 >= 0 && i2 !== self.idx) { self.idx = i2; self.paint(); }
+      });
       $('m-btns').addEventListener('click', function (e) {
         var n = e.target;
         while (n && n.getAttribute && n.getAttribute('data-b') === null) n = n.parentNode;
@@ -2913,6 +3022,21 @@
       v.addEventListener('play', function () { self.paintCtl(); });
       v.addEventListener('pause', function () { self.paintCtl(); });
       // boutons à la souris (télécommande à pointeur)
+      // le curseur qui bouge fait apparaître les commandes
+      var lastMove = 0;
+      hoverOn(this.el, function () {
+        if (!self.active || self.cur().live || Date.now() - lastMove < 400) return;
+        lastMove = Date.now();
+        self.showInfo(self.v.paused);
+      });
+      hoverOn($('p-ctl'), function (t) {
+        var n = attrOf(t, 'data-a', $('p-ctl'));
+        if (!n) return;
+        var a = n.getAttribute('data-a'), k2;
+        for (k2 = 0; k2 < self.ACT.length; k2++) if (self.ACT[k2] === a && self.usable(a) && (self.cIdx !== k2 || self.ctl !== 'btn')) {
+          self.cIdx = k2; self.ctl = 'btn'; self.showInfo(self.v.paused);
+        }
+      });
       $('p-ctl').onclick = function (e) {
         var n = e.target;
         while (n && n.getAttribute && n.getAttribute('data-a') === null) n = n.parentNode;
@@ -3233,7 +3357,7 @@
       var it = this.cur(), v = this.v;
       if (!it || it.live || !it.key) return;
       var pos = this.lastPos, dur = v.duration;
-      if (dur > 0 && isFinite(dur) && pos > dur - 120) {
+      if (dur > 0 && isFinite(dur) && pos > dur - endMargin(dur, !!it.sid)) {
         delete P.pos[it.key];
         Hist.remove(it.key);
         Seen.mark(it.key);
@@ -3387,6 +3511,23 @@
   /* ---------- Clavier / télécommande ---------- */
 
   function isBack(c) { return c === K.BACK || c === K.ESC; }
+
+  /* Curseur : seuls les vrais déplacements comptent (pas le contenu qui défile sous un curseur immobile) */
+  var mouseX = -1, mouseY = -1;
+  document.addEventListener('mousemove', function (e) {
+    if (e.clientX === mouseX && e.clientY === mouseY) return;
+    mouseX = e.clientX; mouseY = e.clientY;
+    var n = e.target;
+    while (n && n !== document) {
+      if (n._hover) {
+        // pas de survol d'un écran caché sous une fenêtre de choix
+        if (Dialog.open && n !== $('d-opts')) return;
+        n._hover.call(n, e.target);
+        return;
+      }
+      n = n.parentNode;
+    }
+  }, true);
 
   var keyHeld = false;
   document.addEventListener('keydown', function (e) {

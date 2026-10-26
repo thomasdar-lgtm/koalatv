@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.1';
+  var VERSION = '1.18.2';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -588,6 +588,16 @@
     fin: 'Finnois', fi: 'Finnois', gre: 'Grec', ell: 'Grec', el: 'Grec', heb: 'Hébreu', he: 'Hébreu', hin: 'Hindi', hi: 'Hindi' };
   function langName(code) { var c = String(code || '').toLowerCase(); return LANG[c] || LANG[c.substr(0, 2)] || (c && c !== 'und' ? c.toUpperCase() : ''); }
 
+  /* Nom de piste lisible : « SRT Forced FR » → « forcés », « French Full » → « complets », « SDH » → « malentendants » */
+  function cleanTrackName(x) {
+    if (/forc/i.test(x)) return 'forcés';
+    if (/\b(sdh|hi|cc)\b|malentend|sourds|hearing/i.test(x)) return 'malentendants';
+    if (/full|complet|integral|intégral/i.test(x)) return 'complets';
+    // le reste, sans format, codec ni langue (déjà affichée)
+    x = x.replace(/\b(srt|ass|ssa|pgs|sup|vobsub|subrip|utf-?8|text|sub(title)?s?|sous[- ]?titres?|ac-?3|e-?ac-?3|dts(-hd)?|truehd|atmos|aac|mp3|flac|opus|\d\.\d|stereo|st[ée]r[ée]o|fr|fre|fra|french|fran[cç]ais|vf|en|eng|english|anglais)\b/gi, ' ')
+      .replace(/[()\[\]|_\-–—:.,]+/g, ' ').replace(/\s+/g, ' ').replace(/^\s+|\s+$/g, '');
+    return x.length > 24 ? x.substr(0, 24) : x;
+  }
   var Tracks = {
     v: null, mediaId: null, sub: null, token: 0,
     audio: [], text: [], curAudio: 0, curText: -1, applied: false, probed: null, cache: {},
@@ -597,7 +607,7 @@
       function fin(t) { if (done) return; done = true; cb(t); }
       if (!window.PalmServiceBridge || !/\.mkv(\?|$)/i.test(url)) return fin(null);
       if (this.cache.hasOwnProperty(url)) return fin(this.cache[url]);
-      setTimeout(function () { Dbg.log('pistes : délai dépassé'); fin(null); }, 7000);
+      setTimeout(function () { if (!done) { Dbg.log('pistes : délai dépassé'); fin(null); } }, 7000);
       try {
         var b = new window.PalmServiceBridge();
         bridges.push(b);
@@ -637,12 +647,14 @@
         return b;
       } catch (e) { Dbg.log('media.' + method + ' exception', String(e)); return null; }
     },
+    /* Identifiant du lecteur webOS (la TV renvoie « <invalid mediaId> » tant qu'il n'est pas prêt) */
+    idOf: function (v) { var id = v && v.mediaId; return id && String(id).charAt(0) !== '<' ? String(id) : null; },
     /* Nouvelle vidéo : on oublie les pistes de la précédente et on attend celles-ci */
     reset: function (v, probed) {
       this.token++;
       if (this.sub) { var i = bridges.indexOf(this.sub); if (i >= 0) bridges.splice(i, 1); this.sub = null; }
       if (this.mediaId && window.PalmServiceBridge) this.luna('unsubscribe', { mediaId: this.mediaId });
-      this.v = v; this.mediaId = null; this.audio = []; this.text = []; this.curAudio = 0; this.curText = -1; this.applied = false;
+      this.v = v; this.mediaId = null; this.pending = false; this.audio = []; this.text = []; this.curAudio = 0; this.curText = -1; this.applied = false;
       this.probed = probed || null;
       if (this.probed) {
         // pistes connues par le fichier : la TV joue la piste audio par défaut
@@ -658,7 +670,7 @@
       if (!window.PalmServiceBridge) return;
       (function poll() {
         if (token !== self.token || self.sub) return;
-        var id = self.v && self.v.mediaId;
+        var id = self.idOf(self.v);
         if (id) { self.subscribe(id, token); return; }
         if (++tries < 200) setTimeout(poll, 25);
       })();
@@ -667,12 +679,19 @@
       var self = this;
       this.mediaId = id;
       Dbg.log('abonnement', { mediaId: id });
+      if (this.pending) {
+        var pd = this.pending;
+        this.pending = false;
+        if (pd.audio) this.select('audio', this.curAudio);
+        if (pd.text) this.select('text', this.curText);
+      }
       this.sub = this.luna('subscribe', { mediaId: id, subscribe: true }, function (m) {
         if (token !== self.token || !m) return;
         var info = self.find(m, 'subtitleTrackInfo'), ainfo = self.find(m, 'audioTrackInfo');
         if (!info && !ainfo) return;
-        if (info && info.length) self.text = self.label(info);
-        if (ainfo && ainfo.length) self.audio = self.label(ainfo);
+        // la liste lue dans le fichier garde la priorité : elle porte les noms (« forcés », « complets »…)
+        if (info && info.length && !(self.probed && self.probed.text.length)) self.text = self.label(info);
+        if (ainfo && ainfo.length && !(self.probed && self.probed.audio.length)) self.audio = self.label(ainfo);
         self.applyPrefs();
       });
     },
@@ -685,7 +704,7 @@
       if (!window.PalmServiceBridge) { this.applyPrefs(); return; }
       (function poll() {
         if (token !== self.token) return;
-        var id = self.v && self.v.mediaId;
+        var id = self.idOf(self.v);
         if (!id) { if (++tries < 10) setTimeout(poll, 300); else { Dbg.log('pas de mediaId'); self.applyPrefs(); } return; }
         if (!self.sub) self.subscribe(id, token);
         // pistes standard du lecteur (l'audio y est souvent) : on applique les choix retenus
@@ -710,8 +729,7 @@
         t = list[i] || {};
         name = langName(t.language) || 'Piste ' + (i + 1);
         n = seen[name] = (seen[name] || 0) + 1;
-        var extra = str(t.title || t.name || t.label || '');
-        if (/forc/i.test(extra)) extra = 'forcés';
+        var extra = cleanTrackName(str(t.title || t.name || t.label || ''));
         out.push({ lang: str(t.language).toLowerCase(), n: n, label: name + (extra ? ' · ' + extra : n > 1 ? ' · ' + n : '') });
       }
       return out;
@@ -737,6 +755,13 @@
       var self = this, tr, k;
       Dbg.log('choix ' + kind, { index: i, service: this.luna_(kind) });
       if (this.luna_(kind)) {
+        if (!this.mediaId) {
+          // lecteur pas encore prêt : le choix est appliqué dès qu'il l'est
+          if (kind === 'text') this.curText = i; else this.curAudio = i;
+          this.pending = this.pending || {};
+          this.pending[kind] = true;
+          return;
+        }
         if (kind === 'text') {
           this.curText = i;
           if (i < 0) { this.luna('setSubtitleEnable', { mediaId: this.mediaId, enable: false }); return; }

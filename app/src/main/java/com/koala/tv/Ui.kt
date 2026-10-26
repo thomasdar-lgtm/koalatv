@@ -39,14 +39,31 @@ fun fmtNum(n: Int): String = String.format(Locale.FRANCE, "%,d", n).replace(' '
 
 fun plural(n: Int, one: String, many: String): String = "${fmtNum(n)} ${if (n > 1) many else one}"
 
-private val EP_CODE = Regex("\\b[sS]\\d{1,2}\\s*[eE]\\d{1,3}\\b")
-private val EDGES = Regex("^[\\s\\-–—:|.·]+|[\\s\\-–—:|.·]+$")
+private val EP_CODE = Regex("\\b[sS]\\d{1,2}\\s*[-.]?\\s*[eE][pP]?\\s*\\d{1,3}\\b")
+private val EP_WORD = Regex("(^|[^\\p{L}])(saison|season|episode|épisode|ep\\.?)\\s*\\d+\\b", RegexOption.IGNORE_CASE)
+private val LANG_TAG = Regex("^\\s*[|\\[(]?\\s*[A-Za-z]{2,3}\\s*[|\\])]\\s*")
+private val YEAR = Regex("\\(?\\b(19|20)\\d{2}\\b\\)?")
+private val EDGES = Regex("^[\\s\\-–—:|.·,]+|[\\s\\-–—:|.·,]+$")
 
-/** Retire le nom de la série et le code S01E02 du titre d'un épisode. */
+/** Nom de la série sans étiquette de langue ni année : « FR - Game of Thrones (2011) » → « game of thrones ». */
+fun seriesCore(n: String): String = fold(n)
+    .replace(Regex("^\\s*[|\\[(]?\\s*[a-z]{2,4}\\s*[|\\])\\-:]\\s*"), "")
+    .replace(YEAR, "").replace(Regex("[^a-z0-9]+"), " ").trim()
+
+/** Titre d'épisode sans le nom de la série (où qu'il soit), « S01E03 », « Épisode 3 », année ni étiquette de langue. */
 fun cleanEpisodeTitle(title: String, series: String): String {
     var t = title.trim()
-    if (series.isNotEmpty() && fold(t).startsWith(fold(series))) t = t.substring(series.length.coerceAtMost(t.length))
-    t = EP_CODE.replace(t, "")
+    val core = seriesCore(series)
+    if (core.isNotEmpty()) {
+        val re = Regex(core.split(' ').joinToString("[^A-Za-z0-9]+") { Regex.escape(it) }, RegexOption.IGNORE_CASE)
+        val f = fold(t)
+        if (f.length == t.length) re.find(f)?.let { t = t.substring(0, it.range.first) + " " + t.substring(it.range.last + 1) }
+    }
+    t = LANG_TAG.replace(t, "")
+    t = YEAR.replace(t, " ")
+    t = EP_CODE.replace(t, " ")
+    t = EP_WORD.replace(t, "$1 ")
+    t = t.replace(Regex("\\s{2,}"), " ")
     return EDGES.replace(t, "")
 }
 

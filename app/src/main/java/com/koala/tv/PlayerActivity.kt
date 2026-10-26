@@ -657,7 +657,7 @@ class PlayerActivity : BaseActivity() {
         val key = item.resumeKey ?: return
         val dur = p.duration
         when {
-            dur > 0 && pos >= dur - 120_000 -> {
+            dur > 0 && pos >= dur - endMargin(dur, item.seriesId.isNotEmpty()) -> {
                 Prefs.setPos(key, 0)
                 History.remove(key)
                 Seen.mark(key)

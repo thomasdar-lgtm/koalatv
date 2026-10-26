@@ -35,6 +35,12 @@ object History {
     @Synchronized
     fun all(): List<Entry> = ArrayList(load())
 
+    /** Rangée « Reprendre » : une seule carte par série, son dernier épisode regardé. */
+    fun shown(): List<Entry> {
+        val seen = HashSet<String>()
+        return all().filter { it.seriesId.isEmpty() || seen.add(it.seriesId) }
+    }
+
     @Synchronized
     fun update(item: PlayItem, pos: Long, dur: Long) {
         val key = item.resumeKey ?: return

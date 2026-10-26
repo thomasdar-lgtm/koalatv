@@ -55,7 +55,10 @@ data class Episode(
     val img: String = "",
     /** Durée en minutes (0 si inconnue). */
     val durMin: Int = 0,
-)
+) {
+    /** Titre calculé pour toute la série (voir setTitles). */
+    @Transient var t: String? = null
+}
 
 data class MovieInfo(
     val title: String,
@@ -99,6 +102,10 @@ fun episodePlayList(seriesId: String, seriesName: String, cover: String, eps: Li
         PlayItem("$seriesName · $label" + if (t.isNotEmpty()) " · $t" else "", Xtream.episodeUrl(e.id, e.ext), false, "e${e.id}", e.id, cover, seriesId, seriesName)
     }
 
+/** Générique de fin (ms) : au-delà, le film ou l'épisode est vu (film : 8 % de la durée, entre 3 et 12 min). */
+fun endMargin(durMs: Long, episode: Boolean): Long =
+    if (episode) maxOf(120_000L, durMs * 4 / 100) else (durMs * 8 / 100).coerceIn(180_000L, 720_000L)
+
 /** Durée « 00:52:13 » ou « 52:13 » en secondes. */
 fun durSecs(d: String): Int {
     val p = d.trim().split(':').map { it.toIntOrNull() ?: return 0 }
@@ -109,15 +116,28 @@ fun durSecs(d: String): Int {
     }
 }
 
-private val EP_ONLY = Regex("^(episode|épisode|ep\\.?)\\s*\\d+$", RegexOption.IGNORE_CASE)
+private val EP_ONLY = Regex("^(episode|épisode|ep\\.?)?\\s*\\d+$", RegexOption.IGNORE_CASE)
 
 /** Vrai titre de l'épisode : nom donné par le serveur, sans le nom de la série ni « S01E03 » ; vide s'il n'y en a pas. */
 fun episodeTitle(e: Episode, series: String): String {
+    e.t?.let { return if (it.isEmpty()) "" else cleanEpisodeTitle(it, series) }
+    return rawEpisodeTitle(e, series)
+}
+
+private fun rawEpisodeTitle(e: Episode, series: String): String {
     val a = cleanEpisodeTitle(e.name, series)
     if (a.isNotEmpty() && !EP_ONLY.matches(a)) return a
     val b = cleanEpisodeTitle(e.title, series)
-    if (b.isNotEmpty() && !EP_ONLY.matches(b) && fold(b) != fold(series)) return b
+    if (b.isNotEmpty() && !EP_ONLY.matches(b)) return b
     return ""
+}
+
+/** Un même texte répété sur plusieurs épisodes est le nom de la série, pas un titre. */
+fun setTitles(eps: List<Episode>, infoName: String) {
+    for (e in eps) e.t = rawEpisodeTitle(e, infoName)
+    // compté par saison : deux saisons peuvent avoir un épisode du même nom
+    val count = eps.filter { !it.t.isNullOrEmpty() }.groupingBy { "${it.season}|${fold(it.t!!)}" }.eachCount()
+    for (e in eps) if (!e.t.isNullOrEmpty() && (count["${e.season}|${fold(e.t!!)}"] ?: 0) > 1) e.t = ""
 }
 
 /** Lit une valeur JSON en texte, en gérant les null / nombres renvoyés par certains panels. */
@@ -319,7 +339,15 @@ object Xtream {
             }
         }
         out.sortWith(compareBy<Episode>({ it.season }, { it.num }))
-        out
+        val infoName = root.optJSONObject("info")?.s("name") ?: ""
+        setTitles(out, infoName)
+        // un résumé identique partout (souvent le nom de la série) n'est pas un résumé
+        val core = seriesCore(infoName)
+        val pc = out.filter { it.plot.isNotEmpty() }.groupingBy { "${it.season}|${fold(it.plot)}" }.eachCount()
+        out.map { e ->
+            val p = e.plot
+            if (p.isNotEmpty() && ((pc["${e.season}|${fold(p)}"] ?: 0) > 1 || (core.isNotEmpty() && seriesCore(p) == core))) e.copy(plot = "").also { it.t = e.t } else e
+        }
     }
 
     /** Fiche d'un film (résumé, durée, note…). */

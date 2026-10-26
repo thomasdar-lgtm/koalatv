@@ -200,7 +200,7 @@ class HomeActivity : BaseActivity() {
     }
 
     private fun refreshResume() {
-        val l = History.all()
+        val l = History.shown()
         resumeAdapter.submit(l)
         resumeBox.visibility = if (l.isEmpty()) View.GONE else View.VISIBLE
     }
@@ -238,8 +238,12 @@ class HomeActivity : BaseActivity() {
             .setTitle(e.title)
             .setItems(arrayOf("Retirer de « Reprendre »", "Annuler")) { _, which ->
                 if (which == 0) {
-                    History.remove(e.key)
-                    Prefs.setPos(e.key, 0)
+                    // une série : tous ses épisodes commencés sortent de la rangée
+                    val keys = History.all().filter { it.key == e.key || (e.seriesId.isNotEmpty() && it.seriesId == e.seriesId) }.map { it.key }
+                    for (k in keys) {
+                        History.remove(k)
+                        Prefs.setPos(k, 0)
+                    }
                     refreshResume()
                 }
             }

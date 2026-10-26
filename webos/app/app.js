@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.0';
+  var VERSION = '1.18.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -91,8 +91,14 @@
       }
       return out;
     },
-    update: function (it, pos, dur) {
+    /* Fin d'un film : il sort de la rangée. Fin d'un épisode : la série reste, prête pour l'épisode suivant. */
+    finish: function (it) {
+      if (it.sid) this.update(it, 0, 0, true);
+      else this.remove(it.key);
+    },
+    update: function (it, pos, dur, done) {
       var e = { k: it.key, t: it.title, u: it.url, i: it.icon || '', p: Math.floor(pos), d: Math.floor(dur || 0), sid: it.sid || '', sn: it.sname || '', a: Date.now() };
+      if (done) e.f = 1;
       var l = [e];
       for (var i = 0; i < P.hist.length && l.length < 20; i++) if (P.hist[i].k !== it.key) l.push(P.hist[i]);
       setP('hist', l);
@@ -113,8 +119,8 @@
           delete P.pos[k];
           this.gone[k] = r.at;
         } else {
-          l.push({ k: k, t: str(r.t), u: str(r.u), i: str(r.i), p: +r.p || 0, d: +r.d || 0, sid: str(r.sid), sn: str(r.sn), a: r.at });
-          P.pos[k] = +r.p || 0;
+          l.push({ k: k, t: str(r.t), u: str(r.u), i: str(r.i), p: +r.p || 0, d: +r.d || 0, sid: str(r.sid), sn: str(r.sn), a: r.at, f: r.f ? 1 : 0 });
+          if (r.f) delete P.pos[k]; else P.pos[k] = +r.p || 0;
         }
         changed = true;
       }
@@ -184,7 +190,7 @@
       } catch (e) { /* hors ligne */ }
     },
     push: function (e) {
-      this.put('e/' + e.k, { t: e.t, u: e.u, i: e.i, p: e.p, d: e.d, at: e.a, sid: e.sid, sn: e.sn });
+      this.put('e/' + e.k, { t: e.t, u: e.u, i: e.i, p: e.p, d: e.d, at: e.a, sid: e.sid, sn: e.sn, f: e.f ? 1 : 0 });
     },
     /* Catégories masquées : clé Firebase sans . $ # [ ] / : */
     catPath: function (k) { return 'c/' + k.replace(/[.$#\[\]\/:]/g, '_'); },
@@ -1511,6 +1517,7 @@
   /* ---------- Accueil ---------- */
 
   function resumeLeft(h) {
+    if (h.f) return 'Épisode suivant';
     var m = h.d > 0 ? Math.max(0, Math.floor((h.d - h.p) / 60)) : 0;
     if (m >= 60) return 'Reste ' + Math.floor(m / 60) + ' h ' + pad2(m % 60);
     if (m > 0) return 'Reste ' + m + ' min';
@@ -1648,7 +1655,7 @@
       for (var i = 0; i < l.length; i++) {
         var it = l[i], pct = it.d > 0 ? Math.min(100, it.p / it.d * 100) : 0;
         h += '<div class="rc" data-r="' + i + '"><div class="rp">' + imgTag(it.i) + '</div><div class="rt">' +
-          '<div class="rn">' + esc(it.t) + '</div><div class="bar"><div style="width:' + pct.toFixed(1) + '%"></div></div>' +
+          '<div class="rn">' + esc(it.f && it.sn ? it.sn : it.t) + '</div><div class="bar"><div style="width:' + pct.toFixed(1) + '%"></div></div>' +
           '<div class="rl">' + esc(resumeLeft(it)) + '</div></div></div>';
       }
       $('h-row').innerHTML = h;
@@ -1734,11 +1741,17 @@
         if (cur !== screens.home) return;
         var epId = h.k.substr(1), ep = null, i;
         if (!err) for (i = 0; i < eps.length; i++) if (eps[i].id === epId) ep = eps[i];
+        var page = { kind: 'series', id: h.sid, name: h.sn, icon: h.i };
+        if (h.f) {
+          // épisode terminé : on enchaîne sur le suivant (saison suivante comprise) ; série finie → sa fiche
+          ep = ep ? eps[eps.indexOf(ep) + 1] : null;
+          if (!ep) { go('series', page); return; }
+        }
         if (!ep) { go('player', { list: [single], index: 0 }); return; }
         var season = [];
         for (i = 0; i < eps.length; i++) if (eps[i].season === ep.season) season.push(eps[i]);
         // la fiche de la série est placée sous le lecteur : le retour y mène
-        go('series', { kind: 'series', id: h.sid, name: h.sn, icon: h.i });
+        go('series', page);
         go('player', { list: episodeList(h.sid, h.sn, h.i, season), index: season.indexOf(ep) });
       });
     },
@@ -3292,7 +3305,7 @@
     /* Fin de l'épisode : marqué comme vu, puis le suivant (sauf si on a choisi de rester) */
     next: function (stay) {
       var it = this.cur();
-      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.remove(it.key); Seen.mark(it.key); }
+      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.finish(it); Seen.mark(it.key); }
       if (!stay && this.i < this.list.length - 1) { this.i++; this.start(true); }
       else back();
     },
@@ -3359,7 +3372,7 @@
       var pos = this.lastPos, dur = v.duration;
       if (dur > 0 && isFinite(dur) && pos > dur - endMargin(dur, !!it.sid)) {
         delete P.pos[it.key];
-        Hist.remove(it.key);
+        Hist.finish(it);
         Seen.mark(it.key);
       } else if (pos > 30) {
         P.pos[it.key] = Math.floor(pos);

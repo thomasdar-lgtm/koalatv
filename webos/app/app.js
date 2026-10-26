@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.16.2';
+  var VERSION = '1.17.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -574,7 +574,35 @@
 
   var Tracks = {
     v: null, mediaId: null, sub: null, token: 0,
-    audio: [], text: [], curAudio: 0, curText: -1, applied: false,
+    audio: [], text: [], curAudio: 0, curText: -1, applied: false, probed: null, cache: {},
+    /* Liste des pistes lue dans l'en-tête du fichier MKV par le service de la TV (avant la lecture) */
+    probe: function (url, cb) {
+      var self = this, done = false;
+      function fin(t) { if (done) return; done = true; cb(t); }
+      if (!window.PalmServiceBridge || !/\.mkv(\?|$)/i.test(url)) return fin(null);
+      if (this.cache.hasOwnProperty(url)) return fin(this.cache[url]);
+      setTimeout(function () { Dbg.log('pistes : délai dépassé'); fin(null); }, 7000);
+      try {
+        var b = new window.PalmServiceBridge();
+        bridges.push(b);
+        b.onservicecallback = function (raw) {
+          var i = bridges.indexOf(b), m = null;
+          if (i >= 0) bridges.splice(i, 1);
+          try { m = JSON.parse(raw); } catch (e) { /* ignoré */ }
+          if (!m || m.returnValue === false) { Dbg.log('pistes : erreur', m && m.errorText); return fin(null); }
+          var out = { audio: [], text: [] }, k, t;
+          for (k = 0; k < (m.tracks || []).length; k++) {
+            t = m.tracks[k];
+            if (t.type === 2) out.audio.push(t); else if (t.type === 17) out.text.push(t);
+          }
+          Dbg.log('pistes du fichier', { audio: out.audio.length, text: out.text.length,
+            detail: (m.tracks || []).map(function (x) { return x.type + ':' + x.lang + (x.forced ? ':forced' : '') + (x.name ? ':' + x.name : '') + ':' + x.codec; }) });
+          self.cache[url] = out;
+          fin(out);
+        };
+        b.call('luna://com.koala.tv.service/probe', JSON.stringify({ url: url, seconds: 6 }));
+      } catch (e) { fin(null); }
+    },
     luna: function (method, params, cb) {
       try {
         var b = new window.PalmServiceBridge();
@@ -594,13 +622,45 @@
       } catch (e) { Dbg.log('media.' + method + ' exception', String(e)); return null; }
     },
     /* Nouvelle vidéo : on oublie les pistes de la précédente et on attend celles-ci */
-    reset: function (v) {
+    reset: function (v, probed) {
       this.token++;
       if (this.sub) { var i = bridges.indexOf(this.sub); if (i >= 0) bridges.splice(i, 1); this.sub = null; }
       if (this.mediaId && window.PalmServiceBridge) this.luna('unsubscribe', { mediaId: this.mediaId });
       this.v = v; this.mediaId = null; this.audio = []; this.text = []; this.curAudio = 0; this.curText = -1; this.applied = false;
+      this.probed = probed || null;
+      if (this.probed) {
+        // pistes connues par le fichier : la TV joue la piste audio par défaut
+        for (var k = 0; k < this.probed.audio.length; k++) if (this.probed.audio[k].def) { this.curAudio = k; break; }
+        this.audio = this.fromFile(this.probed.audio);
+        this.text = this.fromFile(this.probed.text);
+      }
     },
-    /* Appelé quand la vidéo est chargée : identifiant du lecteur webOS, puis abonnement aux infos des pistes */
+    /* Dès que la vidéo démarre : identifiant du lecteur webOS, puis abonnement aux infos des pistes.
+       La TV n'envoie la liste des pistes qu'une fois, au chargement : il faut être abonné avant. */
+    early: function () {
+      var self = this, token = this.token, tries = 0;
+      if (!window.PalmServiceBridge) return;
+      (function poll() {
+        if (token !== self.token || self.sub) return;
+        var id = self.v && self.v.mediaId;
+        if (id) { self.subscribe(id, token); return; }
+        if (++tries < 200) setTimeout(poll, 25);
+      })();
+    },
+    subscribe: function (id, token) {
+      var self = this;
+      this.mediaId = id;
+      Dbg.log('abonnement', { mediaId: id });
+      this.sub = this.luna('subscribe', { mediaId: id, subscribe: true }, function (m) {
+        if (token !== self.token || !m) return;
+        var info = self.find(m, 'subtitleTrackInfo'), ainfo = self.find(m, 'audioTrackInfo');
+        if (!info && !ainfo) return;
+        if (info && info.length) self.text = self.label(info);
+        if (ainfo && ainfo.length) self.audio = self.label(ainfo);
+        self.applyPrefs();
+      });
+    },
+    /* Appelé quand la vidéo est chargée */
     attach: function () {
       var self = this, token = this.token, tries = 0;
       var v0 = this.v, tt = v0 && v0.textTracks, at = v0 && v0.audioTracks;
@@ -611,16 +671,15 @@
         if (token !== self.token) return;
         var id = self.v && self.v.mediaId;
         if (!id) { if (++tries < 10) setTimeout(poll, 300); else { Dbg.log('pas de mediaId'); self.applyPrefs(); } return; }
-        self.mediaId = id;
-        self.sub = self.luna('subscribe', { mediaId: id, subscribe: true }, function (m) {
-          if (token !== self.token || !m) return;
-          var info = self.find(m, 'subtitleTrackInfo'), ainfo = self.find(m, 'audioTrackInfo');
-          if (!info && !ainfo) return;
-          if (info) self.text = self.label(info);
-          if (ainfo) self.audio = self.label(ainfo);
-          if (!self.applied) self.applyPrefs();
-        });
+        if (!self.sub) self.subscribe(id, token);
+        // pistes standard du lecteur (l'audio y est souvent) : on applique les choix retenus
+        self.applyPrefs();
       })();
+    },
+    fromFile: function (list) {
+      var arr = [], i;
+      for (i = 0; i < list.length; i++) arr.push({ language: list[i].lang, title: (list[i].forced ? 'forced ' : '') + (list[i].name || '') });
+      return this.label(arr);
     },
     find: function (o, key) {
       if (!o || typeof o !== 'object') return null;
@@ -641,16 +700,18 @@
       }
       return out;
     },
-    /* Pistes connues : service webOS si disponible, sinon pistes standard du lecteur */
+    /* Le service de la TV a-t-il donné une liste pour ce type de piste ? */
+    luna_: function (kind) { return (!!this.mediaId || !!this.probed) && (kind === 'text' ? this.text : this.audio).length > 0; },
+    /* Pistes connues : service webOS s'il en a donné, sinon pistes standard du lecteur */
     list: function (kind) {
-      if (this.mediaId) return kind === 'text' ? this.text : this.audio;
+      if (this.luna_(kind)) return kind === 'text' ? this.text : this.audio;
       var v = this.v, tr = kind === 'text' ? (v && v.textTracks) : (v && v.audioTracks), arr = [], i;
       if (!tr) return arr;
       for (i = 0; i < tr.length; i++) arr.push({ language: tr[i].language, title: tr[i].label });
       return this.label(arr);
     },
     current: function (kind) {
-      if (this.mediaId) return kind === 'text' ? this.curText : this.curAudio;
+      if (this.luna_(kind)) return kind === 'text' ? this.curText : this.curAudio;
       var tr = kind === 'text' ? this.v.textTracks : this.v.audioTracks, i;
       if (!tr) return kind === 'text' ? -1 : 0;
       for (i = 0; i < tr.length; i++) if (kind === 'text' ? tr[i].mode === 'showing' : tr[i].enabled) return i;
@@ -658,7 +719,8 @@
     },
     select: function (kind, i) {
       var self = this, tr, k;
-      if (this.mediaId) {
+      Dbg.log('choix ' + kind, { index: i, service: this.luna_(kind) });
+      if (this.luna_(kind)) {
         if (kind === 'text') {
           this.curText = i;
           if (i < 0) { this.luna('setSubtitleEnable', { mediaId: this.mediaId, enable: false }); return; }
@@ -668,6 +730,9 @@
         } else {
           this.curAudio = i;
           this.luna('selectTrack', { mediaId: this.mediaId, type: 'audio', index: i });
+          // les deux méthodes : l'une ou l'autre fonctionne selon la version de webOS
+          tr = this.v.audioTracks;
+          if (tr && tr.length === this.audio.length) for (k = 0; k < tr.length; k++) tr[k].enabled = k === i;
         }
         return;
       }
@@ -694,7 +759,7 @@
       var sp = load('slang', ''), ap = this.pref('alang');
       var ai = this.match(this.list('audio'), ap);
       if (ai >= 0 && ai !== this.current('audio')) this.select('audio', ai);
-      if (sp === 'off') { if (!this.mediaId && this.current('text') >= 0) this.select('text', -1); return; }
+      if (sp === 'off') { if (!this.luna_('text') && this.current('text') >= 0) this.select('text', -1); return; }
       var ti = this.match(this.list('text'), this.pref('slang'));
       if (ti >= 0 && ti !== this.current('text')) this.select('text', ti);
     }
@@ -2827,6 +2892,7 @@
     list: [],
     i: 0,
     retries: 0,
+    loadToken: 0,
     lastPos: 0,
     startAt: 0,
     lastT: -1,
@@ -2856,8 +2922,8 @@
         self.ctl = 'btn';
         self.act(a);
       };
-      if (v.audioTracks && v.audioTracks.addEventListener) v.audioTracks.addEventListener('addtrack', function () { if (!Tracks.mediaId) Tracks.applyPrefs(); });
-      if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', function () { if (!Tracks.mediaId) Tracks.applyPrefs(); });
+      if (v.audioTracks && v.audioTracks.addEventListener) v.audioTracks.addEventListener('addtrack', function () { if (!Tracks.luna_('audio')) Tracks.applyPrefs(); });
+      if (v.textTracks && v.textTracks.addEventListener) v.textTracks.addEventListener('addtrack', function () { if (!Tracks.luna_('text')) Tracks.applyPrefs(); });
       v.addEventListener('loadedmetadata', function () {
         Tracks.attach();
         if (self.startAt > 0) {
@@ -3045,15 +3111,22 @@
       this.lastT = -1;
       spinner(true);
       cls($('p-pause'), 'on', false);
-      Tracks.reset(v);
-      v.setAttribute('src', it.url);
-      v.load();
-      var pr = v.play();
-      if (pr && pr['catch']) pr['catch'](function () { /* la lecture démarre dès que possible */ });
       this.showInfo();
+      var self = this, token = ++this.loadToken;
+      // liste des pistes lue dans le fichier avant la lecture (l'abonnement n'autorise qu'une connexion)
+      Tracks.probe(it.url, function (probed) {
+        if (token !== self.loadToken || self.cur() !== it) return;
+        Tracks.reset(v, probed);
+        v.setAttribute('src', it.url);
+        v.load();
+        Tracks.early();
+        var pr = v.play();
+        if (pr && pr['catch']) pr['catch'](function () { /* la lecture démarre dès que possible */ });
+      });
     },
     stopVideo: function () {
       var v = this.v;
+      this.loadToken++;
       try { v.pause(); } catch (e) { /* ignoré */ }
       v.removeAttribute('src');
       try { v.load(); } catch (e2) { /* ignoré */ }

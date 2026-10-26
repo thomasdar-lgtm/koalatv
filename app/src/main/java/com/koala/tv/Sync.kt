@@ -36,7 +36,7 @@ object Sync {
     private fun encode(e: History.Entry): String = JSONObject()
         .put("t", e.title).put("u", e.url).put("i", e.icon)
         .put("p", e.pos / 1000).put("d", e.dur / 1000).put("at", e.at)
-        .put("sid", e.seriesId).put("sn", e.seriesName)
+        .put("sid", e.seriesId).put("sn", e.seriesName).put("f", if (e.done) 1 else 0)
         .toString()
 
     /** Écriture brute (présence de lecture). */
@@ -190,6 +190,7 @@ object Sync {
                             History.Entry(
                                 k, v.optString("t"), v.optString("u"), v.optString("i"),
                                 v.optLong("p") * 1000, v.optLong("d") * 1000, at, v.optString("sid"), v.optString("sn"),
+                                v.optInt("f") == 1,
                             ),
                         ),
                     )

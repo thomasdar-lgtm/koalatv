@@ -279,10 +279,11 @@ class ResumeAdapter(
 
     override fun onBindViewHolder(h: VH, position: Int) {
         val e = items[position]
-        h.name.text = e.title
+        h.name.text = if (e.done && e.seriesName.isNotEmpty()) e.seriesName else e.title
         h.bar.progress = e.progress
         val m = e.remainingMin
         h.left.text = when {
+            e.done -> "Épisode suivant"
             m >= 60 -> "Reste ${m / 60} h ${String.format("%02d", m % 60)}"
             m > 0 -> "Reste $m min"
             else -> "Reprendre à ${fmtTime(e.pos)}"

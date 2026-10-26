@@ -218,18 +218,30 @@ class HomeActivity : BaseActivity() {
                 emptyList()
             }
             val epId = e.key.removePrefix("e")
-            val ep = eps.firstOrNull { it.id == epId }
+            var ep = eps.firstOrNull { it.id == epId }
+            if (e.done) {
+                // épisode terminé : on enchaîne sur le suivant (saison suivante comprise) ; série finie → sa fiche
+                ep = ep?.let { eps.getOrNull(eps.indexOf(it) + 1) }
+                if (ep == null) {
+                    startActivity(
+                        Intent(this@HomeActivity, SeriesActivity::class.java)
+                            .putExtra("id", e.seriesId).putExtra("name", e.seriesName).putExtra("cover", e.icon),
+                    )
+                    return@launch
+                }
+            }
             if (ep == null) {
                 Nav.play(this@HomeActivity, listOf(PlayItem(e.title, e.url, false, e.key, epId, e.icon, e.seriesId, e.seriesName)), 0)
                 return@launch
             }
-            val season = eps.filter { it.season == ep.season }
+            val target: Episode = ep
+            val season = eps.filter { it.season == target.season }
             // la fiche de la série est placée sous le lecteur : le retour y mène
             startActivity(
                 Intent(this@HomeActivity, SeriesActivity::class.java)
                     .putExtra("id", e.seriesId).putExtra("name", e.seriesName).putExtra("cover", e.icon),
             )
-            Nav.play(this@HomeActivity, episodePlayList(e.seriesId, e.seriesName, e.icon, season), season.indexOf(ep))
+            Nav.play(this@HomeActivity, episodePlayList(e.seriesId, e.seriesName, e.icon, season), season.indexOf(target))
         }
     }
 

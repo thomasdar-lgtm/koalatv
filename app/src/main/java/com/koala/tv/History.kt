@@ -20,6 +20,8 @@ object History {
         /** Série : identifiant, nom et identifiant d'épisode (pour enchaîner la suite). */
         val seriesId: String = "",
         val seriesName: String = "",
+        /** Épisode terminé : la série reste dans la rangée, prête pour l'épisode suivant. */
+        val done: Boolean = false,
     ) {
         val remainingMin: Int get() = (((dur - pos).coerceAtLeast(0)) / 60_000L).toInt()
         val progress: Int get() = if (dur > 0) ((pos * 1000) / dur).toInt().coerceIn(0, 1000) else 0
@@ -41,12 +43,18 @@ object History {
         return all().filter { it.seriesId.isEmpty() || seen.add(it.seriesId) }
     }
 
+    /** Fin d'un film : il sort de la rangée. Fin d'un épisode : la série reste, prête pour l'épisode suivant. */
+    fun finish(item: PlayItem) {
+        val key = item.resumeKey ?: return
+        if (item.seriesId.isNotEmpty()) update(item, 0, 0, true) else remove(key)
+    }
+
     @Synchronized
-    fun update(item: PlayItem, pos: Long, dur: Long) {
+    fun update(item: PlayItem, pos: Long, dur: Long, done: Boolean = false) {
         val key = item.resumeKey ?: return
         val l = load()
         l.removeAll { it.key == key }
-        val e = Entry(key, item.title, item.url, item.icon, pos, dur, System.currentTimeMillis(), item.seriesId, item.seriesName)
+        val e = Entry(key, item.title, item.url, item.icon, pos, dur, System.currentTimeMillis(), item.seriesId, item.seriesName, done)
         l.add(0, e)
         while (l.size > MAX) l.removeAt(l.size - 1)
         save(l)
@@ -80,7 +88,7 @@ object History {
                 sp.edit().putLong("gone_${r.key}", r.at).apply()
             } else {
                 l.add(r.entry)
-                Prefs.setPos(r.key, r.entry.pos)
+                Prefs.setPos(r.key, if (r.entry.done) 0 else r.entry.pos)
             }
             changed = true
         }
@@ -109,6 +117,7 @@ object History {
                     Entry(
                         o.optString("k"), o.optString("t"), o.optString("u"), o.optString("i"),
                         o.optLong("p"), o.optLong("d"), o.optLong("a"), o.optString("sid"), o.optString("sn"),
+                        o.optInt("f") == 1,
                     ),
                 )
             }
@@ -125,7 +134,7 @@ object History {
             a.put(
                 JSONObject()
                     .put("k", e.key).put("t", e.title).put("u", e.url).put("i", e.icon)
-                    .put("p", e.pos).put("d", e.dur).put("a", e.at).put("sid", e.seriesId).put("sn", e.seriesName),
+                    .put("p", e.pos).put("d", e.dur).put("a", e.at).put("sid", e.seriesId).put("sn", e.seriesName).put("f", if (e.done) 1 else 0),
             )
         }
         sp.edit().putString("list", a.toString()).apply()

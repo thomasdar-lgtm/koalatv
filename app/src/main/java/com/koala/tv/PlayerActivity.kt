@@ -568,7 +568,7 @@ class PlayerActivity : BaseActivity() {
     private fun next(stay: Boolean = false) {
         current.resumeKey?.let {
             Prefs.setPos(it, 0)
-            History.remove(it)
+            History.finish(current)
             Seen.mark(it)
         }
         hideNext(false)
@@ -659,7 +659,7 @@ class PlayerActivity : BaseActivity() {
         when {
             dur > 0 && pos >= dur - endMargin(dur, item.seriesId.isNotEmpty()) -> {
                 Prefs.setPos(key, 0)
-                History.remove(key)
+                History.finish(item)
                 Seen.mark(key)
             }
             pos > 30_000 -> {

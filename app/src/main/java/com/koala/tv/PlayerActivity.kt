@@ -147,6 +147,8 @@ class PlayerActivity : BaseActivity() {
 
         index = Playback.index.coerceIn(0, items.size - 1)
         pv = findViewById(R.id.player_view)
+        // barre de progression à la télécommande : 10 s par appui
+        pv.findViewById<androidx.media3.ui.DefaultTimeBar?>(androidx.media3.ui.R.id.exo_progress)?.setKeyTimeIncrement(10_000)
         overlay = findViewById(R.id.overlay)
         ovTitle = findViewById(R.id.ov_title)
         ovPos = findViewById(R.id.ov_pos)
@@ -709,7 +711,7 @@ class PlayerActivity : BaseActivity() {
                             p.seekTo((p.currentPosition - 10_000).coerceAtLeast(0)); pv.showController(); return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> if (p != null) {
-                            p.seekTo(p.currentPosition + 30_000); pv.showController(); return true
+                            p.seekTo(p.currentPosition + 10_000); pv.showController(); return true
                         }
                     }
                 }

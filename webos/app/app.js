@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.2';
+  var VERSION = '1.18.3';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -616,13 +616,14 @@
           if (i >= 0) bridges.splice(i, 1);
           try { m = JSON.parse(raw); } catch (e) { /* ignoré */ }
           if (!m || m.returnValue === false) { Dbg.log('pistes : erreur', m && m.errorText); return fin(null); }
-          var out = { audio: [], text: [] }, k, t;
+          var out = { audio: [], text: [], dur: +m.dur || 0 }, k, t;
           for (k = 0; k < (m.tracks || []).length; k++) {
             t = m.tracks[k];
             if (t.type === 2) out.audio.push(t); else if (t.type === 17) out.text.push(t);
           }
           Dbg.log('pistes du fichier', { audio: out.audio.length, text: out.text.length,
-            detail: (m.tracks || []).map(function (x) { return x.type + ':' + x.lang + (x.forced ? ':forced' : '') + (x.name ? ':' + x.name : '') + ':' + x.codec; }) });
+            dur: Math.round(+m.dur || 0),
+            detail: (m.tracks || []).map(function (x) { return x.type + ':' + x.lang + (x.forced ? ':forced' : '') + (x.name ? ':' + x.name : '') + ':' + x.codec + (x.frames >= 0 ? ':' + x.frames + ' st' : ''); }) });
           self.cache[url] = out;
           fin(out);
         };
@@ -713,8 +714,18 @@
     },
     fromFile: function (list) {
       var arr = [], i;
-      for (i = 0; i < list.length; i++) arr.push({ language: list[i].lang, title: (list[i].forced ? 'forced ' : '') + (list[i].name || '') });
+      for (i = 0; i < list.length; i++) arr.push({ language: list[i].lang, title: this.kindOf(list[i]) || list[i].name || '' });
       return this.label(arr);
+    },
+    /*
+     * Forcés ou complets d'après le nombre de sous-titres de la piste (le nom donné dans le fichier est souvent faux) :
+     * moins de 3 par minute → forcés, plus de 6 → complets ; sinon le nom et l'indicateur du fichier.
+     */
+    kindOf: function (t) {
+      var dur = this.probed && this.probed.dur, per = t.frames >= 0 && dur > 300 ? t.frames / (dur / 60) : -1;
+      if (per >= 0 && per < 3) return 'forced';
+      if (per > 6) return /sdh|malentend|sourds|hearing|\bcc\b/i.test(t.name || '') ? 'sdh' : 'full';
+      return t.forced ? 'forced' : '';
     },
     find: function (o, key) {
       if (!o || typeof o !== 'object') return null;
@@ -730,7 +741,7 @@
         name = langName(t.language) || 'Piste ' + (i + 1);
         n = seen[name] = (seen[name] || 0) + 1;
         var extra = cleanTrackName(str(t.title || t.name || t.label || ''));
-        out.push({ lang: str(t.language).toLowerCase(), n: n, label: name + (extra ? ' · ' + extra : n > 1 ? ' · ' + n : '') });
+        out.push({ lang: str(t.language).toLowerCase(), n: n, x: extra, label: name + (extra ? ' · ' + extra : n > 1 ? ' · ' + n : '') });
       }
       return out;
     },
@@ -784,16 +795,24 @@
     pref: function (key) { var p = load(key, ''); return typeof p === 'string' ? (p ? { l: p, n: 1 } : null) : p; },
     remember: function (kind, i) {
       var l = this.list(kind)[i];
-      save(kind === 'text' ? 'slang' : 'alang', i < 0 ? 'off' : l ? { l: l.lang, n: l.n } : '');
+      save(kind === 'text' ? 'slang' : 'alang', i < 0 ? 'off' : l ? { l: l.lang, n: l.n, x: l.x || '' } : '');
     },
     match: function (list, p) {
       var best = -1, i;
       if (!p || !p.l) return -1;
+      var byN = -1;
       for (i = 0; i < list.length; i++) {
         var lang = list[i].lang;
-        if (lang === p.l || langName(lang) === langName(p.l)) { if (best < 0) best = i; if (list[i].n === p.n) return i; }
+        if (lang === p.l || langName(lang) === langName(p.l)) {
+          if (best < 0) best = i;
+          // même type (forcés, complets…) d'abord, puis même rang
+          if (p.x !== undefined && list[i].x === p.x) return i;
+          if (list[i].n === p.n && byN < 0) byN = i;
+        }
       }
-      return best;
+      // le type retenu n'existe pas dans ce fichier : on ne prend pas des forcés à la place des complets (ni l'inverse)
+      if (p.x && byN >= 0 && list[byN].x && list[byN].x !== p.x) return -1;
+      return byN >= 0 ? byN : best;
     },
     applyPrefs: function () {
       this.applied = true;

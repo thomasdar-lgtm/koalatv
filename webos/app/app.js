@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.3';
+  var VERSION = '1.18.4';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -3544,7 +3544,7 @@
         else { this.ctl = 'btn'; this.cIdx = 2; this.togglePause(); }
       } else if (c === K.LEFT || c === K.RIGHT) {
         if (this.ctl === 'btn') this.moveCtl(c === K.LEFT ? -1 : 1);
-        else this.seek(c === K.LEFT ? -10 : 30);
+        else this.seek(c === K.LEFT ? -10 : 10);
       } else if (c === K.UP) {
         this.ctl = 'bar';
         this.showInfo(this.v.paused);

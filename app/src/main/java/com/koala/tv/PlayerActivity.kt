@@ -165,12 +165,14 @@ class PlayerActivity : BaseActivity() {
         }
         pv.requestFocus()
 
-        // Infos de la chaîne visibles tant que les commandes sont affichées
+        // Infos de la chaîne visibles tant que les commandes sont affichées ; tout disparaît en même temps
+        // (sans l'animation par étapes du lecteur, qui cache les boutons puis la barre puis le reste)
+        pv.setControllerAnimationEnabled(false)
         pv.setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { visibility ->
             if (visibility == View.VISIBLE) showInfo(keep = true)
             else {
                 handler.removeCallbacks(hideOverlay)
-                handler.postDelayed(hideOverlay, 1500)
+                handler.post(hideOverlay)
             }
         })
 

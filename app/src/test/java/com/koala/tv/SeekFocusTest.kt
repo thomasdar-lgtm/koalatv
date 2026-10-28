@@ -68,4 +68,24 @@ class SeekFocusTest {
         assertTrue("le focus reste sur la barre", bar.isFocused)
         assertEquals(620_000L, fake.pos)
     }
+
+    /** Sans action : les commandes disparaissent d'un coup (pas boutons, puis barre, puis le reste). */
+    @Test
+    fun hidesAllAtOnce() {
+        val act = Robolectric.buildActivity(Activity::class.java).setup().get()
+        val pv = PlayerView(act)
+        act.setContentView(pv)
+        pv.player = FakePlayer()
+        pv.setControllerAnimationEnabled(false)
+        pv.controllerShowTimeoutMs = 5000
+        pv.showController()
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(4900))
+        val bar = pv.findViewById<DefaultTimeBar>(androidx.media3.ui.R.id.exo_progress)
+        val play = pv.findViewById<android.view.View>(androidx.media3.ui.R.id.exo_play_pause)
+        println("à 4,9 s : barre " + bar.isShown + " · bouton " + play.isShown)
+        assertTrue(bar.isShown && play.isShown)
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(300))
+        println("à 5,2 s : barre " + bar.isShown + " · bouton " + play.isShown)
+        assertTrue(!bar.isShown && !play.isShown)
+    }
 }

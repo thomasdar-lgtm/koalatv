@@ -1,0 +1,5 @@
+w: file:///home/runner/work/koalatv/koalatv/app/src/main/java/com/koala/tv/GuideView.kt:44:53 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/koalatv/koalatv/app/src/main/java/com/koala/tv/GuideView.kt:49:51 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/koalatv/koalatv/app/src/main/java/com/koala/tv/GuideView.kt:54:51 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/koalatv/koalatv/app/src/main/java/com/koala/tv/GuideView.kt:140:51 'field scaledDensity: Float' is deprecated. Deprecated in Java.
+BUILD SUCCESSFUL in 1m 1s

@@ -1,0 +1,11 @@
+ecriture: {"at":1}
+lecture: {"ping":{"at":1}}
+liste racine (doit etre refusee): {
+  "error" : "Permission denied"
+}
+ecriture facon TV LG: {"at":2}
+lecture apres TV: {"ping":{"at":1},"tv":{"at":2}}
+CORS: access-control-allow-origin: null
+nettoyage: null
+cloudflare debit: 200 20000000 octets 99934043 o/s
+cloudflare CORS: Access-Control-Allow-Origin: *

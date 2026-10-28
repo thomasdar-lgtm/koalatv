@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.SeekFocusTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-28T21:15:33" hostname="runnervmnwato" time="3.412">
+  <properties/>
+  <testcase name="seekThenStaysOnBar" classname="com.koala.tv.SeekFocusTest" time="3.287"/>
+  <testcase name="hidesAllAtOnce" classname="com.koala.tv.SeekFocusTest" time="0.125"/>
+  <system-out><![CDATA[focus après 1er appui : null id=null
+position après 2e appui : 620000 · focus barre : true
+à 4,9 s : barre true · bouton true
+à 5,2 s : barre false · bouton false
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

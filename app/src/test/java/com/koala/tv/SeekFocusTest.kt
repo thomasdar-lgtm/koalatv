@@ -28,7 +28,7 @@ class SeekFocusTest {
     private class FakePlayer : SimpleBasePlayer(Looper.getMainLooper()) {
         var pos = 600_000L
         override fun getState(): State = State.Builder()
-            .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())
+            .setAvailableCommands(Player.Commands.Builder().addAll(Player.COMMAND_PLAY_PAUSE, Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM, Player.COMMAND_GET_CURRENT_MEDIA_ITEM, Player.COMMAND_GET_TIMELINE, Player.COMMAND_SEEK_BACK, Player.COMMAND_SEEK_FORWARD).build())
             .setPlaybackState(Player.STATE_READY)
             .setPlayWhenReady(true, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
             .setPlaylist(listOf(MediaItemData.Builder("v").setMediaItem(MediaItem.fromUri("http://x/v.mp4")).setDurationUs(3_600_000_000L).setIsSeekable(true).build()))

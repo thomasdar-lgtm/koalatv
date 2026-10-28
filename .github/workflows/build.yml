@@ -33,7 +33,7 @@ jobs:
 
       - name: Screenshots
         continue-on-error: true
-        run: ./gradlew testDebugUnitTest --tests 'com.koala.tv.ScreenshotTest' --no-daemon 2>&1 | tail -80 > shots.log
+        run: ./gradlew testDebugUnitTest --tests 'com.koala.tv.ScreenshotTest' --tests 'com.koala.tv.SeekFocusTest' --no-daemon 2>&1 | tail -80 > shots.log
 
       - name: Prepare APK
         run: |
@@ -68,6 +68,7 @@ jobs:
           fi
           cp app/build/shots/*.png /tmp/report/ 2>/dev/null || true
           cp shots.log /tmp/report/ 2>/dev/null || true
+          cp app/build/test-results/testDebugUnitTest/TEST-com.koala.tv.SeekFocusTest.xml /tmp/report/focus.xml 2>/dev/null || true
           DB="https://koalatv-dae7b-default-rtdb.europe-west1.firebasedatabase.app"
           {
             echo "ecriture: $(curl -s -m 20 -X PUT -d '{"at":1}' "$DB/h/ci-check/e/ping.json")"

@@ -53,6 +53,7 @@ import kotlin.math.abs
 class PlayerActivity : BaseActivity() {
 
     private lateinit var pv: PlayerView
+    private var timeBar: androidx.media3.ui.DefaultTimeBar? = null
     private lateinit var overlay: View
     private lateinit var ovTitle: TextView
     private lateinit var ovPos: TextView
@@ -148,7 +149,8 @@ class PlayerActivity : BaseActivity() {
         index = Playback.index.coerceIn(0, items.size - 1)
         pv = findViewById(R.id.player_view)
         // barre de progression à la télécommande : 10 s par appui
-        pv.findViewById<androidx.media3.ui.DefaultTimeBar?>(androidx.media3.ui.R.id.exo_progress)?.setKeyTimeIncrement(10_000)
+        timeBar = pv.findViewById(androidx.media3.ui.R.id.exo_progress)
+        timeBar?.setKeyTimeIncrement(10_000)
         overlay = findViewById(R.id.overlay)
         ovTitle = findViewById(R.id.ov_title)
         ovPos = findViewById(R.id.ov_pos)
@@ -671,6 +673,12 @@ class PlayerActivity : BaseActivity() {
         }
     }
 
+    /** Après une avance ou un recul : commandes affichées, le curseur sur la barre (les appuis suivants continuent d'avancer). */
+    private fun showOnBar() {
+        pv.showController()
+        timeBar?.let { bar -> bar.post { bar.requestFocus() } }
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (nextOn && event.keyCode != KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
         if (event.action == KeyEvent.ACTION_DOWN && ::pv.isInitialized && items.isNotEmpty()) {
@@ -708,10 +716,10 @@ class PlayerActivity : BaseActivity() {
                     val p = player
                     when (event.keyCode) {
                         KeyEvent.KEYCODE_DPAD_LEFT -> if (p != null) {
-                            p.seekTo((p.currentPosition - 10_000).coerceAtLeast(0)); pv.showController(); return true
+                            p.seekTo((p.currentPosition - 10_000).coerceAtLeast(0)); showOnBar(); return true
                         }
                         KeyEvent.KEYCODE_DPAD_RIGHT -> if (p != null) {
-                            p.seekTo(p.currentPosition + 10_000); pv.showController(); return true
+                            p.seekTo(p.currentPosition + 10_000); showOnBar(); return true
                         }
                     }
                 }

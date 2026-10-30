@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.4';
+  var VERSION = '1.18.5';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -1292,6 +1292,7 @@
 
   /* ---------- Liste virtualisée (seuls les éléments visibles existent dans le DOM) ---------- */
 
+  var allLists = [];
   function VList(box, o) {
     var self = this;
     this.box = box;
@@ -1302,6 +1303,7 @@
     this.active = false;
     this.top = 0;
     this.nodes = {};
+    allLists.push(this);
     this.inner = document.createElement('div');
     this.inner.className = 'vinner';
     box.appendChild(this.inner);
@@ -1326,6 +1328,7 @@
   }
   VList.prototype.measure = function () {
     var h = this.box.clientHeight, w = this.box.clientWidth;
+    this.mh = h; this.mw = w;
     if (this.o.itemW) {
       // grille d'affiches : hauteur déduite de la largeur pour garder le format 2:3
       this.cols = Math.max(1, Math.floor(w / (this.o.itemW * REM)));
@@ -1348,6 +1351,13 @@
     this.render();
   };
   VList.prototype.redraw = function () { this.set(this.items, this.idx, true); };
+  /* Liste préparée pendant que son écran était caché (taille nulle) : on la remet à la bonne taille à l'affichage */
+  VList.prototype.fit = function () {
+    var h = this.box.clientHeight, w = this.box.clientWidth;
+    if (h > 0 && (h !== this.mh || w !== this.mw)) {
+      this.redraw();
+    }
+  };
   /* keepTop : survol au pointeur, la liste ne défile pas sous le curseur */
   VList.prototype.render = function (keepTop) {
     var n = this.items.length, cols = this.cols, rowH = this.rowH, vis = this.vis;
@@ -1420,6 +1430,7 @@
   function show(name) {
     for (var k in screens) if (screens.hasOwnProperty(k)) cls(screens[k].el, 'on', k === name);
     cur = screens[name];
+    for (var i = 0; i < allLists.length; i++) if (cur.el.contains(allLists[i].box)) allLists[i].fit();
   }
   function go(name, params) {
     if (cur && cur.leave) cur.leave();

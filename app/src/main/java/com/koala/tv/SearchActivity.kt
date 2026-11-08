@@ -102,12 +102,7 @@ class SearchActivity : BaseActivity() {
             showEmpty("Tape le nom d'une chaîne, d'un film ou d'une série")
             return
         }
-        val groups = Array(4) { ArrayList<Item>() }
-        for (it in pool) {
-            val g = searchRank(it, q)
-            if (g >= 0) groups[g].add(it)
-        }
-        val list = groups.flatMap { it }.take(300)
+        val list = searchSort(pool, q).take(300)
         adapter.submit(list)
         rv.scrollToPosition(0)
         tvHead.text = "Résultats"

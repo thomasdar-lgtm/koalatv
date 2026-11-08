@@ -39,7 +39,7 @@ data class Item(
     /** Mots du titre, séparés par des espaces (pour « un mot commence par… »). */
     val searchWords: String by lazy(LazyThreadSafetyMode.NONE) { " " + NON_ALNUM.replace(searchKey, " ") }
     /** Titre sans préfixe de langue (« FR | », « EN: »…) ni année finale. */
-    val searchCore: String by lazy(LazyThreadSafetyMode.NONE) { YEAR.replace(PREFIX.replace(searchKey, ""), "") }
+    val searchCore: String by lazy(LazyThreadSafetyMode.NONE) { titleCore(searchKey) }
 }
 
 data class Episode(
@@ -425,8 +425,33 @@ object Xtream {
 }
 
 private val NON_ALNUM = Regex("[^a-z0-9]+")
-private val PREFIX = Regex("^\\s*[a-z0-9+]{1,6}\\s*[|:\\-]\\s*")
-private val YEAR = Regex("\\s*[(\\[]?\\d{4}[)\\]]?\\s*$")
+private const val TAG = "(fr|fra|fre|en|eng|vf|vff|vfq|vo|vost|vostfr|multi|4k|uhd|fhd|hd|sd|hdr|dv|de|es|it|pt|ar|tr|nl|be|ch|ca|us|uk)"
+private val RE_BOX = Regex("^\\s*[|\\[(][^|\\])]{1,20}[|\\])]\\s*")
+private val RE_TAG = Regex("^\\s*$TAG\\b[a-z0-9+ \\-]{0,12}?\\s*[|:\\-]\\s*")
+private val RE_END = Regex("(\\s*([(\\[]?\\b(19|20)\\d{2}\\b[)\\]]?|[|\\[(][^|\\])]{1,20}[|\\])]?|\\b$TAG\\b))+\\s*$")
+
+/** Titre sans étiquettes : « |FR-4K DV| Game of Thrones » → « game of thrones », « FR - H (1998) » → « h » (texte déjà replié). */
+fun titleCore(f: String): String {
+    var c = f
+    while (true) {
+        val n = RE_TAG.replaceFirst(RE_BOX.replaceFirst(c, ""), "")
+        if (n == c) break
+        c = n
+    }
+    c = RE_END.replace(c, "").trim()
+    return c.ifEmpty { f }
+}
+
+/** Résultats de recherche : par pertinence, puis à pertinence égale les titres les plus courts d'abord. */
+fun searchSort(pool: List<Item>, q: String): List<Item> {
+    val groups = Array(4) { ArrayList<Item>() }
+    for (it in pool) {
+        val g = searchRank(it, q)
+        if (g >= 0) groups[g].add(it)
+    }
+    for (g in 1..3) groups[g].sortBy { it.searchCore.length }
+    return groups.flatMap { it }
+}
 
 /** Pertinence d'un élément pour la recherche : 0 (meilleur) à 3, ou -1 s'il ne correspond pas. */
 fun searchRank(it: Item, q: String): Int = when {

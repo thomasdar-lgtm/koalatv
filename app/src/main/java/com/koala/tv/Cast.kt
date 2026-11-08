@@ -136,7 +136,7 @@ class CastRemote(override val name: String, private val session: CastSession) : 
             .build()
         val req = MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true)
             .setCurrentTime(if (item.live) 0 else startMs).build()
-        kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        kotlinx.coroutines.suspendCancellableCoroutine<String?> { cont ->
             c.load(req).setResultCallback { r ->
                 if (cont.isActive) cont.resumeWith(Result.success(if (r.status.isSuccess) null else "Le Chromecast n'a pas pu lire cette vidéo"))
             }

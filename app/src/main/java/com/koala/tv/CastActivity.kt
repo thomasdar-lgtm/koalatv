@@ -172,7 +172,7 @@ class CastActivity : BaseActivity() {
     }
 
     private fun paintPlay() {
-        btnPlay.setImageResource(if (playing) R.drawable.exo_styled_controls_pause else R.drawable.exo_styled_controls_play)
+        btnPlay.setImageResource(if (playing) androidx.media3.ui.R.drawable.exo_styled_controls_pause else androidx.media3.ui.R.drawable.exo_styled_controls_play)
     }
 
     private fun jump(d: Long) {

@@ -19,10 +19,12 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.io.File
 
 /** Diffusion DLNA contre un faux téléviseur UPnP, et écran de télécommande. */
 @RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 class CastTest {
 
     /** Faux téléviseur : description, puis commandes AVTransport (état simulé). */

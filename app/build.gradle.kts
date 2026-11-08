@@ -11,8 +11,8 @@ android {
         applicationId = "com.koala.tv"
         minSdk = 21
         targetSdk = 34
-        versionCode = 41
-        versionName = "1.21.5"
+        versionCode = 42
+        versionName = "1.22.0"
     }
 
     signingConfigs {
@@ -61,6 +61,9 @@ dependencies {
     // Décodeur audio logiciel (AC3, E-AC3, DTS, TrueHD…) pour les appareils qui ne les lisent pas
     implementation("org.jellyfin.media3:media3-ffmpeg-decoder:1.6.1+2")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // diffusion vers Chromecast / Google TV
+    implementation("com.google.android.gms:play-services-cast-framework:21.5.0")
+    implementation("androidx.mediarouter:mediarouter:1.7.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.recyclerview:recyclerview:1.3.2")

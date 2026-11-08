@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Télécommande de la diffusion vers un téléviseur -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <ImageView
+        android:id="@+id/cast_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.18"
+        android:scaleType="centerCrop" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <include layout="@layout/view_back" />
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginStart="4dp"
+                    android:src="@drawable/ic_cast"
+                    android:tint="@color/accent" />
+
+                <TextView
+                    android:id="@+id/cast_device"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:singleLine="true"
+                    android:textColor="@color/accent"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="24dp" />
+
+            <ImageView
+                android:id="@+id/cast_poster"
+                android:layout_width="150dp"
+                android:layout_height="220dp"
+                android:layout_gravity="center_horizontal"
+                android:background="@drawable/poster_bg"
+                android:scaleType="centerCrop" />
+
+            <TextView
+                android:id="@+id/cast_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:fontFamily="@font/inter_bold"
+                android:gravity="center"
+                android:maxLines="2"
+                android:textColor="@color/text"
+                android:textSize="22sp" />
+
+            <TextView
+                android:id="@+id/cast_state"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:textColor="@color/muted"
+                android:textSize="15sp" />
+
+            <SeekBar
+                android:id="@+id/cast_seek"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:progressTint="@color/accent"
+                android:thumbTint="@color/accent" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp">
+
+                <TextView
+                    android:id="@+id/cast_pos"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="@color/text_soft"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/cast_dur"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_soft"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/cast_prev"
+                    style="@style/CastBtn"
+                    android:contentDescription="Épisode précédent"
+                    android:src="@drawable/exo_styled_controls_previous" />
+
+                <ImageView
+                    android:id="@+id/cast_rew"
+                    style="@style/CastBtn"
+                    android:contentDescription="Reculer de 10 secondes"
+                    android:src="@drawable/exo_styled_controls_rewind" />
+
+                <ImageView
+                    android:id="@+id/cast_play"
+                    style="@style/CastBtn"
+                    android:layout_width="72dp"
+                    android:layout_height="72dp"
+                    android:background="@drawable/btn_primary_bg"
+                    android:contentDescription="Lecture ou pause"
+                    android:padding="18dp"
+                    android:src="@drawable/exo_styled_controls_pause"
+                    android:tint="@color/bg" />
+
+                <ImageView
+                    android:id="@+id/cast_fwd"
+                    style="@style/CastBtn"
+                    android:contentDescription="Avancer de 30 secondes"
+                    android:src="@drawable/exo_styled_controls_fastforward" />
+
+                <ImageView
+                    android:id="@+id/cast_next"
+                    style="@style/CastBtn"
+                    android:contentDescription="Épisode suivant"
+                    android:src="@drawable/exo_styled_controls_next" />
+            </LinearLayout>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:minHeight="24dp" />
+
+            <TextView
+                android:id="@+id/cast_here"
+                style="@style/Btn"
+                android:layout_width="match_parent"
+                android:layout_marginTop="12dp"
+                android:text="Regarder sur ce téléphone" />
+
+            <TextView
+                android:id="@+id/cast_stop"
+                style="@style/BtnPrimary"
+                android:layout_width="match_parent"
+                android:layout_marginTop="10dp"
+                android:text="Arrêter la diffusion" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

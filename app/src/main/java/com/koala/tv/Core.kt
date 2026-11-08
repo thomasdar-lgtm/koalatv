@@ -11,8 +11,14 @@ import android.view.View
 import android.widget.Toast
 
 class App : Application() {
+    companion object {
+        lateinit var ctx: android.content.Context
+            private set
+    }
+
     override fun onCreate() {
         super.onCreate()
+        ctx = this
         Prefs.init(this)
         Lists.init(this)
         History.init(this)

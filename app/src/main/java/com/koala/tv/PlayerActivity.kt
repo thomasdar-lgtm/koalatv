@@ -163,6 +163,12 @@ class PlayerActivity : BaseActivity() {
                 setOnClickListener { enterPip() }
             }
         }
+        if (isTouch) {
+            findViewById<View>(R.id.btn_cast).apply {
+                visibility = View.VISIBLE
+                setOnClickListener { pickDevice() }
+            }
+        }
         pv.requestFocus()
 
         // Infos de la chaîne visibles tant que les commandes sont affichées ; tout disparaît en même temps
@@ -443,6 +449,88 @@ class PlayerActivity : BaseActivity() {
             if (sp in 1..5) sb.setSpan(ForegroundColorSpan(accent), start, start + sp, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         return sb
+    }
+
+    // ---------- Diffusion vers un téléviseur (téléphone et tablette) ----------
+
+    private fun pickDevice() {
+        val found = ArrayList<Device>()
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val status = TextView(this).apply {
+            setTextColor(ContextCompat.getColor(context, R.color.muted))
+            textSize = 15f
+            setPadding(pad, pad / 2, pad, pad / 2)
+            text = "Recherche sur le Wi-Fi…"
+        }
+        val list = android.widget.ListView(this)
+        val adapter = object : android.widget.BaseAdapter() {
+            override fun getCount() = found.size
+            override fun getItem(i: Int) = found[i]
+            override fun getItemId(i: Int) = i.toLong()
+            override fun getView(i: Int, v: View?, parent: android.view.ViewGroup): View {
+                val t = (v as? TextView) ?: TextView(this@PlayerActivity).apply {
+                    setPadding(pad, pad * 3 / 5, pad, pad * 3 / 5)
+                    textSize = 17f
+                    setTextColor(ContextCompat.getColor(context, R.color.text))
+                }
+                val d = found[i]
+                val sb = SpannableStringBuilder(d.name).append("   ")
+                val s0 = sb.length
+                sb.append(d.kind)
+                sb.setSpan(ForegroundColorSpan(ContextCompat.getColor(this@PlayerActivity, R.color.muted)), s0, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                t.text = sb
+                return t
+            }
+        }
+        list.adapter = adapter
+        val box = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            addView(status)
+            addView(list)
+        }
+        val scan = DeviceScan(this) { l ->
+            found.clear(); found.addAll(l); adapter.notifyDataSetChanged()
+            status.text = if (l.isEmpty()) "Recherche sur le Wi-Fi…" else "Choisis le téléviseur"
+        }
+        val dlg = AlertDialog.Builder(this)
+            .setTitle("Diffuser sur")
+            .setView(box)
+            .setNegativeButton("Annuler", null)
+            .create()
+        dlg.setOnDismissListener { scan.stop() }
+        handler.postDelayed({
+            if (dlg.isShowing && found.isEmpty()) status.text = "Aucun téléviseur trouvé. Le téléphone doit être sur le même Wi-Fi que le téléviseur."
+        }, 9000)
+        list.setOnItemClickListener { _, _, i, _ ->
+            val d = found[i]
+            status.text = "Connexion à ${d.name}…"
+            list.isEnabled = false
+            lifecycleScope.launch {
+                val r = d.connect()
+                if (r == null) {
+                    status.text = "Impossible de se connecter à ${d.name}"
+                    list.isEnabled = true
+                    return@launch
+                }
+                dlg.dismiss()
+                startCast(r)
+            }
+        }
+        dlg.show()
+        scan.start()
+    }
+
+    /** La lecture passe sur le téléviseur : le téléphone arrête la sienne (une seule connexion à la fois). */
+    private fun startCast(r: Remote) {
+        saveProgress()
+        val p = player
+        Casting.remote = r
+        Casting.items = items
+        Casting.index = index
+        Casting.startAt = if (current.live) 0 else (p?.currentPosition ?: lastPos)
+        releasePlayer()
+        startActivity(android.content.Intent(this, CastActivity::class.java).putExtra("send", true))
+        finish()
     }
 
     // ---------- Image dans l'image (téléphone et tablette) ----------

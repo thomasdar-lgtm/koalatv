@@ -1,6 +1,6 @@
 {
   "name": "com.koala.tv.service",
-  "version": "1.18.5",
+  "version": "1.18.6",
   "description": "KoalaTV network service",
   "main": "index.js"
 }

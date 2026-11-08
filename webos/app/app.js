@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.5';
+  var VERSION = '1.18.6';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -1953,6 +1953,23 @@
    * Recherche : titre exact, titre qui commence par la saisie, mot qui commence par la saisie,
    * puis (à partir de 2 lettres) titre qui contient la saisie. q est déjà « plié » (minuscules, sans accents).
    */
+  /*
+   * Titre sans étiquettes : « |FR-4K DV| Game of Thrones » → « game of thrones », « FR - H (1998) » → « h ».
+   * (texte déjà sans accents ni majuscules)
+   */
+  var TAG = '(fr|fra|fre|en|eng|vf|vff|vfq|vo|vost|vostfr|multi|4k|uhd|fhd|hd|sd|hdr|dv|de|es|it|pt|ar|tr|nl|be|ch|ca|us|uk)';
+  var RE_BOX = /^\s*[|\[(][^|\])]{1,20}[|\])]\s*/, RE_TAG = new RegExp('^\\s*' + TAG + '\\b[a-z0-9+ \\-]{0,12}?\\s*[|:\\-]\\s*');
+  var RE_END = new RegExp('(\\s*([\\(\\[]?\\b(19|20)\\d{2}\\b[\\)\\]]?|[|\\[(][^|\\])]{1,20}[|\\])]?|\\b' + TAG + '\\b))+\\s*$');
+  function titleCore(f) {
+    var c = f, prev;
+    do { prev = c; c = c.replace(RE_BOX, '').replace(RE_TAG, ''); } while (c !== prev);
+    c = c.replace(RE_END, '').replace(/^\s+|\s+$/g, '');
+    return c || f;
+  }
+  function stableByLen(a) {
+    for (var i = 0; i < a.length; i++) a[i]._o = i;
+    return a.sort(function (x, y) { return x._c.length - y._c.length || x._o - y._o; });
+  }
   function searchList(pool, q, max) {
     var groups = [[], [], [], []], wq = ' ' + q;
     for (var i = 0; i < pool.length; i++) {
@@ -1960,13 +1977,14 @@
       if (it._f === undefined) {
         it._f = fold(it.name);
         it._w = ' ' + it._f.replace(/[^a-z0-9]+/g, ' ');
-        // sans préfixe de langue (« FR | », « EN: »…) ni année finale
-        it._c = it._f.replace(/^\s*[a-z0-9+]{1,6}\s*[|:\-]\s*/, '').replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/, '');
+        it._c = titleCore(it._f);
       }
       var g = it._c === q || it._f === q ? 0 : it._c.indexOf(q) === 0 || it._f.indexOf(q) === 0 ? 1 :
         it._w.indexOf(wq) >= 0 ? 2 : q.length > 1 && it._f.indexOf(q) >= 0 ? 3 : -1;
       if (g >= 0) groups[g].push(it);
     }
+    // à pertinence égale, les titres les plus courts d'abord (« H » avant « Hawaii 5-0 »)
+    for (var g2 = 1; g2 < 4; g2++) groups[g2] = stableByLen(groups[g2]);
     var out = groups[0].concat(groups[1], groups[2], groups[3]);
     return max ? out.slice(0, max) : out;
   }

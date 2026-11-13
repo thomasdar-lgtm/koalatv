@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.7';
+  var VERSION = '1.19.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -241,7 +241,7 @@
         if (err) return;
         remote = remote || {};
         var changed = Seen.merge(remote), k;
-        for (k in Seen.m) if (Seen.m.hasOwnProperty(k) && !remote[k]) self.put('w/' + k, { at: Seen.m[k] });
+        for (k in Seen.m) if (Seen.m.hasOwnProperty(k) && !(remote[k] && remote[k].at >= Seen.m[k])) self.put('w/' + k, { at: Seen.m[k] });
         if (changed && cb) cb();
       });
     },
@@ -459,11 +459,31 @@
       save('seen', this.m);
       Sync.put('w/' + key, { at: this.m[key] });
     },
+    /* Dernière fois qu'une série a été regardée (« s » + identifiant) : mise à jour à chaque épisode fini */
+    touch: function (key, at) {
+      at = at || Date.now();
+      if (!key || (this.m[key] || 0) >= at) return;
+      this.m[key] = at;
+      save('seen', this.m);
+      Sync.put('w/' + key, { at: at });
+    },
     merge: function (remote) {
       var changed = false, k;
-      for (k in remote) if (remote.hasOwnProperty(k) && remote[k] && remote[k].at > 0 && !this.m[k]) { this.m[k] = remote[k].at; changed = true; }
+      for (k in remote) if (remote.hasOwnProperty(k) && remote[k] && remote[k].at > (this.m[k] || 0)) { this.m[k] = remote[k].at; changed = true; }
       if (changed) save('seen', this.m);
       return changed;
+    },
+    /* Historique : films et séries vus, du plus récent au plus ancien */
+    watched: function (items, kind) {
+      var pre = kind === 'series' ? 's' : 'm', out = [], i, at;
+      for (i = 0; i < items.length; i++) { at = this.m[pre + items[i].id]; if (at) out.push({ it: items[i], at: at }); }
+      out.sort(function (a, b) { return b.at - a.at; });
+      for (i = 0; i < out.length; i++) out[i] = out[i].it;
+      return out;
+    },
+    /* Séries vues avant l'historique : retrouvées dans « Reprendre » (épisodes finis) */
+    backfill: function () {
+      for (var i = 0; i < P.hist.length; i++) { var h = P.hist[i]; if (h.sid && h.f && !this.m['s' + h.sid]) this.touch('s' + h.sid, h.a); }
     }
   };
 
@@ -507,6 +527,7 @@
     }
   };
   Hidden.init();
+  Seen.backfill();
   Presence.init();
 
   /** Liste de lecture d'une saison : les épisodes s'enchaînent. */
@@ -2393,6 +2414,7 @@
         }
       }
       list.push({ id: '*fav', name: 'Favoris', n: favN });
+      if (kind !== 'live') list.push({ id: '*seen', name: 'Déjà vus', n: Seen.watched(pool, kind).length });
       list.push({ id: '*all', name: 'Tout', n: pool.length });
       for (i = 0; i < cats.length; i++) {
         if (!counts[cats[i].id] || Hidden.isHidden(kind, cats[i].id)) continue;
@@ -2412,13 +2434,15 @@
         this.items.render();
         return;
       }
-      var start = favN ? 0 : (list.length > 2 ? 2 : 1);
+      // première catégorie du fournisseur (après Favoris, Déjà vus et Tout), sinon Tout
+      var allAt = kind === 'live' ? 1 : 2, start = favN ? 0 : (list.length > allAt + 1 ? allAt + 1 : allAt);
       this.cats.set(list, start);
       this.pickCat(start, true);
     },
     resume: function () {
       if (this.catList.length) {
         this.catList[0].n = this.countFavs();
+        if (this.catList[1] && this.catList[1].id === '*seen') this.catList[1].n = Seen.watched(this.pool, this.kind).length;
         this.cats.redraw();
       }
       this.items.redraw();
@@ -2457,9 +2481,11 @@
       var list = [], k;
       if (c.id === '*all') list = this.pool;
       else if (c.id === '*fav') { for (k = 0; k < this.pool.length; k++) if (isFav(this.pool[k])) list.push(this.pool[k]); }
+      else if (c.id === '*seen') list = Seen.watched(this.pool, this.kind);
       else { for (k = 0; k < this.all.length; k++) if (this.all[k].cat === c.id) list.push(this.all[k]); }
       this.showItems(list, c.name, c.id === '*fav'
         ? 'Aucun favori pour le moment.\nMaintiens OK ou appuie sur le bouton rouge pour en ajouter.'
+        : c.id === '*seen' ? (this.kind === 'series' ? 'Aucune série vue pour le moment.' : 'Aucun film vu pour le moment.')
         : 'Cette catégorie est vide.', keepTop);
       if (!stayInCats && list.length) this.setZone('items');
     },
@@ -2721,6 +2747,11 @@
         if (err) { self.msg('Impossible de charger la série.\n' + err.message + '\n\nOK pour réessayer'); self.zone = 'retry'; return; }
         if (!eps.length) { self.msg('Aucun épisode disponible.'); return; }
         self.eps = eps;
+        if (!Seen.has('s' + it.id)) {
+          var last = 0;
+          for (var j = 0; j < eps.length; j++) last = Math.max(last, Seen.m['e' + eps[j].id] || 0);
+          if (last) Seen.touch('s' + it.id, last);
+        }
         var seen = {}, list = [];
         for (var i = 0; i < eps.length; i++) {
           var s = eps[i].season;
@@ -3412,7 +3443,7 @@
     /* Fin de l'épisode : marqué comme vu, puis le suivant (sauf si on a choisi de rester) */
     next: function (stay) {
       var it = this.cur();
-      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.finish(it); Seen.mark(it.key); }
+      if (it.key) { delete P.pos[it.key]; save('pos', P.pos); Hist.finish(it); Seen.mark(it.key); if (it.sid) Seen.touch('s' + it.sid); }
       if (!stay && this.i < this.list.length - 1) { this.i++; this.start(true); }
       else back();
     },
@@ -3481,6 +3512,7 @@
         delete P.pos[it.key];
         Hist.finish(it);
         Seen.mark(it.key);
+        if (it.sid) Seen.touch('s' + it.sid);
       } else if (pos > 30) {
         P.pos[it.key] = Math.floor(pos);
         Hist.update(it, pos, isFinite(dur) ? dur : 0);

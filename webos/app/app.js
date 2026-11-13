@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.18.6';
+  var VERSION = '1.18.7';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -81,6 +81,25 @@
       save('hgone', this.gone);
       Sync.put('e/' + key, { gone: true, at: at });
     },
+    /* Séries terminées sur un autre appareil ou avant cette version : vérifiées une fois, retirées si plus rien à voir */
+    checked: {},
+    /* Tous les épisodes commencés d'une série sortent de la rangée */
+    removeSeries: function (sid) {
+      var keys = [], i;
+      for (i = 0; i < P.hist.length; i++) if (P.hist[i].sid === sid) keys.push(P.hist[i].k);
+      for (i = 0; i < keys.length; i++) this.remove(keys[i]);
+    },
+    checkDone: function (redraw) {
+      var self = this, l = this.shown(), i;
+      for (i = 0; i < l.length; i++) (function (h) {
+        if (!h.f || !h.sid || self.checked[h.k]) return;
+        self.checked[h.k] = 1;
+        X.episodes(h.sid, function (err, eps) {
+          if (err || !eps || !eps.length) return;
+          if ('e' + eps[eps.length - 1].id === h.k) { self.removeSeries(h.sid); redraw(); }
+        });
+      })(l[i]);
+    },
     /* Rangée « Reprendre » : une seule carte par série, son dernier épisode regardé */
     shown: function () {
       var out = [], sids = {}, i, h;
@@ -93,8 +112,14 @@
     },
     /* Fin d'un film : il sort de la rangée. Fin d'un épisode : la série reste, prête pour l'épisode suivant. */
     finish: function (it) {
-      if (it.sid) this.update(it, 0, 0, true);
-      else this.remove(it.key);
+      if (!it.sid) { this.remove(it.key); return; }
+      this.update(it, 0, 0, true);
+      // dernier épisode de la série : elle sort de la rangée
+      var self = this;
+      X.episodes(it.sid, function (err, eps) {
+        if (err || !eps || !eps.length) return;
+        if ('e' + eps[eps.length - 1].id === it.key) self.removeSeries(it.sid);
+      });
     },
     update: function (it, pos, dur, done) {
       var e = { k: it.key, t: it.title, u: it.url, i: it.icon || '', p: Math.floor(pos), d: Math.floor(dur || 0), sid: it.sid || '', sn: it.sname || '', a: Date.now() };
@@ -1706,6 +1731,8 @@
       if (it) go(it.kind === 'series' ? 'series' : 'movie', it);
     },
     drawResume: function () {
+      var me = this;
+      Hist.checkDone(function () { me.drawResume(); if (me.zone === 'resume' && me.rIdx >= (me.hl || []).length) me.rIdx = Math.max(0, me.hl.length - 1); me.paint(); });
       var l = this.hl = Hist.shown(), h = '';
       for (var i = 0; i < l.length; i++) {
         var it = l[i], pct = it.d > 0 ? Math.min(100, it.p / it.d * 100) : 0;
@@ -1800,7 +1827,7 @@
         if (h.f) {
           // épisode terminé : on enchaîne sur le suivant (saison suivante comprise) ; série finie → sa fiche
           ep = ep ? eps[eps.indexOf(ep) + 1] : null;
-          if (!ep) { go('series', page); return; }
+          if (!ep) { Hist.removeSeries(h.sid); screens.home.drawResume(); go('series', page); return; }
         }
         if (!ep) { go('player', { list: [single], index: 0 }); return; }
         var season = [];
@@ -3122,6 +3149,13 @@
         for (k2 = 0; k2 < self.ACT.length; k2++) if (self.ACT[k2] === a && self.usable(a) && (self.cIdx !== k2 || self.ctl !== 'btn')) {
           self.cIdx = k2; self.ctl = 'btn'; self.showInfo(self.v.paused);
         }
+      });
+      // clic du pointeur sur l'image (au-dessus de la barre et des boutons) : lecture ou pause
+      this.el.addEventListener('click', function (e) {
+        if (!self.active || self.cur().live) return;
+        var n = e.target;
+        while (n && n !== self.el) { if (n.id === 'p-vod' || n.id === 'p-next') return; n = n.parentNode; }
+        self.togglePause();
       });
       $('p-ctl').onclick = function (e) {
         var n = e.target;

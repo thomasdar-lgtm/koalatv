@@ -203,6 +203,7 @@ class HomeActivity : BaseActivity() {
         val l = History.shown()
         resumeAdapter.submit(l)
         resumeBox.visibility = if (l.isEmpty()) View.GONE else View.VISIBLE
+        if (l.any { it.done }) lifecycleScope.launch { if (History.checkDone()) refreshResume() }
     }
 
     private fun resume(e: History.Entry) {
@@ -223,6 +224,8 @@ class HomeActivity : BaseActivity() {
                 // épisode terminé : on enchaîne sur le suivant (saison suivante comprise) ; série finie → sa fiche
                 ep = ep?.let { eps.getOrNull(eps.indexOf(it) + 1) }
                 if (ep == null) {
+                    History.removeSeries(e.seriesId)
+                    refreshResume()
                     startActivity(
                         Intent(this@HomeActivity, SeriesActivity::class.java)
                             .putExtra("id", e.seriesId).putExtra("name", e.seriesName).putExtra("cover", e.icon),

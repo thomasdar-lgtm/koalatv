@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 /** Films et épisodes commencés, du plus récent au plus ancien (rangée « Reprendre »). */
 object History {
@@ -46,7 +47,37 @@ object History {
     /** Fin d'un film : il sort de la rangée. Fin d'un épisode : la série reste, prête pour l'épisode suivant. */
     fun finish(item: PlayItem) {
         val key = item.resumeKey ?: return
-        if (item.seriesId.isNotEmpty()) update(item, 0, 0, true) else remove(key)
+        if (item.seriesId.isEmpty()) { remove(key); return }
+        update(item, 0, 0, true)
+        // dernier épisode de la série : elle sort de la rangée
+        val sid = item.seriesId
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            if (isLastEpisode(sid, key)) removeSeries(sid)
+        }
+    }
+
+    suspend fun isLastEpisode(sid: String, key: String): Boolean = try {
+        val eps = Xtream.seriesEpisodes(sid)
+        eps.isNotEmpty() && "e" + eps.last().id == key
+    } catch (e: Exception) {
+        false
+    }
+
+    /** Tous les épisodes commencés d'une série sortent de la rangée. */
+    fun removeSeries(sid: String) {
+        for (k in all().filter { it.seriesId == sid }.map { it.key }) remove(k)
+    }
+
+    /** Séries terminées (sur un autre appareil ou avant cette version) : vérifiées une fois par lancement. */
+    private val checked = HashSet<String>()
+
+    suspend fun checkDone(): Boolean {
+        var changed = false
+        for (e in shown()) {
+            if (!e.done || e.seriesId.isEmpty() || !checked.add(e.key)) continue
+            if (isLastEpisode(e.seriesId, e.key)) { removeSeries(e.seriesId); changed = true }
+        }
+        return changed
     }
 
     @Synchronized

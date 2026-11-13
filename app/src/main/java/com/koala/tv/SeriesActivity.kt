@@ -93,6 +93,11 @@ class SeriesActivity : BaseActivity() {
             try {
                 episodes = Xtream.seriesEpisodes(seriesId)
                 Sync.pullSeen()
+                // série dont des épisodes ont été vus : elle entre dans l'historique
+                if (!Seen.has("s$seriesId")) {
+                    val last = episodes.maxOfOrNull { Seen.at("e${it.id}") } ?: 0
+                    if (last > 0) Seen.touch("s$seriesId", last)
+                }
                 seasons = episodes.map { it.season }.distinct().sorted()
                 if (episodes.isEmpty()) {
                     showMessage("Aucun épisode disponible.", false)

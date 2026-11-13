@@ -86,7 +86,7 @@ object Sync {
             val remote = HashMap<String, Long>()
             for (k in o.keys()) o.optJSONObject(k)?.optLong("at")?.takeIf { it > 0 }?.let { remote[k] = it }
             val changed = Seen.merge(remote)
-            for ((k, at) in Seen.all()) if (!remote.containsKey(k)) pushSeen(k, at)
+            for ((k, at) in Seen.all()) if ((remote[k] ?: 0) < at) pushSeen(k, at)
             changed
         } catch (e: Exception) {
             false

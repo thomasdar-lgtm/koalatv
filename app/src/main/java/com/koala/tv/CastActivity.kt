@@ -194,7 +194,7 @@ class CastActivity : BaseActivity() {
             lastDur > 0 && lastPos >= lastDur - endMargin(lastDur, item.seriesId.isNotEmpty()) -> {
                 Prefs.setPos(key, 0)
                 History.finish(item)
-                Seen.mark(key)
+                Seen.finished(item)
             }
             lastPos > 30_000 -> {
                 Prefs.setPos(key, lastPos)

@@ -24,6 +24,7 @@ class BrowseActivity : BaseActivity() {
     companion object {
         private const val FAV = "__fav"
         private const val ALL = "__all"
+        private const val SEEN = "__seen"
     }
 
     private lateinit var kind: Kind
@@ -215,6 +216,7 @@ class BrowseActivity : BaseActivity() {
         val favN = pool.count { favs.contains(it.favKey) }
         val built = ArrayList<Category>()
         built.add(Category(FAV, "Favoris", favN))
+        if (kind != Kind.LIVE) built.add(Category(SEEN, "Déjà vus", Seen.watched(pool, kind).size))
         built.add(Category(ALL, "Tout", pool.size))
         for (cat in data.cats) {
             val n = counts[cat.id] ?: 0
@@ -224,18 +226,20 @@ class BrowseActivity : BaseActivity() {
         cats = built
         catAdapter.submit(built)
         if (initial) {
+            // première catégorie du fournisseur (après Favoris, Déjà vus et Tout), sinon Tout
+            val allAt = built.indexOfFirst { it.id == ALL }
             val start = when {
                 restoreCat in built.indices -> restoreCat
                 favN > 0 -> 0
-                built.size > 2 -> 2
-                else -> 1
+                built.size > allAt + 1 -> allAt + 1
+                else -> allAt
             }
             selectCategory(start)
             rvCats.scrollToPosition(start)
             if (sidePanel) rvCats.post { rvCats.findViewHolderForAdapterPosition(start)?.itemView?.requestFocus() }
         } else {
             // liste rafraîchie en arrière-plan : on reste sur la même catégorie, sans remonter en haut
-            val idx = built.indexOfFirst { it.id == prevId }.takeIf { it >= 0 } ?: 1
+            val idx = built.indexOfFirst { it.id == prevId }.takeIf { it >= 0 } ?: built.indexOfFirst { it.id == ALL }
             selectCategory(idx, clearSearch = false, keepScroll = true)
         }
     }
@@ -263,11 +267,14 @@ class BrowseActivity : BaseActivity() {
                 pool.filter { favs.contains(it.favKey) }
             }
             ALL -> pool
+            SEEN -> Seen.watched(pool, kind)
             else -> allItems.filter { it.categoryId == c.id }
         }
-        val empty = if (c.id == FAV) {
-            "Aucun favori pour le moment.\nAppui long sur une chaîne, un film ou une série pour l'ajouter."
-        } else "Cette catégorie est vide."
+        val empty = when (c.id) {
+            FAV -> "Aucun favori pour le moment.\nAppui long sur une chaîne, un film ou une série pour l'ajouter."
+            SEEN -> if (kind == Kind.SERIES) "Aucune série vue pour le moment." else "Aucun film vu pour le moment."
+            else -> "Cette catégorie est vide."
+        }
         showItems(list, c.name, empty, keepScroll)
         if (!sidePanel && !keepScroll) rvCats.smoothScrollToPosition(pos)
     }
@@ -309,6 +316,16 @@ class BrowseActivity : BaseActivity() {
             if (list.size != itemAdapter.itemCount) showItems(list, cats[0].name, "Aucun favori pour le moment.")
         }
         cats = cats.mapIndexed { i, c -> if (i == 0) c.copy(count = n) else c }
+        // « Déjà vus » : un film ou un épisode a pu être fini depuis
+        val si = cats.indexOfFirst { it.id == SEEN }
+        if (si >= 0) {
+            val sn = Seen.watched(pool, kind).size
+            if (cats[si].count != sn) {
+                catAdapter.item(si)?.let { catAdapter.update(si, it.copy(count = sn)) }
+                cats = cats.mapIndexed { i, c -> if (i == si) c.copy(count = sn) else c }
+                if (catIdx == si && etSearch.text.isEmpty()) selectCategory(si, clearSearch = false, keepScroll = true)
+            }
+        }
     }
 
     private fun focusFirstItem() {

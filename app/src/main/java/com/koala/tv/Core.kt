@@ -24,6 +24,7 @@ class App : Application() {
         History.init(this)
         Hidden.init(this)
         Seen.init(this)
+        Seen.backfill()
         Presence.init(this)
     }
 }

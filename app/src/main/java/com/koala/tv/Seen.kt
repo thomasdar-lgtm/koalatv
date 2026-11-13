@@ -34,11 +34,41 @@ object Seen {
         Sync.pushSeen(key, at)
     }
 
-    /** Ajoute ce qui a été vu ailleurs. Renvoie true si quelque chose a changé. */
+    /** Fin d'un film ou d'un épisode ; une série garde la date de son dernier épisode fini (« s » + identifiant). */
+    fun finished(item: PlayItem) {
+        val key = item.resumeKey ?: return
+        mark(key)
+        if (item.seriesId.isNotEmpty()) touch("s" + item.seriesId)
+    }
+
+    @Synchronized
+    fun touch(key: String, at: Long = System.currentTimeMillis()) {
+        if ((m[key] ?: 0) >= at) return
+        m[key] = at
+        save()
+        Sync.pushSeen(key, at)
+    }
+
+    @Synchronized
+    fun at(key: String): Long = m[key] ?: 0
+
+    /** Historique : films ou séries vus, du plus récent au plus ancien. */
+    @Synchronized
+    fun watched(items: List<Item>, kind: Kind): List<Item> {
+        val pre = if (kind == Kind.SERIES) "s" else "m"
+        return items.mapNotNull { i -> m[pre + i.id]?.let { i to it } }.sortedByDescending { it.second }.map { it.first }
+    }
+
+    /** Séries vues avant l'historique : retrouvées dans « Reprendre » (épisodes finis). */
+    fun backfill() {
+        for (e in History.all()) if (e.done && e.seriesId.isNotEmpty() && !has("s" + e.seriesId)) touch("s" + e.seriesId, e.at)
+    }
+
+    /** Ajoute ce qui a été vu ailleurs (date la plus récente). Renvoie true si quelque chose a changé. */
     @Synchronized
     fun merge(remote: Map<String, Long>): Boolean {
         var changed = false
-        for ((k, at) in remote) if (!m.containsKey(k) && at > 0) {
+        for ((k, at) in remote) if (at > (m[k] ?: 0)) {
             m[k] = at; changed = true
         }
         if (changed) save()

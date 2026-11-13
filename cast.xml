@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.CastTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T20:22:42" hostname="runnervmccnms" time="11.338">
+  <properties/>
+  <testcase name="dlnaFlow" classname="com.koala.tv.CastTest" time="6.809"/>
+  <testcase name="remoteScreen" classname="com.koala.tv.CastTest" time="4.486"/>
+  <testcase name="liveUrls" classname="com.koala.tv.CastTest" time="0.042"/>
+  <system-out><![CDATA[commandes : [Stop, SetAVTransportURI, Play, GetTransportInfo, Seek]
+télécommande : position 12:34
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

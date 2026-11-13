@@ -1,0 +1,168 @@
+===== lgmwar1m1s 1.18.5 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+14:52:28 pistes du fichier {"audio":1,"text":1,"dur":4626,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","17:fr:French Full:S_TEXT/ASS:766 st"]}
+14:52:29 abonnement {"mediaId":"_0Dbz9sJrsjwloy"}
+14:52:29 media.subscribe → {"mediaId":"_0Dbz9sJrsjwloy","subscribe":true}
+14:52:29 media.subscribe ← {"subscription":true}
+14:52:29 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Dbz9sJrsjwloy"}
+14:52:29 media.subscribe ← {"resourceInfo":{"context":"_0Dbz9sJrsjwloy","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_0Dbz9sJrsjwloy"}}
+
+14:52:29 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_0Dbz9sJrsjwloy"}}
+
+14:52:29 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0Dbz9sJrsjwloy"}}
+
+14:52:30 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0Dbz9sJrsjwloy"}}
+
+14:52:30 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4625504,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2158,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_0Dbz9sJrsjwloy"}}
+
+14:52:30 vidéo chargée {"bridge":true,"mediaId":"_0Dbz9sJrsjwloy","textTracks":0,"audioTracks":1,"src":".mkv"}
+19:46:51 media.subscribe ← {"serviceName":"com.webos.pipeline._0Dbz9sJrsjwloy","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0Dbz9sJrsjwloy is not running."}
+20:09:57 media.unsubscribe → {"mediaId":"_0Dbz9sJrsjwloy"}
+20:09:57 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0Dbz9sJrsjwloy"}
+20:09:57 abonnement {"mediaId":"_fB6Ac2o44luimE"}
+20:09:57 media.subscribe → {"mediaId":"_fB6Ac2o44luimE","subscribe":true}
+20:09:57 media.subscribe ← {"subscription":true}
+20:09:57 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fB6Ac2o44luimE"}
+20:09:58 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_fB6Ac2o44luimE"}}
+
+20:09:58 media.subscribe ← {"resourceInfo":{"context":"_fB6Ac2o44luimE","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_fB6Ac2o44luimE"}}
+
+20:09:58 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fB6Ac2o44luimE"}}
+
+20:09:58 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_fB6Ac2o44luimE"}}
+
+20:09:58 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4625504,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2158,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_fB6Ac2o44luimE"}}
+
+20:09:58 vidéo chargée {"bridge":true,"mediaId":"_fB6Ac2o44luimE","textTracks":0,"audioTracks":1,"src":".mkv"}
+20:21:44 media.subscribe ← {"serviceName":"com.webos.pipeline._fB6Ac2o44luimE","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._fB6Ac2o44luimE is not running."}
+20:21:50 media.unsubscribe → {"mediaId":"_fB6Ac2o44luimE"}
+20:21:50 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_fB6Ac2o44luimE"}
+20:21:50 abonnement {"mediaId":"_fYbW5L51X4Qx0t"}
+20:21:50 media.subscribe → {"mediaId":"_fYbW5L51X4Qx0t","subscribe":true}
+20:21:50 media.subscribe ← {"subscription":true}
+20:21:50 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fYbW5L51X4Qx0t"}
+20:21:51 media.subscribe ← {"resourceInfo":{"context":"_fYbW5L51X4Qx0t","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_fYbW5L51X4Qx0t"}}
+
+20:21:51 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_fYbW5L51X4Qx0t"}}
+
+20:21:51 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fYbW5L51X4Qx0t"}}
+
+20:21:51 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_fYbW5L51X4Qx0t"}}
+
+20:21:51 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4625504,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2158,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_fYbW5L51X4Qx0t"}}
+
+20:21:51 vidéo chargée {"bridge":true,"mediaId":"_fYbW5L51X4Qx0t","textTracks":0,"audioTracks":1,"src":".mkv"}
+20:43:55 media.subscribe ← {"serviceName":"com.webos.pipeline._fYbW5L51X4Qx0t","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._fYbW5L51X4Qx0t is not running."}
+===== lgmwbxpiqi 1.18.5 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+10:46:38 pistes du fichier {"audio":1,"text":1,"dur":4681,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","17:fr:French Full:S_TEXT/ASS:380 st"]}
+10:46:38 abonnement {"mediaId":"_LpQI9PMg9PNeq5"}
+10:46:38 media.subscribe → {"mediaId":"_LpQI9PMg9PNeq5","subscribe":true}
+10:46:38 media.subscribe ← {"subscription":true}
+10:46:38 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LpQI9PMg9PNeq5"}
+10:46:40 media.subscribe ← {"resourceInfo":{"context":"_LpQI9PMg9PNeq5","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":1}],"mediaId":"_LpQI9PMg9PNeq5"}}
+
+10:46:40 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":12,"remainingTime":12,"percent":120,"mediaId":"_LpQI9PMg9PNeq5"}}
+
+10:46:40 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_LpQI9PMg9PNeq5"}}
+
+10:46:40 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_LpQI9PMg9PNeq5"}}
+
+10:46:40 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4680992,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_LpQI9PMg9PNeq5"}}
+
+10:46:40 vidéo chargée {"bridge":true,"mediaId":"_LpQI9PMg9PNeq5","textTracks":0,"audioTracks":1,"src":".mkv"}
+12:04:19 pistes du fichier {"audio":1,"text":1,"dur":4718,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","17:fr:French Full:S_TEXT/ASS:466 st"]}
+12:04:19 media.unsubscribe → {"mediaId":"_LpQI9PMg9PNeq5"}
+12:04:19 media.unsubscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LpQI9PMg9PNeq5"}
+12:04:19 abonnement {"mediaId":"_fpMJRi2N08vqBZ"}
+12:04:19 media.subscribe → {"mediaId":"_fpMJRi2N08vqBZ","subscribe":true}
+12:04:19 media.subscribe ← {"subscription":true}
+12:04:19 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fpMJRi2N08vqBZ"}
+12:04:19 media.subscribe ← {"resourceInfo":{"context":"_fpMJRi2N08vqBZ","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":1}],"mediaId":"_fpMJRi2N08vqBZ"}}
+
+12:04:19 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_fpMJRi2N08vqBZ"}}
+
+12:04:19 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fpMJRi2N08vqBZ"}}
+
+12:04:19 media.subscribe ← {"videoInfo":{"vdec_ch":0,"width":3840,"height":2160,"frameRate":23.976023976023978,"mode3D":"2d","parWidth":1,"parHeight":1,"scanType":"progressive","path":"network","LRType":-1,"bitRate":2779024,"afd":16,"rotation":0,"codec":"video\/x-h265","userData":"(null)","storeDemo8k":0,"aspectRatio":"16:9","pixelAspectRatio":"1:1","scalerFeedingFrameRate":-1,"captionExist":false,"actual3D":"2d","hdrType":"DolbyVision","mediaId":"_fpMJRi2N08vqBZ"}}
+
+12:04:19 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4717824,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_fpMJRi2N08vqBZ"}}
+
+12:04:19 vidéo chargée {"bridge":true,"mediaId":"_fpMJRi2N08vqBZ","textTracks":0,"audioTracks":1,"src":".mkv"}
+14:49:50 media.subscribe ← {"serviceName":"com.webos.pipeline._fpMJRi2N08vqBZ","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._fpMJRi2N08vqBZ is not running."}
+19:43:39 media.unsubscribe → {"mediaId":"_fpMJRi2N08vqBZ"}
+19:43:40 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_fpMJRi2N08vqBZ"}
+19:43:40 abonnement {"mediaId":"_0Nq3604JGkOQ88"}
+19:43:40 media.subscribe → {"mediaId":"_0Nq3604JGkOQ88","subscribe":true}
+19:43:40 media.subscribe ← {"subscription":true}
+19:43:40 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Nq3604JGkOQ88"}
+19:43:40 media.subscribe ← {"resourceInfo":{"context":"_0Nq3604JGkOQ88","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":1}],"mediaId":"_0Nq3604JGkOQ88"}}
+
+19:43:40 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_0Nq3604JGkOQ88"}}
+
+19:43:40 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0Nq3604JGkOQ88"}}
+
+19:43:40 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0Nq3604JGkOQ88"}}
+
+19:43:40 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4717824,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_0Nq3604JGkOQ88"}}
+
+19:43:40 vidéo chargée {"bridge":true,"mediaId":"_0Nq3604JGkOQ88","textTracks":0,"audioTracks":1,"src":".mkv"}
+===== lgmwe1i83s 1.18.5 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+22:08:31 pistes du fichier {"audio":1,"text":1,"dur":4718,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","17:fr:French Full:S_TEXT/ASS:466 st"]}
+22:08:32 abonnement {"mediaId":"_0ASz9SZpSk8Nte"}
+22:08:32 media.subscribe → {"mediaId":"_0ASz9SZpSk8Nte","subscribe":true}
+22:08:32 media.subscribe ← {"subscription":true}
+22:08:32 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0ASz9SZpSk8Nte"}
+22:08:33 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_0ASz9SZpSk8Nte"}}
+
+22:08:33 media.subscribe ← {"resourceInfo":{"context":"_0ASz9SZpSk8Nte","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_0ASz9SZpSk8Nte"}}
+
+22:08:33 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0ASz9SZpSk8Nte"}}
+
+22:08:33 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":3,"remainingTime":3,"percent":30,"mediaId":"_0ASz9SZpSk8Nte"}}
+
+22:08:33 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4717824,"numAudioTracks":1,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":1,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_0ASz9SZpSk8Nte"}}
+
+22:08:33 vidéo chargée {"bridge":true,"mediaId":"_0ASz9SZpSk8Nte","textTracks":0,"audioTracks":1,"src":".mkv"}
+22:24:24 media.subscribe ← {"serviceName":"com.webos.pipeline._0ASz9SZpSk8Nte","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0ASz9SZpSk8Nte is not running."}
+22:25:34 pistes du fichier {"audio":2,"text":3,"dur":4852,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VFI  DDP 5.1:A_EAC3","2:en:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:14 st","17:fr:FR:S_TEXT/UTF8:844 st","17:en:ENG:S_TEXT/UTF8:982 st"]}
+22:25:34 media.unsubscribe → {"mediaId":"_0ASz9SZpSk8Nte"}
+22:25:34 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0ASz9SZpSk8Nte"}
+22:25:34 abonnement {"mediaId":"_04SGcS5dly1MlO"}
+22:25:34 media.subscribe → {"mediaId":"_04SGcS5dly1MlO","subscribe":true}
+22:25:34 media.subscribe ← {"subscription":true}
+22:25:34 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_04SGcS5dly1MlO"}
+22:25:35 media.subscribe ← {"resourceInfo":{"context":"_04SGcS5dly1MlO","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_04SGcS5dly1MlO"}}
+
+22:25:35 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_04SGcS5dly1MlO"}}
+
+22:25:35 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_04SGcS5dly1MlO"}}
+
+22:25:35 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_04SGcS5dly1MlO"}}
+
+22:25:35 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4852320,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_04SGcS5dly1MlO"}}
+
+22:25:35 vidéo chargée {"bridge":true,"mediaId":"_04SGcS5dly1MlO","textTracks":0,"audioTracks":2,"src":".mkv"}
+22:35:28 media.subscribe ← {"serviceName":"com.webos.pipeline._04SGcS5dly1MlO","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._04SGcS5dly1MlO is not running."}
+===== lgmwfbj5ky 1.18.5 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+19:37:11 pistes du fichier {"audio":2,"text":3,"dur":4852,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VFI  DDP 5.1:A_EAC3","2:en:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:14 st","17:fr:FR:S_TEXT/UTF8:844 st","17:en:ENG:S_TEXT/UTF8:982 st"]}
+19:37:12 abonnement {"mediaId":"_0Z379abQZlgUUd"}
+19:37:12 media.subscribe → {"mediaId":"_0Z379abQZlgUUd","subscribe":true}
+19:37:12 media.subscribe ← {"subscription":true}
+19:37:12 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Z379abQZlgUUd"}
+19:37:13 media.subscribe ← {"resourceInfo":{"context":"_0Z379abQZlgUUd","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_0Z379abQZlgUUd"}}
+
+19:37:13 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":2,"remainingTime":2,"percent":20,"mediaId":"_0Z379abQZlgUUd"}}
+
+19:37:13 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0Z379abQZlgUUd"}}
+
+19:37:13 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0Z379abQZlgUUd"}}
+
+19:37:13 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4852320,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_0Z379abQZlgUUd"}}
+
+19:37:13 vidéo chargée {"bridge":true,"mediaId":"_0Z379abQZlgUUd","textTracks":0,"audioTracks":2,"src":".mkv"}
+20:07:16 menu text {"mediaId":"_0Z379abQZlgUUd","pistes":[{"lang":"fr","n":1,"x":"forcés","label":"Français · forcés"},{"lang":"fr","n":2,"x":"complets","label":"Français · complets"},{"lang":"en","n":1,"x":"complets","label":"Anglais · complets"}],"actuelle":-1,"html5":0}
+20:07:17 choix text {"index":0,"service":true}
+20:07:17 media.setSubtitleEnable → {"mediaId":"_0Z379abQZlgUUd","enable":true}
+20:07:18 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Z379abQZlgUUd"}
+20:07:18 media.selectTrack → {"mediaId":"_0Z379abQZlgUUd","type":"text","index":0}
+20:07:18 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Z379abQZlgUUd"}
+20:51:56 media.subscribe ← {"serviceName":"com.webos.pipeline._0Z379abQZlgUUd","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0Z379abQZlgUUd is not running."}

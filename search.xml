@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.SearchTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T20:23:08" hostname="runnervmccnms" time="1.366">
+  <properties/>
+  <testcase name="titleCore" classname="com.koala.tv.SearchTest" time="1.224"/>
+  <testcase name="singleLetterFindsH" classname="com.koala.tv.SearchTest" time="0.085"/>
+  <testcase name="watchedHistory" classname="com.koala.tv.SearchTest" time="0.056"/>
+  <system-out><![CDATA[premiers résultats : [|FR-4K DV| H (1998), |FR| Hawaii 1900, |FR| Hawaii 1901, |FR| Hawaii 1902]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

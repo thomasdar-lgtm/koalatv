@@ -203,7 +203,7 @@ class HomeActivity : BaseActivity() {
         val l = History.shown()
         resumeAdapter.submit(l)
         resumeBox.visibility = if (l.isEmpty()) View.GONE else View.VISIBLE
-        if (l.any { it.done }) lifecycleScope.launch { if (History.checkDone()) refreshResume() }
+        if (l.any { it.seriesId.isNotEmpty() }) lifecycleScope.launch { if (History.checkDone()) refreshResume() }
     }
 
     private fun resume(e: History.Entry) {

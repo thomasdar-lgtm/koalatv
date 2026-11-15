@@ -74,8 +74,10 @@ object History {
     suspend fun checkDone(): Boolean {
         var changed = false
         for (e in shown()) {
-            if (!e.done || e.seriesId.isEmpty() || !checked.add(e.key)) continue
-            if (isLastEpisode(e.seriesId, e.key)) { removeSeries(e.seriesId); changed = true }
+            if (e.seriesId.isEmpty() || !checked.add(e.key)) continue
+            // dernier épisode fini, ou arrêté dans le générique de fin (90 % vus)
+            val over = e.done || (e.dur > 0 && e.pos >= e.dur * 9 / 10)
+            if (over && isLastEpisode(e.seriesId, e.key)) { removeSeries(e.seriesId); changed = true }
         }
         return changed
     }

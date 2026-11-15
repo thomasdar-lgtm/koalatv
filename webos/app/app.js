@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.19.1';
+  var VERSION = '1.20.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -92,11 +92,15 @@
     checkDone: function (redraw) {
       var self = this, l = this.shown(), i;
       for (i = 0; i < l.length; i++) (function (h) {
-        if (!h.f || !h.sid || self.checked[h.k]) return;
+        if (!h.sid || self.checked[h.k]) return;
         self.checked[h.k] = 1;
         X.episodes(h.sid, function (err, eps) {
           if (err || !eps || !eps.length) return;
-          if ('e' + eps[eps.length - 1].id === h.k) { self.removeSeries(h.sid); redraw(); }
+          var last = 'e' + eps[eps.length - 1].id === h.k;
+          // dernier épisode fini, ou arrêté dans le générique de fin (90 % vus)
+          var over = last && (h.f || (h.d > 0 && h.p >= h.d * 0.9));
+          Dbg.log('reprendre : série', { sn: h.sn, ep: h.t, fini: !!h.f, p: h.p, d: h.d, dernier: last, episodes: eps.length, retirée: over });
+          if (over) { self.removeSeries(h.sid); redraw(); }
         });
       })(l[i]);
     },
@@ -652,6 +656,23 @@
     fin: 'Finnois', fi: 'Finnois', gre: 'Grec', ell: 'Grec', el: 'Grec', heb: 'Hébreu', he: 'Hébreu', hin: 'Hindi', hi: 'Hindi' };
   function langName(code) { var c = String(code || '').toLowerCase(); return LANG[c] || LANG[c.substr(0, 2)] || (c && c !== 'und' ? c.toUpperCase() : ''); }
 
+  /* Texte d'un sous-titre en HTML : balises ASS retirées, italique/gras/couleur appliqués, le reste échappé */
+  function subHtml(x) {
+    x = String(x).replace(/\{[^}]*\}/g, '').replace(/\\N/gi, '\n').replace(/\\h/g, ' ');
+    var parts = x.split(/(<[^>]*>)/), out = '', open = [], i, p, m;
+    for (i = 0; i < parts.length; i++) {
+      p = parts[i];
+      if (!p) continue;
+      if (p.charAt(0) !== '<') { out += p.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\r?\n/g, '<br>'); continue; }
+      if ((m = /^<\s*(i|b|u)\s*>$/i.exec(p))) { out += '<' + m[1].toLowerCase() + '>'; open.push(m[1].toLowerCase()); }
+      else if ((m = /^<\s*\/\s*(i|b|u)\s*>$/i.exec(p))) { if (open.indexOf(m[1].toLowerCase()) >= 0) { out += '</' + m[1].toLowerCase() + '>'; open.splice(open.lastIndexOf(m[1].toLowerCase()), 1); } }
+      else if ((m = /^<\s*font\b[^>]*color\s*=\s*["']?\s*(#[0-9a-f]{3,8}|[a-z]+)/i.exec(p))) { out += '<span style="color:' + m[1] + '">'; open.push('span'); }
+      else if (/^<\s*\/\s*font\s*>$/i.test(p)) { if (open.indexOf('span') >= 0) { out += '</span>'; open.splice(open.lastIndexOf('span'), 1); } }
+      // autres balises : ignorées
+    }
+    while (open.length) out += '</' + open.pop() + '>';
+    return out;
+  }
   /* Nom de piste lisible : « SRT Forced FR » → « forcés », « French Full » → « complets », « SDH » → « malentendants » */
   function cleanTrackName(x) {
     if (/forc/i.test(x)) return 'forcés';
@@ -671,7 +692,7 @@
       function fin(t) { if (done) return; done = true; cb(t); }
       if (!window.PalmServiceBridge || !/\.mkv(\?|$)/i.test(url)) return fin(null);
       if (this.cache.hasOwnProperty(url)) return fin(this.cache[url]);
-      setTimeout(function () { if (!done) { Dbg.log('pistes : délai dépassé'); fin(null); } }, 7000);
+      setTimeout(function () { if (!done) { Dbg.log('pistes : délai dépassé'); fin(null); } }, 12000);
       try {
         var b = new window.PalmServiceBridge();
         bridges.push(b);
@@ -687,11 +708,11 @@
           }
           Dbg.log('pistes du fichier', { audio: out.audio.length, text: out.text.length,
             dur: Math.round(+m.dur || 0),
-            detail: (m.tracks || []).map(function (x) { return x.type + ':' + x.lang + (x.forced ? ':forced' : '') + (x.name ? ':' + x.name : '') + ':' + x.codec + (x.frames >= 0 ? ':' + x.frames + ' st' : ''); }) });
+            detail: (m.tracks || []).map(function (x) { return x.type + ':' + x.lang + (x.forced ? ':forced' : '') + (x.name ? ':' + x.name : '') + ':' + x.codec + (x.frames >= 0 ? ':' + x.frames + ' st' : '') + (x.events ? ':lus ' + x.events.length + (x.complete ? '' : ' incomplet') : ''); }) });
           self.cache[url] = out;
           fin(out);
         };
-        b.call('luna://com.koala.tv.service/probe', JSON.stringify({ url: url, seconds: 6 }));
+        b.call('luna://com.koala.tv.service/probe', JSON.stringify({ url: url, seconds: 10 }));
       } catch (e) { fin(null); }
     },
     luna: function (method, params, cb) {
@@ -719,6 +740,7 @@
       this.token++;
       if (this.sub) { var i = bridges.indexOf(this.sub); if (i >= 0) bridges.splice(i, 1); this.sub = null; }
       if (this.mediaId && window.PalmServiceBridge) this.luna('unsubscribe', { mediaId: this.mediaId });
+      this.subOff();
       this.v = v; this.mediaId = null; this.pending = false; this.audio = []; this.text = []; this.curAudio = 0; this.curText = -1; this.applied = false;
       this.probed = probed || null;
       if (this.probed) {
@@ -809,6 +831,38 @@
       }
       return out;
     },
+    /*
+     * Sous-titres affichés par l'appli (pistes courtes lues dans le fichier) : la TV montre les balises
+     * de mise en forme ({\an8}, <font color=…>) telles quelles, l'appli les applique.
+     */
+    own: function (i) { var t = this.probed && i >= 0 && this.probed.text[i]; return t && t.complete && t.events && t.events.length ? t.events : null; },
+    subOn: function (events) {
+      var self = this;
+      this.custom = events;
+      this.subShown = -2;
+      clearInterval(this.subTimer);
+      this.subTimer = setInterval(function () { self.subTick(); }, 200);
+      this.subTick();
+    },
+    subOff: function () {
+      this.custom = null;
+      clearInterval(this.subTimer);
+      this.subTimer = null;
+      var el = $('p-sub');
+      if (el) { el.innerHTML = ''; el.className = ''; }
+    },
+    subTick: function () {
+      var ev = this.custom, v = this.v;
+      if (!ev || !v) return;
+      var t = v.currentTime * 1000, found = -1, i;
+      for (i = 0; i < ev.length; i++) { if (ev[i].s > t) break; if (t < ev[i].e) found = i; }
+      if (found === this.subShown) return;
+      this.subShown = found;
+      var el = $('p-sub');
+      if (found < 0) { el.innerHTML = ''; el.className = ''; return; }
+      el.innerHTML = subHtml(ev[found].x);
+      el.className = 'on' + (/\{[^}]*\\an[789][^}]*\}/.test(ev[found].x) ? ' top' : '');
+    },
     /* Le service de la TV a-t-il donné une liste pour ce type de piste ? */
     luna_: function (kind) { return (!!this.mediaId || !!this.probed) && (kind === 'text' ? this.text : this.audio).length > 0; },
     /* Pistes connues : service webOS s'il en a donné, sinon pistes standard du lecteur */
@@ -828,7 +882,19 @@
     },
     select: function (kind, i) {
       var self = this, tr, k;
-      Dbg.log('choix ' + kind, { index: i, service: this.luna_(kind) });
+      Dbg.log('choix ' + kind, { index: i, service: this.luna_(kind), appli: kind === 'text' && !!this.own(i) });
+      if (kind === 'text') {
+        var own = this.own(i);
+        if (own) {
+          // sous-titres affichés par l'appli : ceux de la TV sont coupés
+          this.curText = i;
+          if (this.mediaId) this.luna('setSubtitleEnable', { mediaId: this.mediaId, enable: false });
+          tr = this.v.textTracks; for (k = 0; tr && k < tr.length; k++) tr[k].mode = 'disabled';
+          this.subOn(own);
+          return;
+        }
+        this.subOff();
+      }
       if (this.luna_(kind)) {
         if (!this.mediaId) {
           // lecteur pas encore prêt : le choix est appliqué dès qu'il l'est
@@ -3405,6 +3471,7 @@
       for (var k in this.timers) if (this.timers.hasOwnProperty(k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
       this.loadSince = 0;
       cls($('p-load'), 'on', false);
+      Tracks.subOff();
       this.timers = {};
       this.stopVideo();
       this.status('');

@@ -347,6 +347,12 @@ input { font-family: inherit; }
 #p-status { position: absolute; top: 2.4rem; left: 50%; width: 24rem; margin-left: -12rem; text-align: center;
   background: rgba(14, 17, 22, .9); padding: .8rem 1rem; border-radius: .8rem; font-size: 1.1rem; display: none; }
 #p-status.on { display: block; }
+/* Sous-titres affichés par l'appli */
+#p-sub { position: absolute; left: 6%; right: 6%; bottom: 7%; text-align: center; font-size: 2.4rem; font-weight: 600; line-height: 1.25;
+  color: #FFFFFF; text-shadow: 0 0 .25rem #000, 0 0 .25rem #000, .08rem .08rem .2rem #000; display: none; pointer-events: none; }
+#p-sub.on { display: block; }
+#p-sub.top { bottom: auto; top: 6%; }
+#p-info.on ~ #p-sub:not(.top) { bottom: 32%; }
 /* État du chargement, sous la roue */
 #p-load { position: absolute; top: 50%; left: 50%; width: 30rem; margin: 3rem 0 0 -15rem; text-align: center; display: none; }
 #p-load.on { display: block; }

@@ -136,7 +136,11 @@ var MKV = { SEGMENT: 0x18538067, SEEKHEAD: 0x114D9B74, SEEK: 0x4DBB, SEEKID: 0x5
   INFO: 0x1549A966, SCALE: 0x2AD7B1, DURATION: 0x4489, TRACKS: 0x1654AE6B, ENTRY: 0xAE, CLUSTER: 0x1F43B675,
   NUM: 0xD7, UID: 0x73C5, TYPE: 0x83, LANG: 0x22B59C, BCP47: 0x22B59D, NAME: 0x536E, CODEC: 0x86, FORCED: 0x55AA, DEFAULT: 0x88,
   TAGS: 0x1254C367, TAG: 0x7373, TARGETS: 0x63C0, TAGTRACK: 0x63C5, SIMPLE: 0x67C8, TAGNAME: 0x45A3, TAGSTR: 0x4487,
-  CUES: 0x1C53BB6B, CUEPOINT: 0xBB, CUEPOS: 0xB7, CUETRACK: 0xF7 };
+  CUES: 0x1C53BB6B, CUEPOINT: 0xBB, CUEPOS: 0xB7, CUETRACK: 0xF7, CUETIME: 0xB3, CUECLUSTER: 0xF1, CUEREL: 0xF0, CUEDUR: 0xB2,
+  BLOCKGROUP: 0xA0, BLOCK: 0xA1, SIMPLEBLOCK: 0xA3, BLOCKDUR: 0x9B };
+
+/* Sous-titres affichés par l'appli : pistes courtes seulement (forcés), lues réplique par réplique avant la lecture */
+var SMALL_TRACK = 80;
 
 function vint(buf, pos, keepMarker) {
   if (pos >= buf.length) return null;
@@ -214,6 +218,7 @@ function readHeader(buf) {
     pos = s + sz.val;
   }
   h.dur = rawDur * scale / 1e9;
+  h.scale = scale;
   if (!h.tracks) return more ? null : { tracks: [], seg: -1, seek: {}, dur: 0 };
   return h;
 }
@@ -241,21 +246,59 @@ function readTags(buf) {
   return found ? out : null;
 }
 
-/* Index : nombre d'entrées par numéro de piste */
+/* Index : nombre d'entrées par numéro de piste, et emplacement de chacune (out.pos[piste] = [{t, c, r, d}]) */
 function readCues(buf) {
-  var out = {}, found = false;
+  var out = { pos: {} }, found = false;
   each(buf, 0, buf.length, function (id, s, e) {
     if (id !== MKV.CUES) return;
     each(buf, s, e, function (cid, cs, ce) {
       if (cid !== MKV.CUEPOINT) return;
+      var time = 0;
       each(buf, cs, ce, function (k, ks, ke) {
+        if (k === MKV.CUETIME) { time = uint(buf, ks, ke); return; }
         if (k !== MKV.CUEPOS) return;
-        each(buf, ks, ke, function (x, xs, xe) { if (x === MKV.CUETRACK) { var n = uint(buf, xs, xe); out[n] = (out[n] || 0) + 1; found = true; } });
+        var n = -1, c = -1, rel = -1, dur = 0;
+        each(buf, ks, ke, function (x, xs, xe) {
+          if (x === MKV.CUETRACK) n = uint(buf, xs, xe);
+          else if (x === MKV.CUECLUSTER) c = uint(buf, xs, xe);
+          else if (x === MKV.CUEREL) rel = uint(buf, xs, xe);
+          else if (x === MKV.CUEDUR) dur = uint(buf, xs, xe);
+        });
+        if (n < 0) return;
+        out[n] = (out[n] || 0) + 1; found = true;
+        (out.pos[n] = out.pos[n] || []).push({ t: time, c: c, r: rel, d: dur });
       });
     });
     return true;
   });
   return found ? out : null;
+}
+
+/*
+ * Une réplique : bloc trouvé à l'emplacement donné par l'index. L'en-tête de la grappe (5 à 12 octets) est inconnu,
+ * on cherche donc le bloc de la bonne piste dans les premiers octets lus.
+ */
+function readEvent(buf, track, codec) {
+  for (var off = 0; off <= 8 && off < buf.length; off++) {
+    var id = vint(buf, off, true); if (!id || (id.val !== MKV.BLOCKGROUP && id.val !== MKV.SIMPLEBLOCK)) continue;
+    var sz = vint(buf, off + id.len, false); if (!sz || sz.unknown) continue;
+    var s = off + id.len + sz.len, e = s + sz.val;
+    if (e > buf.length || sz.val > 65536) continue;
+    var block = null, dur = -1;
+    if (id.val === MKV.SIMPLEBLOCK) block = { s: s, e: e };
+    else each(buf, s, e, function (k, ks, ke) {
+      if (k === MKV.BLOCK) block = { s: ks, e: ke };
+      else if (k === MKV.BLOCKDUR) dur = uint(buf, ks, ke);
+    });
+    if (!block) continue;
+    var tn = vint(buf, block.s, false);
+    if (!tn || tn.val !== track) continue;
+    var text = buf.toString('utf8', block.s + tn.len + 3, block.e).replace(/\0+$/, '');
+    // ASS : « ordre,couche,style,nom,marges…,effet,texte »
+    if (/ASS|SSA/i.test(codec)) { var parts = text.split(','); if (parts.length >= 9) text = parts.slice(8).join(','); }
+    return { text: text, dur: dur };
+  }
+  return null;
 }
 
 /* Compat. tests : liste des pistes d'un tampon d'en-tête */
@@ -320,9 +363,52 @@ service.register('probe', function (message) {
         if (v !== undefined) { t.frames = v; n++; }
       }
       if (!n && kind === 'tags') count('cues');
+      else if (kind === 'cues') events(r);
+      else if (small()) count('cues');
       else finish(null);
       return true;
     });
+  }
+  /* Une piste courte (forcés) existe-t-elle ? */
+  function small() {
+    for (var i = 0; i < head.tracks.length; i++) { var t = head.tracks[i]; if (t.type === 17 && t.frames > 0 && t.frames <= SMALL_TRACK) return true; }
+    return false;
+  }
+  /* Lecture des répliques des pistes courtes, l'une après l'autre (une seule connexion à la fois) */
+  function events(cues) {
+    var jobs = [], i, j, t, list;
+    if (!cues || head.seg < 0) return finish(null);
+    for (i = 0; i < head.tracks.length; i++) {
+      t = head.tracks[i];
+      list = cues.pos[t.num];
+      if (t.type !== 17 || !list || !list.length || list.length > SMALL_TRACK) continue;
+      t.events = [];
+      for (j = 0; j < list.length; j++) if (list[j].c >= 0 && list[j].r >= 0) jobs.push({ t: t, cue: list[j] });
+    }
+    var ms = head.scale / 1e6, k = 0;
+    (function nextJob() {
+      if (done) return;
+      if (k >= jobs.length) {
+        for (var a = 0; a < head.tracks.length; a++) {
+          var tr = head.tracks[a];
+          if (!tr.events) continue;
+          tr.events.sort(function (x, y) { return x.s - y.s; });
+          // complète : l'appli peut l'afficher elle-même (sinon la TV s'en charge)
+          tr.complete = (tr.missed || 0) <= 1 && tr.events.length > 0;
+        }
+        return finish(null);
+      }
+      var job = jobs[k++], at = head.seg + job.cue.c + job.cue.r + 4;
+      range(finalUrl, at, 4096, 0, function (buf) {
+        var ev = buf && readEvent(buf, job.t.num, job.t.codec);
+        if (ev) {
+          var d = ev.dur >= 0 ? ev.dur : job.cue.d;
+          job.t.events.push({ s: Math.round(job.cue.t * ms), e: Math.round(job.cue.t * ms + (d > 0 ? d * ms : 3000)), x: ev.text });
+        } else job.t.missed = (job.t.missed || 0) + 1;
+        setTimeout(nextJob, 0);
+        return true;
+      });
+    })();
   }
   range(url, 0, max, 0, function (buf, end) {
     if (!buf) { finish(new Error('Serveur injoignable')); return true; }
@@ -337,4 +423,4 @@ service.register('probe', function (message) {
   });
 });
 
-module.exports = { findTracks: findTracks, readHeader: readHeader, readTags: readTags, readCues: readCues };
+module.exports = { findTracks: findTracks, readHeader: readHeader, readTags: readTags, readCues: readCues, readEvent: readEvent };

@@ -347,6 +347,14 @@ input { font-family: inherit; }
 #p-status { position: absolute; top: 2.4rem; left: 50%; width: 24rem; margin-left: -12rem; text-align: center;
   background: rgba(14, 17, 22, .9); padding: .8rem 1rem; border-radius: .8rem; font-size: 1.1rem; display: none; }
 #p-status.on { display: block; }
+/* État du chargement, sous la roue */
+#p-load { position: absolute; top: 50%; left: 50%; width: 30rem; margin: 3rem 0 0 -15rem; text-align: center; display: none; }
+#p-load.on { display: block; }
+#pl-msg { font-size: 1.35rem; font-weight: 700; color: #EDEFF2; text-shadow: 0 .1rem .4rem rgba(0, 0, 0, .8); }
+#pl-msg.warn { color: #FFB454; }
+#pl-det { margin-top: .5rem; font-size: 1.05rem; color: #B7C0CC; text-shadow: 0 .1rem .4rem rgba(0, 0, 0, .8); }
+#p-buf { margin-right: 1.4rem; color: #8B95A3; }
+#p-buf.low { color: #FFB454; }
 #p-num { position: absolute; top: 2.4rem; right: 3.5rem; min-width: 6rem; padding: .4rem 1.4rem; text-align: center; border-radius: .9rem;
   background: rgba(14, 17, 22, .9); color: #4C9AFF; font-size: 3rem; font-weight: 700; display: none; }
 #p-num.on { display: block; }

@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.19.0';
+  var VERSION = '1.19.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -122,6 +122,7 @@
       });
     },
     update: function (it, pos, dur, done) {
+      if (it.sid) Seen.before(it);
       var e = { k: it.key, t: it.title, u: it.url, i: it.icon || '', p: Math.floor(pos), d: Math.floor(dur || 0), sid: it.sid || '', sn: it.sname || '', a: Date.now() };
       if (done) e.f = 1;
       var l = [e];
@@ -458,6 +459,23 @@
       this.m[key] = Date.now();
       save('seen', this.m);
       Sync.put('w/' + key, { at: this.m[key] });
+    },
+    /* Un épisode regardé : tous ceux qui le précèdent dans la série comptent comme vus (une fois par épisode) */
+    beforeDone: {},
+    before: function (it) {
+      var self = this;
+      if (!it.sid || !it.key || this.beforeDone[it.key]) return;
+      this.beforeDone[it.key] = 1;
+      X.episodes(it.sid, function (err, eps) {
+        if (err || !eps) return;
+        var at = Date.now() - 1000, changed = false, i;
+        for (i = 0; i < eps.length; i++) {
+          var k = 'e' + eps[i].id;
+          if (k === it.key) break;
+          if (!self.m[k]) { self.m[k] = at; Sync.put('w/' + k, { at: at }); changed = true; }
+        }
+        if (changed) save('seen', self.m);
+      });
     },
     /* Dernière fois qu'une série a été regardée (« s » + identifiant) : mise à jour à chaque épisode fini */
     touch: function (key, at) {
@@ -3231,7 +3249,7 @@
       });
     },
     cur: function () { return this.list[this.i]; },
-    ACT: ['prev', 'back', 'play', 'fwd', 'next', 'audio', 'subs'],
+    ACT: ['prev', 'back', 'play', 'fwd', 'next', 'audio', 'subs', 'reload'],
     /* Zone active sous le titre : false (rien), 'bar' (barre de progression) ou 'btn' (boutons) */
     ctl: false,
     cIdx: 2,
@@ -3271,6 +3289,50 @@
       else if (a === 'next') this.goTo(this.i + 1);
       else if (a === 'audio') this.trackMenu('audio');
       else if (a === 'subs') this.trackMenu('text');
+      else if (a === 'reload') this.reload();
+    },
+    /* Rechargement manuel : on repart du même endroit */
+    reload: function () {
+      var v = this.v, it = this.cur();
+      var at = it.live ? 0 : (v.currentTime > 1 ? v.currentTime : this.lastPos);
+      Dbg.log('rechargement manuel', { t: Math.round(at) });
+      this.retries = 0;
+      clearTimeout(this.timers.retry);
+      this.timers.retry = null;
+      this.status('');
+      this.stopVideo();
+      this.load(at);
+    },
+    /* Mémoire tampon : secondes déjà chargées devant la position de lecture */
+    ahead: function () {
+      var v = this.v, b = v.buffered, t = v.currentTime, i;
+      try { for (i = 0; i < b.length; i++) if (b.start(i) <= t + 0.5 && b.end(i) >= t) return Math.max(0, b.end(i) - t); } catch (e) { /* ignoré */ }
+      return 0;
+    },
+    /*
+     * Pendant un chargement : ce qui se passe, chaque seconde.
+     * Internet coupé · serveur qui ne répond pas (rien n'arrive) · chargement lent (ça arrive, doucement).
+     */
+    loadSince: 0,
+    loadTick: function () {
+      var on = this.active && /\bon\b/.test($('spinner').className) && !Dialog.open;
+      var box = $('p-load');
+      if (!on) { this.loadSince = 0; cls(box, 'on', false); return; }
+      var now = Date.now(), it = this.cur(), a = this.ahead();
+      if (!this.loadSince) { this.loadSince = now; this.loadBuf = a; this.loadGrow = now; }
+      if (a > this.loadBuf + 0.2) { this.loadBuf = a; this.loadGrow = now; }
+      var waited = Math.floor((now - this.loadSince) / 1000), msg, warn = true;
+      if (navigator.onLine === false) msg = 'Connexion internet coupée';
+      else if (waited < 4) { msg = 'Chargement…'; warn = false; }
+      else if (now - this.loadGrow < 3000) msg = 'Chargement lent : la vidéo arrive doucement';
+      else msg = it.live ? 'La chaîne ne répond pas' : 'Le serveur ne répond pas';
+      var det = 'Attente ' + waited + ' s';
+      if (!it.live) det += ' · Mémoire tampon ' + Math.floor(a) + ' s';
+      if (waited >= 8) det += ' · OK pour recharger';
+      $('pl-msg').textContent = msg;
+      cls($('pl-msg'), 'warn', warn);
+      $('pl-det').textContent = det;
+      cls(box, 'on', waited >= 1);
     },
     /* Encart « Épisode suivant » dans les 15 dernières secondes ; OK lance tout de suite, Retour annule */
     checkNext: function () {
@@ -3333,12 +3395,16 @@
       });
       var self = this;
       this.timers.watch = setInterval(function () { self.watchdog(); }, 2000);
+      clearInterval(this.timers.load);
+      this.timers.load = setInterval(function () { self.loadTick(); }, 1000);
     },
     leave: function () {
       this.saveProgress();
       this.active = false;
       Presence.stop();
       for (var k in this.timers) if (this.timers.hasOwnProperty(k)) { clearTimeout(this.timers[k]); clearInterval(this.timers[k]); }
+      this.loadSince = 0;
+      cls($('p-load'), 'on', false);
       this.timers = {};
       this.stopVideo();
       this.status('');
@@ -3524,6 +3590,9 @@
       var ok = dur > 0 && isFinite(dur);
       $('p-prog').style.width = (ok ? Math.min(100, t / dur * 100) : 0) + '%';
       $('p-cur').textContent = fmtTime(t);
+      var a = this.ahead();
+      $('p-buf').textContent = ok ? 'Mémoire tampon ' + (a >= 60 ? Math.floor(a / 60) + ' min' : Math.floor(a) + ' s') : '';
+      cls($('p-buf'), 'low', ok && a < 5 && !v.paused);
       $('p-dur').textContent = ok ? '-' + fmtTime(dur - t) : '';
     },
     showInfo: function (keep) {
@@ -3608,6 +3677,8 @@
       if (c === K.STOP) { back(); return true; }
       if (c === K.GREEN) { this.trackMenu('audio'); return true; }
       if (c === K.YELLOW) { this.trackMenu('text'); return true; }
+      // chargement bloqué depuis 8 s : OK recharge
+      if (c === K.OK && this.loadSince && Date.now() - this.loadSince >= 8000) { if (!(e && e.repeat)) this.reload(); return true; }
       if (it.live) {
         var self = this;
         if (c >= 48 && c <= 57) this.typeDigit(c - 48);

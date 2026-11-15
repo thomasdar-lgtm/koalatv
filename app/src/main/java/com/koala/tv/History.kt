@@ -83,6 +83,7 @@ object History {
     @Synchronized
     fun update(item: PlayItem, pos: Long, dur: Long, done: Boolean = false) {
         val key = item.resumeKey ?: return
+        Seen.before(item)
         val l = load()
         l.removeAll { it.key == key }
         val e = Entry(key, item.title, item.url, item.icon, pos, dur, System.currentTimeMillis(), item.seriesId, item.seriesName, done)

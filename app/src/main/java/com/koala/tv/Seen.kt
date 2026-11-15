@@ -3,6 +3,7 @@ package com.koala.tv
 import android.content.Context
 import android.content.SharedPreferences
 import org.json.JSONObject
+import kotlinx.coroutines.launch
 
 /** Films et épisodes vus jusqu'au bout, partagés entre appareils (même format que l'appli LG). */
 object Seen {
@@ -39,6 +40,28 @@ object Seen {
         val key = item.resumeKey ?: return
         mark(key)
         if (item.seriesId.isNotEmpty()) touch("s" + item.seriesId)
+    }
+
+    private val beforeDone = HashSet<String>()
+
+    /** Un épisode regardé : tous ceux qui le précèdent dans la série comptent comme vus (une fois par épisode). */
+    fun before(item: PlayItem) {
+        val key = item.resumeKey ?: return
+        if (item.seriesId.isEmpty() || !synchronized(beforeDone) { beforeDone.add(key) }) return
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val eps = try { Xtream.seriesEpisodes(item.seriesId) } catch (e: Exception) { return@launch }
+            val at = System.currentTimeMillis() - 1000
+            val added = ArrayList<String>()
+            synchronized(this@Seen) {
+                for (e in eps) {
+                    val k = "e" + e.id
+                    if (k == key) break
+                    if (!m.containsKey(k)) { m[k] = at; added.add(k) }
+                }
+                if (added.isNotEmpty()) save()
+            }
+            for (k in added) Sync.pushSeen(k, at)
+        }
     }
 
     @Synchronized

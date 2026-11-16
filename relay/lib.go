@@ -442,32 +442,63 @@ func min64(a, b int64) int64 {
 	return b
 }
 
+// Certains serveurs envoient le début de chaque requête à pleine vitesse, puis brident.
+// Quand la vitesse s'effondre par rapport au début de la requête, on la relance là où on en est
+// (toujours une seule connexion à la fois). Si la relance ne rend pas la vitesse, on n'insiste plus.
+const (
+	reopenMinPeak = 3 << 20 // 3 Mo/s au début de la requête
+	reopenRatio   = 4       // vitesse tombée sous le quart du début
+)
+
+var errReopen = errors.New("relance")
+
 func (l *Lib) copy(ctx context.Context, it *Item, from, to int64, mark func(int64)) error {
+	pos := from
+	reopen := true
+	for pos < to {
+		start := pos
+		t0 := time.Now()
+		var err error
+		pos, err = l.copyOnce(ctx, it, pos, to, mark, reopen)
+		if err != errReopen {
+			return err
+		}
+		// la relance n'a apporté presque rien en plus de la vitesse bridée : on arrête de relancer
+		if time.Since(t0) > 20*time.Second && pos-start < int64(time.Since(t0).Seconds())*reopenMinPeak/2 {
+			reopen = false
+		}
+	}
+	return nil
+}
+
+func (l *Lib) copyOnce(ctx context.Context, it *Item, from, to int64, mark func(int64), reopen bool) (int64, error) {
 	if from >= to {
-		return nil
+		return from, nil
 	}
 	r, err := l.request(ctx, it, from, to-1)
 	if err != nil {
-		return err
+		return from, err
 	}
 	defer r.Body.Close()
 	if r.StatusCode != 206 && !(r.StatusCode == 200 && from == 0) {
-		return fmt.Errorf("le serveur refuse la reprise (%d)", r.StatusCode)
+		return from, fmt.Errorf("le serveur refuse la reprise (%d)", r.StatusCode)
 	}
 	f, err := os.OpenFile(it.Path, os.O_RDWR, 0o644)
 	if err != nil {
-		return noSpace{"Écriture impossible : " + err.Error()}
+		return from, noSpace{"Écriture impossible : " + err.Error()}
 	}
 	defer f.Close()
 	buf := make([]byte, 512<<10)
 	pos := from
 	lastT, lastP := time.Now(), pos
 	lastSave := time.Now()
+	var peak int64
+	slow := 0
 	for pos < to {
 		n, rerr := r.Body.Read(buf[:min64(int64(len(buf)), to-pos)])
 		if n > 0 {
 			if _, werr := f.WriteAt(buf[:n], pos); werr != nil {
-				return noSpace{"Écriture impossible : " + werr.Error()}
+				return pos, noSpace{"Écriture impossible : " + werr.Error()}
 			}
 			pos += int64(n)
 			l.mu.Lock()
@@ -484,6 +515,17 @@ func (l *Lib) copy(ctx context.Context, it *Item, from, to int64, mark func(int6
 				lastT, lastP = time.Now(), pos
 				l.mu.Unlock()
 				l.changed()
+				if inst > peak {
+					peak = inst
+				}
+				if reopen && peak >= reopenMinPeak && inst*reopenRatio < peak {
+					slow++
+				} else {
+					slow = 0
+				}
+				if slow >= 2 && pos < to {
+					return pos, errReopen
+				}
 			} else {
 				l.mu.Unlock()
 			}
@@ -497,15 +539,15 @@ func (l *Lib) copy(ctx context.Context, it *Item, from, to int64, mark func(int6
 		}
 		if rerr != nil {
 			if ctx.Err() != nil {
-				return errPaused
+				return pos, errPaused
 			}
-			return rerr
+			return pos, rerr
 		}
 	}
 	if pos < to {
-		return errors.New("connexion coupée")
+		return pos, errors.New("connexion coupée")
 	}
-	return nil
+	return pos, nil
 }
 
 func fmtSize(b int64) string {

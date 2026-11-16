@@ -274,3 +274,57 @@ func TestEndToEnd(t *testing.T) {
 	json.NewDecoder(st.Body).Decode(&s)
 	t.Logf("page : lié=%v, éléments=%d", s["linked"], len(s["items"].([]any)))
 }
+
+// Serveur qui envoie le début de chaque requête vite, puis bride (comme celui de l'abonnement).
+func TestReopenWhenThrottled(t *testing.T) {
+	data := make([]byte, 40<<20)
+	for i := range data {
+		data[i] = byte(i*13 + i/5)
+	}
+	reqs := 0
+	var mu sync.Mutex
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		reqs++
+		mu.Unlock()
+		var a, b int
+		fmt.Sscanf(r.Header.Get("Range"), "bytes=%d-%d", &a, &b)
+		if b >= len(data) {
+			b = len(data) - 1
+		}
+		w.Header().Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", a, b, len(data)))
+		w.Header().Set("Content-Length", strconv.Itoa(b-a+1))
+		w.WriteHeader(206)
+		sent := 0
+		for p := a; p <= b; p += 64 << 10 {
+			e := p + 64<<10
+			if e > b+1 {
+				e = b + 1
+			}
+			if _, err := w.Write(data[p:e]); err != nil {
+				return
+			}
+			sent += e - p
+			if sent > 8<<20 {
+				time.Sleep(time.Duration(int64(e-p) * int64(time.Second) / 300_000))
+			}
+		}
+	}))
+	defer srv.Close()
+	tmp := t.TempDir()
+	l := newLib(filepath.Join(tmp, "lib.json"))
+	l.urlFor = func(*Item) string { return srv.URL + "/v" }
+	l.free = func(string) int64 { return 0 }
+	it := &Item{Key: "e1", Path: filepath.Join(tmp, "e1.mkv")}
+	l.items[it.Key] = it
+	t0 := time.Now()
+	l.download(context.Background(), it)
+	got, _ := os.ReadFile(it.Path)
+	t.Logf("40 Mo en %v, %d requêtes (sans relance : plus de 100 s)", time.Since(t0).Round(time.Millisecond), reqs)
+	if it.State != stDone || !bytes.Equal(got, data) {
+		t.Fatalf("état %v, %d octets, identiques %v", it.State, len(got), bytes.Equal(got, data))
+	}
+	if time.Since(t0) > 40*time.Second {
+		t.Fatal("trop lent : les relances ne marchent pas")
+	}
+}

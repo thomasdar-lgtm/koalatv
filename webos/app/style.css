@@ -265,6 +265,21 @@ input { font-family: inherit; }
 #cs-list { position: absolute; top: 8rem; left: 3rem; right: 3rem; bottom: 1.5rem; }
 .cs-h .c { color: #4C9AFF; }
 .cs-h .n { opacity: .45; }
+/* PC de la maison */
+#pc-list { position: absolute; top: 8rem; left: 3rem; right: 3rem; bottom: 1.5rem; }
+#pc-msg { position: absolute; top: 12rem; left: 3.5rem; right: 3.5rem; font-size: 1.3rem; color: #8B95A3; display: none; }
+#pc-msg.on { display: block; }
+.pcrow { display: flex; align-items: center; height: 100%; padding: 0 1rem; }
+.pcrow img { width: 3rem; height: 4.3rem; object-fit: cover; border-radius: .35rem; background: #1B2230; flex: none; }
+.pcrow .bd { flex: 1; margin-left: 1.2rem; min-width: 0; }
+.pcrow .t { font-size: 1.3rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pcrow .s { font-size: 1.05rem; color: #8B95A3; margin-top: .25rem; }
+.pcrow .s.bad { color: #FF6B6B; }
+.pcrow .bar { height: .25rem; background: #232A35; border-radius: .2rem; margin-top: .5rem; overflow: hidden; }
+.pcrow .bar i { display: block; height: 100%; background: #4C9AFF; }
+.ep .pc { margin-left: 1rem; color: #4C9AFF; font-size: .95rem; }
+#h-pc { margin-left: 1rem; }
+#h-pc.hide, #m-pc.hide { display: none; }
 
 /* Fiche film */
 #m-back { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0E1116 center / cover no-repeat; opacity: .45; }

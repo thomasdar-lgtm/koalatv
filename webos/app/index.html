@@ -40,6 +40,7 @@
       <div class="brand"><img src="koala.png" alt=""><span>Koala<b>TV</b></span></div>
       <div id="h-account"><div id="h-acc-t"></div><div id="h-busy"></div></div>
       <div id="h-search" class="hsearch"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></svg><span>Rechercher</span></div>
+      <div id="h-pc" class="hsearch hide"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/></svg><span>Sur le PC</span></div>
     </header>
     <div id="h-resume">
       <div class="h-label">Reprendre<span class="h-hint">Appui long sur OK pour retirer</span></div>
@@ -152,6 +153,15 @@
     <div id="cs-list" class="vlist"></div>
   </section>
 
+  <section id="s-pcs" class="screen">
+    <div class="cs-head">
+      <h1 id="pc-title">Sur le PC</h1>
+      <p id="pc-sub"></p>
+    </div>
+    <div id="pc-list" class="vlist"></div>
+    <div id="pc-msg" class="msg"></div>
+  </section>
+
   <section id="s-movie" class="screen">
     <div id="m-back"></div>
     <div class="m-scrim"></div>
@@ -165,6 +175,7 @@
           <div class="mbtn primary" data-b="0" id="m-play">Lecture</div>
           <div class="mbtn" data-b="1" id="m-restart">Depuis le début</div>
           <div class="mbtn icon" data-b="2" id="m-fav"><svg viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></svg></div>
+          <div class="mbtn hide" data-b="3" id="m-pc">Télécharger sur le PC</div>
         </div>
         <p id="m-plot"></p>
         <p id="m-credits"></p>

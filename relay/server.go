@@ -31,6 +31,8 @@ func local(r *http.Request) bool {
 func (a *App) routes() http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+		// lu par les applis (la page de la TV en particulier)
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if r.URL.Query().Get("t") != a.cfg.Token {
 			http.Error(w, "refusé", 403)
 			return

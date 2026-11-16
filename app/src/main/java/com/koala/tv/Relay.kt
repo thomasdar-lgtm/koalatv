@@ -54,7 +54,8 @@ object Relay {
     /** Un PC est relié au compte (vu récemment). */
     val known get() = token.isNotEmpty() && System.currentTimeMillis() - seenAt < 24 * 3600_000L
 
-    fun all(): List<Entry> = lib.values.sortedByDescending { it.at }
+    /** Plus récent d'abord ; envoyés ensemble (une saison) : dans l'ordre des titres. */
+    fun all(): List<Entry> = lib.values.sortedWith(compareByDescending<Entry> { it.at / 60_000 }.thenBy { it.title })
     fun get(key: String?): Entry? = if (key == null) null else lib[key]
 
     private val ping by lazy { Xtream.http.newBuilder().connectTimeout(1500, TimeUnit.MILLISECONDS).readTimeout(2, TimeUnit.SECONDS).build() }

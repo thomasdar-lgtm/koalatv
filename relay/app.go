@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const version = "1.0.0"
+const version = "1.0.1"
 
 type Config struct {
 	Server string `json:"server"`
@@ -314,8 +314,14 @@ func (a *App) heartbeat() {
 	fb.Put("p/"+id, map[string]any{"n": a.cfg.Name, "t": "Téléchargement : " + title, "at": time.Now().UnixMilli(), "dl": 1})
 }
 
+// forcedIPs : adresses annoncées imposées (essais).
+var forcedIPs []string
+
 // lanIPs : adresses du PC sur le réseau local.
 func lanIPs() []string {
+	if len(forcedIPs) > 0 {
+		return forcedIPs
+	}
 	var out []string
 	ifs, _ := net.Interfaces()
 	for _, i := range ifs {

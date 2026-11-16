@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.20.3';
+  var VERSION = '1.21.0';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -423,10 +423,11 @@
     init: function () {
       if (!this.id) { this.id = 'lg' + Date.now().toString(36) + Math.floor(Math.random() * 1e9).toString(36); save('devid', this.id); }
     },
-    start: function (title) {
+    /* local : lecture depuis le PC de la maison (n'utilise pas l'abonnement, le PC continue de télécharger) */
+    start: function (title, local) {
       var self = this;
       this.stop(true);
-      function beat() { Sync.put('p/' + self.id, { n: self.name, t: title, at: Date.now() }); }
+      function beat() { var o = { n: self.name, t: title, at: Date.now() }; if (local) o.l = 1; Sync.put('p/' + self.id, o); }
       beat();
       this.timer = setInterval(beat, 30000);
     },
@@ -436,13 +437,18 @@
     /* Autres lectures en cours : cb({ others: [{n, t}], cons, max }) ; 2,5 s au plus */
     check: function (useServer, cb) {
       var done = false, out = { others: [], cons: 0, max: 0 }, n = 0, need = useServer ? 2 : 1, self = this;
-      function fin() { if (!done) { done = true; cb(out); } }
+      // la connexion d'un appareil qui télécharge (PC…) se libère d'elle-même : elle ne compte pas
+      function fin() { if (!done) { done = true; out.cons = Math.max(0, out.cons - (out.pcDl || 0)); cb(out); } }
       function part() { if (++n >= need) fin(); }
       setTimeout(fin, 2500);
       if (!Sync.enabled()) part();
       else getJson(Sync.url('p'), function (err, all) {
         if (!err && all) for (var k in all) {
-          if (all.hasOwnProperty(k) && k !== self.id && all[k] && Date.now() - all[k].at < 75000) out.others.push(all[k]);
+          if (!all.hasOwnProperty(k) || k === self.id || !all[k] || Date.now() - all[k].at >= 75000) continue;
+          // téléchargements (PC, autre appareil) : se mettent en pause ; lectures locales : n'utilisent pas l'abonnement
+          if (all[k].dl === 1 || /^Téléchargement/.test(all[k].t || '')) { out.pcDl = (out.pcDl || 0) + 1; continue; }
+          if (all[k].l === 1) continue;
+          out.others.push(all[k]);
         }
         part();
       });
@@ -453,6 +459,93 @@
       });
     }
   };
+
+  /*
+   * PC de la maison (KoalaTV Relais) : il télécharge films et épisodes à la demande, puis les sert sur le réseau local.
+   * Adresse et jeton du PC : r ; sa bibliothèque : rl ; demandes : q/<clé>.
+   */
+  var Relay = {
+    name: '', pauseWhy: '', ips: [], port: 0, tok: '', seenAt: 0, base: '', lib: {}, checkedAt: 0,
+    known: function () { return !!this.tok && Date.now() - this.seenAt < 24 * 3600000; },
+    get: function (key) { return key ? this.lib[key] || null : null; },
+    playable: function (e) { return !!e && (e.st === 'fini' || ((e.st === 'cours' || e.st === 'attente') && e.pct > 0)); },
+    /* Adresse de lecture depuis le PC, ou '' (pas téléchargé, ou PC injoignable d'ici) */
+    playUrl: function (key) {
+      var e = this.get(key);
+      if (!this.playable(e) || !this.base) return '';
+      return this.base + '/v/' + key + '.' + (e.ext || 'mkv') + '?t=' + this.tok;
+    },
+    all: function () {
+      var out = [], k;
+      for (k in this.lib) if (this.lib.hasOwnProperty(k)) { this.lib[k].k = k; out.push(this.lib[k]); }
+      // plus récent d'abord ; envoyés ensemble (une saison) : dans l'ordre des titres
+      out.sort(function (a, b) { var d = (b.at || 0) - (a.at || 0); return Math.abs(d) < 60000 ? (a.t < b.t ? -1 : a.t > b.t ? 1 : 0) : d; });
+      return out;
+    },
+    refresh: function (cb, force) {
+      var self = this;
+      cb = cb || function () {};
+      if (!Sync.enabled()) return cb();
+      getJson(Sync.url('r'), function (err, r) {
+        if (err) return cb();
+        if (!r) { self.tok = ''; self.base = ''; self.lib = {}; return cb(); }
+        self.name = str(r.n); self.pauseWhy = str(r.pause); self.port = r.port; self.tok = str(r.tok); self.seenAt = r.at || 0;
+        self.ips = r.ip || [];
+        getJson(Sync.url('rl'), function (err2, rl) {
+          if (!err2) self.lib = rl || {};
+          if (!force && self.base && Date.now() - self.checkedAt < 60000) return cb();
+          self.checkedAt = Date.now();
+          // première adresse qui répond sur ce réseau
+          var i = 0;
+          (function next() {
+            if (i >= self.ips.length) { self.base = ''; return cb(); }
+            var b = 'http://' + self.ips[i++] + ':' + self.port;
+            httpGet(b + '/ping?t=' + self.tok, function (e3) { if (!e3) { self.base = b; cb(); } else next(); });
+          })();
+        });
+      });
+    },
+    /* Demande au PC de télécharger ces éléments ({title, url, key, icon, sid, sname}) */
+    send: function (items) {
+      var n = 0, i, it, ext;
+      for (i = 0; i < items.length; i++) {
+        it = items[i];
+        if (!it.key || it.live || this.lib[it.key]) continue;
+        ext = (/\.([a-z0-9]{2,5})(\?|$)/i.exec(it.url) || [0, 'mkv'])[1];
+        Sync.put('q/' + it.key, { kind: it.key.charAt(0) === 'e' ? 'series' : 'movie', id: it.key.substr(1), ext: ext, t: it.title, i: it.icon || '', sid: it.sid || '', sn: it.sname || '', at: Date.now() });
+        this.lib[it.key] = { t: it.title, i: it.icon || '', st: 'attente', pct: 0, ext: ext, sid: it.sid || '', sn: it.sname || '', at: Date.now() };
+        n++;
+      }
+      return n;
+    },
+    remove: function (key) { Sync.put('q/' + key, { del: 1 }); delete this.lib[key]; },
+    retry: function (key) { Sync.put('q/' + key, { retry: 1 }); },
+    tag: function (e) {
+      if (!e) return '';
+      return e.st === 'fini' ? 'Sur le PC' : e.st === 'cours' ? 'Sur le PC ' + e.pct + ' %' : e.st === 'echec' ? 'Échec sur le PC' : 'En attente sur le PC';
+    },
+    stateText: function (e) {
+      switch (e.st) {
+        case 'fini': return 'Sur le PC · ' + fmtSize(e.tot);
+        case 'cours': return 'Téléchargement · ' + e.pct + ' %' + (e.tot ? ' de ' + fmtSize(e.tot) : '') + (e.sp ? ' · ' + (e.sp / 1048576).toFixed(1).replace('.', ',') + ' Mo/s' : '');
+        case 'echec': return 'Échec : ' + (e.err || '');
+        default: return (this.pauseWhy ? 'En pause' : 'En attente') + (e.pct ? ' · ' + e.pct + ' %' : '');
+      }
+    },
+    /* Menu « Télécharger sur le PC » ou retrait, pour une liste d'éléments (le premier est l'élément choisi) */
+    menu: function (title, choices, after) {
+      var opts = [], i;
+      for (i = 0; i < choices.length; i++) (function (c) {
+        opts.push({ label: c.label, fn: function () { c.fn(); if (after) after(); } });
+      })(choices[i]);
+      Dialog.show(title, '', opts);
+    }
+  };
+
+  function fmtSize(b) {
+    if (!(b > 0)) return '';
+    return b >= 1073741824 ? (b / 1073741824).toFixed(1).replace('.', ',') + ' Go' : Math.round(b / 1048576) + ' Mo';
+  }
 
   /* Films et épisodes vus jusqu'au bout (partagés entre appareils) */
   var Seen = {
@@ -1803,6 +1896,8 @@
       }
       $('h-search').addEventListener('click', function () { go('gsearch'); });
       hoverOn($('h-search'), function () { if (self.zone !== 'search') { self.zone = 'search'; self.paint(); } });
+      $('h-pc').addEventListener('click', function () { go('pcs'); });
+      hoverOn($('h-pc'), function () { if (self.zone !== 'pc') { self.zone = 'pc'; self.paint(); } });
       hoverOn($('h-new'), function (t) {
         var n = attrOf(t, 'data-n', $('h-new')), i2 = n ? parseInt(n.getAttribute('data-n'), 10) : -1;
         if (i2 >= 0 && (self.zone !== 'recent' || self.nIdx !== i2)) { self.zone = 'recent'; self.nIdx = i2; self.paint(); }
@@ -1838,6 +1933,7 @@
       }
       $('h-acc-t').textContent = txt;
       this.zone = 'tiles';
+      this.pcButton();
       this.drawResume();
       this.paint();
       Lists.warmAll();
@@ -1848,7 +1944,16 @@
       Sync.pullFavs();
       Sync.pullSeen();
     },
+    /* Bouton « Sur le PC » : visible quand un PC est relié au compte */
+    pcButton: function () {
+      var self = this;
+      Relay.refresh(function () {
+        cls($('h-pc'), 'hide', !Relay.known());
+        if (!Relay.known() && self.zone === 'pc') { self.zone = 'search'; self.paint(); }
+      });
+    },
     resume: function () {
+      this.pcButton();
       this.drawResume();
       this.paint();
       this.loadRecent();
@@ -1930,6 +2035,7 @@
     paint: function () {
       cls(this.el, 'resume-on', this.zone === 'resume');
       cls($('h-search'), 'focus', this.zone === 'search');
+      cls($('h-pc'), 'focus', this.zone === 'pc');
       // la rangée « Ajoutés récemment » est sous les tuiles : on fait remonter la page pour l'afficher
       var tl = this.el.querySelector('.tiles'), nr = $('h-recent');
       nr.style.top = (tl.offsetTop + tl.offsetHeight + 2.2 * REM) + 'px';
@@ -1969,6 +2075,13 @@
       }
       if (this.zone === 'search') {
         if (c === K.OK) go('gsearch');
+        else if (c === K.DOWN) { this.zone = n ? 'resume' : 'tiles'; this.paint(); }
+        else if (c === K.RIGHT && Relay.known()) { this.zone = 'pc'; this.paint(); }
+        return true;
+      }
+      if (this.zone === 'pc') {
+        if (c === K.OK) go('pcs');
+        else if (c === K.LEFT) { this.zone = 'search'; this.paint(); }
         else if (c === K.DOWN) { this.zone = n ? 'resume' : 'tiles'; this.paint(); }
         return true;
       }
@@ -2872,7 +2985,8 @@
             (pos && e.dur ? '<i style="width:' + Math.min(100, pos / 60 / e.dur * 100).toFixed(1) + '%"></i>' : '') + '</div>' +
             '<div class="bd"><div class="t"><span class="en">' + (title ? 'Épisode ' + e.num + (e.dur ? ' · ' + e.dur + ' min' : '') : (e.dur ? e.dur + ' min' : '')) + '</span>' +
             (pos ? '<span class="r">Reprendre à ' + fmtTime(pos) + '</span>' : '') +
-            (seen ? '<span class="vu"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Vu</span>' : '') + '</div>' +
+            (seen ? '<span class="vu"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Vu</span>' : '') +
+            (Relay.get('e' + e.id) ? '<span class="pc">' + esc(Relay.tag(Relay.get('e' + e.id))) + '</span>' : '') + '</div>' +
             '<div class="tt">' + esc(title || 'Épisode ' + e.num) + '</div>' +
             '<div class="p">' + esc(e.plot) + '</div></div></div>';
         },
@@ -2896,6 +3010,7 @@
       this.zone = 'seasons';
       this.paintZone();
       spinner(true);
+      Relay.refresh(function () { if (token === self.token) self.eList.redraw(); });
       X.episodes(it.id, function (err, eps) {
         if (token !== self.token) return;
         if (cur === self) spinner(false);
@@ -2971,6 +3086,31 @@
     play: function () {
       go('player', { list: episodeList(this.it.id, this.it.name, this.it.icon, this.eList.items), index: this.eList.idx });
     },
+    /* Appui long sur un épisode : téléchargement sur le PC (l'épisode, 3, la saison, la série) ou retrait */
+    epMenu: function () {
+      var self = this, season = episodeList(this.it.id, this.it.name, this.it.icon, this.eList.items), me = season[this.eList.idx];
+      if (!me) return;
+      if (!Relay.known()) { Dialog.show(me.title, 'Pour télécharger, installe KoalaTV Relais sur un PC de la maison, puis relie-le à ton compte.', [{ label: 'OK', fn: function () {} }]); return; }
+      var all = episodeList(this.it.id, this.it.name, this.it.icon, this.eps), from = 0, i, e = Relay.get(me.key), ch = [];
+      for (i = 0; i < all.length; i++) if (all[i].key === me.key) from = i;
+      function sendPc(l) { var n = Relay.send(l); toast(n === 0 ? 'Déjà sur le PC' : n === 1 ? 'Envoyé au PC' : n + ' épisodes envoyés au PC'); }
+      if (!e) {
+        ch.push({ label: 'Sur le PC : cet épisode', fn: function () { sendPc([me]); } });
+        ch.push({ label: 'Sur le PC : 3 épisodes à partir de celui-ci', fn: function () { sendPc(all.slice(from, from + 3)); } });
+        ch.push({ label: 'Sur le PC : toute la saison', fn: function () { sendPc(season); } });
+        ch.push({ label: 'Sur le PC : toute la série', fn: function () { sendPc(all); } });
+      } else {
+        if (e.st === 'echec') ch.push({ label: 'Réessayer sur le PC', fn: function () { Relay.retry(me.key); } });
+        ch.push({ label: e.st === 'fini' ? 'Supprimer du PC' : 'Annuler sur le PC', fn: function () { Relay.remove(me.key); } });
+      }
+      ch.push({ label: 'Voir le PC', fn: function () { go('pcs'); } });
+      Relay.menu(me.title, ch, function () { self.eList.redraw(); });
+    },
+    keyup: function (c) {
+      if (c !== K.OK || !this.okTimer) return;
+      if (this.okTimer !== 'long') { clearTimeout(this.okTimer); this.play(); }
+      this.okTimer = null;
+    },
     back: function () {
       if (this.zone === 'eps') { this.setZone('seasons'); return true; }
       return false;
@@ -2987,7 +3127,80 @@
       else if (c === K.DOWN) this.eList.move(0, 1);
       else if (c === K.CH_UP || c === K.CH_DOWN) this.eList.page(c === K.CH_UP ? -1 : 1);
       else if (c === K.LEFT) this.setZone('seasons');
-      else if (c === K.OK) this.play();
+      else if (c === K.OK) {
+        // appui court : lecture ; appui long : téléchargement sur le PC
+        var self = this;
+        if (!this.okTimer) this.okTimer = setTimeout(function () { self.okTimer = 'long'; self.epMenu(); }, 650);
+      }
+      else if (c === K.RED) this.epMenu();
+      return true;
+    }
+  };
+
+  /* ---------- PC de la maison : téléchargements ---------- */
+
+  screens.pcs = {
+    el: $('s-pcs'),
+    init: function () {
+      var self = this;
+      this.list = new VList($('pc-list'), {
+        rowH: 5.4,
+        render: function (e) {
+          var img = /^https?:\/\//i.test(e.i) ? '<img src="' + esc(e.i) + '" onerror="this.style.visibility=\'hidden\'">' : '<img style="visibility:hidden">';
+          return '<div class="pcrow">' + img + '<div class="bd"><div class="t">' + esc(e.t) + '</div><div class="s' + (e.st === 'echec' ? ' bad' : '') + '">' + esc(Relay.stateText(e)) + '</div>' +
+            (e.st === 'fini' || e.st === 'echec' ? '' : '<div class="bar"><i style="width:' + (e.pct || 0) + '%"></i></div>') + '</div></div>';
+        },
+        onOk: function () { self.open(); }
+      });
+    },
+    enter: function () {
+      var self = this;
+      this.paint();
+      this.list.focus(true);
+      Relay.refresh(function () { self.paint(); }, true);
+      clearInterval(this.timer);
+      this.timer = setInterval(function () { Relay.refresh(function () { self.paint(); }); }, 3000);
+    },
+    leave: function () { clearInterval(this.timer); this.timer = null; },
+    resume: function () { this.enter(); },
+    paint: function () {
+      var l = Relay.all(), idx = Math.min(this.list.idx || 0, Math.max(0, l.length - 1));
+      $('pc-title').textContent = Relay.known() ? 'Sur le PC · ' + Relay.name : 'Sur le PC';
+      $('pc-sub').textContent = !Relay.known() ? 'Installe KoalaTV Relais sur un PC de la maison, puis relie-le à ton compte (Réglages, Connecter un appareil).'
+        : !Relay.base ? 'PC injoignable : il doit être allumé, sur le même réseau que la TV.'
+        : Relay.pauseWhy ? Relay.pauseWhy : 'OK : lire · appui long : supprimer ou réessayer';
+      this.list.set(l, idx, true);
+      var m = $('pc-msg');
+      m.textContent = Relay.known() && !l.length ? 'Rien sur le PC pour le moment. Dans une série, appui long sur OK sur un épisode : « Sur le PC ».' : '';
+      cls(m, 'on', !!m.textContent);
+    },
+    open: function () {
+      var e = this.list.items[this.list.idx];
+      if (!e) return;
+      if (e.st === 'echec') return this.menu();
+      if (!Relay.playable(e)) return toast('Le PC n\'a pas encore commencé ce téléchargement');
+      if (!Relay.base) return toast('Le PC est injoignable : il doit être allumé, sur le même réseau que la TV');
+      var series = e.k.charAt(0) === 'e', id = e.k.substr(1);
+      go('player', { list: [{ title: e.t, url: X.url(series ? 'episode' : 'movie', id, e.ext || 'mkv'), live: false, key: e.k, icon: e.i, sid: e.sid, sname: e.sn }], index: 0, startAt: P.pos[e.k] || 0 });
+    },
+    menu: function () {
+      var self = this, e = this.list.items[this.list.idx], ch = [];
+      if (!e) return;
+      if (Relay.playable(e)) ch.push({ label: 'Lire', fn: function () { self.open(); } });
+      if (e.st === 'echec') ch.push({ label: 'Réessayer', fn: function () { Relay.retry(e.k); } });
+      ch.push({ label: e.st === 'fini' ? 'Supprimer du PC' : 'Annuler', fn: function () { Relay.remove(e.k); self.paint(); } });
+      Relay.menu(e.t, ch);
+    },
+    keyup: function (c) {
+      if (c !== K.OK || !this.okTimer) return;
+      if (this.okTimer !== 'long') { clearTimeout(this.okTimer); this.open(); }
+      this.okTimer = null;
+    },
+    key: function (c) {
+      if (c === K.UP) this.list.move(0, -1);
+      else if (c === K.DOWN) this.list.move(0, 1);
+      else if (c === K.OK) { var self = this; if (!this.okTimer) this.okTimer = setTimeout(function () { self.okTimer = 'long'; self.menu(); }, 650); }
+      else if (c === K.RED) this.menu();
       return true;
     }
   };
@@ -3230,6 +3443,7 @@
       var r = parseFloat(it.rating);
       this.show({ title: it.name, poster: it.icon, backdrop: '', plot: '', year: '', minutes: 0, genre: '', rating: r > 0 ? r.toFixed(1).replace('.', ',') : '', director: '', cast: '' });
       this.paint();
+      Relay.refresh(function () { if (token === self.token) self.paint(); });
       X.movie(it.id, function (err, m) {
         if (err || token !== self.token) return;
         if (m.ext) self.ext = m.ext;
@@ -3238,7 +3452,7 @@
         self.show(m);
       });
     },
-    resume: function () { this.paint(); },
+    resume: function () { var self = this; this.paint(); Relay.refresh(function () { self.paint(); }); },
     show: function (m) {
       $('m-title').textContent = m.title;
       var meta = [];
@@ -3267,11 +3481,26 @@
       cls($('m-restart'), 'hide', !(pos > 0));
       if (!(pos > 0) && this.idx === 1) this.idx = 0;
       cls($('m-fav'), 'on', isFav(this.it));
-      var b = [$('m-play'), $('m-restart'), $('m-fav')];
+      // PC de la maison : téléchargement ou état
+      var pc = Relay.get(this.key0());
+      cls($('m-pc'), 'hide', !Relay.known());
+      $('m-pc').textContent = pc ? Relay.tag(pc) : 'Télécharger sur le PC';
+      if (!Relay.known() && this.idx === 3) this.idx = 0;
+      var b = [$('m-play'), $('m-restart'), $('m-fav'), $('m-pc')];
       for (var i = 0; i < b.length; i++) cls(b[i], 'focus', i === this.idx);
     },
     ok: function () {
-      var it = this.it, pos = P.pos[this.key0()] || 0;
+      var it = this.it, pos = P.pos[this.key0()] || 0, self = this;
+      if (this.idx === 3) {
+        var key = this.key0(), e = Relay.get(key), item0 = { title: it.name, url: X.url('movie', it.id, this.ext), live: false, key: key, icon: it.icon };
+        if (!e) { toast(Relay.send([item0]) ? 'Envoyé au PC' : 'Déjà sur le PC'); this.paint(); return; }
+        var ch = [];
+        if (e.st === 'echec') ch.push({ label: 'Réessayer sur le PC', fn: function () { Relay.retry(key); } });
+        ch.push({ label: e.st === 'fini' ? 'Supprimer du PC' : 'Annuler sur le PC', fn: function () { Relay.remove(key); } });
+        ch.push({ label: 'Voir le PC', fn: function () { go('pcs'); } });
+        Relay.menu(it.name, ch, function () { self.paint(); });
+        return;
+      }
       if (this.idx === 2) {
         var key = it.kind + ':' + it.id;
         Favs.toggle(key);
@@ -3283,7 +3512,9 @@
       go('player', { list: [item], index: 0, startAt: this.idx === 1 ? 0 : pos });
     },
     key: function (c) {
-      var order = (P.pos[this.key0()] || 0) > 0 ? [0, 1, 2] : [0, 2], k = order.indexOf(this.idx);
+      var order = (P.pos[this.key0()] || 0) > 0 ? [0, 1, 2] : [0, 2], k;
+      if (Relay.known()) order.push(3);
+      k = order.indexOf(this.idx);
       if (c === K.LEFT && k > 0) { this.idx = order[k - 1]; this.paint(); }
       else if (c === K.RIGHT && k < order.length - 1) { this.idx = order[k + 1]; this.paint(); }
       else if (c === K.OK) this.ok();
@@ -3581,7 +3812,10 @@
     },
     load: function (at) {
       var v = this.v, it = this.cur();
-      Presence.start(it.title);
+      // sur le PC de la maison : lecture par le réseau local (n'utilise pas l'abonnement)
+      var pc = it.live ? '' : Relay.playUrl(it.key), url = pc || it.url;
+      Presence.start(it.title, !!pc);
+      if (pc) Dbg.log('lecture depuis le PC', { clé: it.key });
       clearTimeout(this.timers.retry);
       this.timers.retry = null;
       this.startAt = at || 0;
@@ -3593,10 +3827,10 @@
       this.showInfo();
       var self = this, token = ++this.loadToken;
       // liste des pistes lue dans le fichier avant la lecture (l'abonnement n'autorise qu'une connexion)
-      Tracks.probe(it.url, function (probed) {
+      Tracks.probe(url, function (probed) {
         if (token !== self.loadToken || self.cur() !== it) return;
         Tracks.reset(v, probed);
-        v.setAttribute('src', it.url);
+        v.setAttribute('src', url);
         v.load();
         Tracks.early();
         var pr = v.play();

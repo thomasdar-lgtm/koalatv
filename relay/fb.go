@@ -79,6 +79,8 @@ func (f *FB) Listen(ctx context.Context, path string, onChange func()) {
 		req, _ := http.NewRequestWithContext(ctx, "GET", f.url(path), nil)
 		req.Header.Set("Accept", "text/event-stream")
 		r, err := (&http.Client{}).Do(req)
+		// à chaque (re)connexion : relecture (rien n'est perdu pendant une coupure)
+		onChange()
 		if err == nil {
 			sc := bufio.NewScanner(r.Body)
 			sc.Buffer(make([]byte, 64*1024), 4*1024*1024)

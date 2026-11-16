@@ -59,6 +59,8 @@ object Downloads {
         @Volatile var tailDone: Boolean = false,
         @Volatile var state: State = State.QUEUED,
         @Volatile var error: String = "",
+        /** Vitesse moyenne récente (octets par seconde), 0 si inconnue. */
+        @Volatile var speed: Long = 0,
         val added: Long = System.currentTimeMillis(),
     ) {
         val file get() = File(path)
@@ -68,6 +70,23 @@ object Downloads {
             pos < done -> done - pos
             tailDone && tailFrom in 0..pos && pos < total -> total - pos
             else -> 0
+        }
+        /** Octets restant à télécharger. */
+        val remaining: Long get() = if (total <= 0) -1 else (total - done - if (tailDone) total - tailFrom else 0).coerceAtLeast(0)
+        /** « 12 Mo/s · encore 7 min », vide tant que la vitesse est inconnue. */
+        fun pace(): String {
+            if (speed <= 0 || state != State.RUNNING) return ""
+            val mbs = speed / 1048576.0
+            val rate = if (mbs >= 10) "${mbs.toInt()} Mo/s" else String.format(java.util.Locale.FRANCE, "%.1f Mo/s", mbs)
+            val left = remaining
+            if (left < 0) return rate
+            val s = left / speed
+            val eta = when {
+                s < 60 -> "moins d'une minute"
+                s < 3600 -> "${s / 60} min"
+                else -> "${s / 3600} h ${String.format("%02d", s / 60 % 60)}"
+            }
+            return "$rate · encore $eta"
         }
         val percent: Int get() = if (total > 0) ((done + if (tailDone) total - tailFrom else 0) * 100 / total).toInt().coerceIn(0, 100) else 0
         fun toPlayItem() = PlayItem(title, url, false, key, key.drop(1), icon, seriesId, seriesName)
@@ -325,6 +344,7 @@ object Downloads {
                     val buf = ByteArray(256 * 1024)
                     var pos = from
                     var lastNote = 0L
+                    var lastPos = from
                     while (pos < to) {
                         if (stopFlag) throw IOException("interrompu")
                         val n = input.read(buf, 0, minOf(buf.size.toLong(), to - pos).toInt())
@@ -333,7 +353,16 @@ object Downloads {
                         pos += n
                         mark(pos)
                         val now = System.currentTimeMillis()
-                        if (now - lastNote > 1000) { lastNote = now; onProgress() }
+                        if (now - lastNote > 1000) {
+                            // vitesse lissée sur les dernières secondes
+                            if (lastNote > 0) {
+                                val inst = (pos - lastPos) * 1000 / (now - lastNote)
+                                d.speed = if (d.speed <= 0) inst else (d.speed * 7 + inst * 3) / 10
+                            }
+                            lastNote = now
+                            lastPos = pos
+                            onProgress()
+                        }
                     }
                     if (pos < to) throw IOException("Connexion coupée")
                     mark(pos)
@@ -377,7 +406,7 @@ class DownloadService : Service() {
             }
             Presence.start("Téléchargement : ${d.title}")
             Downloads.Worker.run(d) {
-                manager().notify(1, note(d.title, d.percent, false))
+                manager().notify(1, note(d.title + (d.pace().let { if (it.isEmpty()) "" else " · $it" }), d.percent, false))
                 Downloads.notifyProgress()
             }
             if (!Downloads.heldByPlayback) Presence.stopDownload()

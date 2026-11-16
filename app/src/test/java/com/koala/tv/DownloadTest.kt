@@ -116,6 +116,7 @@ class DownloadTest {
         val a = Downloads.Dl("e1", "Game of Thrones · S6 É1 · La Femme rouge", "http://x/1.mkv", "", "9", "Game of Thrones", File(Downloads.dir(), "a").path, total = 4_200_000_000, done = 4_200_000_000, tailFrom = 4_100_000_000, tailDone = true, state = Downloads.State.DONE)
         val b = Downloads.Dl("e2", "Game of Thrones · S6 É2 · Chez moi", "http://x/2.mkv", "", "9", "Game of Thrones", File(Downloads.dir(), "b").path, total = 4_000_000_000, done = 1_300_000_000, tailFrom = 3_900_000_000, tailDone = true, state = Downloads.State.RUNNING)
         val c = Downloads.Dl("m3", "Dune : deuxième partie", "http://x/3.mkv", "", "", "", File(Downloads.dir(), "c").path)
+        b.speed = 12L * 1048576
         listOf(a, b, c).forEach { synchronizedAdd(it) }
         val sc = ActivityScenario.launch(DownloadsActivity::class.java)
         shadowOf(Looper.getMainLooper()).idle()

@@ -104,7 +104,8 @@ class DownloadsActivity : BaseActivity() {
     companion object {
         fun stateText(d: Downloads.Dl): String = when (d.state) {
             Downloads.State.DONE -> "Téléchargé · ${fmtSize(d.total)}"
-            Downloads.State.RUNNING -> "Téléchargement · ${d.percent} %" + (if (d.total > 0) " de ${fmtSize(d.total)}" else "")
+            Downloads.State.RUNNING -> "Téléchargement · ${d.percent} %" + (if (d.total > 0) " de ${fmtSize(d.total)}" else "") +
+                d.pace().let { if (it.isEmpty()) "" else " · $it" }
             Downloads.State.FAILED -> "Échec : ${d.error}"
             Downloads.State.QUEUED -> when {
                 Downloads.heldByPlayback -> "En pause pendant la lecture"

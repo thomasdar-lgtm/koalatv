@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.20.1';
+  var VERSION = '1.20.2';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -600,7 +600,7 @@
       this.call('storage', {}, function (m) {
         var res = m && m.result;
         Dbg.log('stockage : dossiers', res ? res.dirs : m);
-        if (res) Dbg.log('stockage : usb', { usb: res.usb, node: res.node, uid: res.uid });
+        if (res) Dbg.log('stockage : usb', { usb: res.usb, montages: res.mounts, node: res.node, uid: res.uid });
         if (!res) return;
         // dossier de test : une clé USB inscriptible d'abord, sinon le premier dossier inscriptible
         var best = null, k, d;

@@ -462,7 +462,7 @@ function listDir(dir) {
 
 service.register('storage', function (message) {
   var cands = [__dirname, '/media/developer/temp', '/media/internal', '/tmp', '/var/tmp', '/media/cryptofs/apps/usr/palm/services'];
-  var usbRoots = ['/tmp/usb', '/mnt/usb', '/media/usb', '/run/media', '/media'];
+  var usbRoots = ['/tmp/usb', '/mnt/usb', '/media/usb', '/run/media', '/media', '/mnt', '/media/multimedia'];
   var usb = {};
   usbRoots.forEach(function (r) {
     var l = listDir(r);
@@ -474,7 +474,15 @@ service.register('storage', function (message) {
       if (/^sd[a-z]\d*$/.test(d)) cands.push(pathLib.join(r, d));
     });
   });
-  var out = { dirs: {}, usb: usb, node: process.version, uid: process.getuid ? process.getuid() : '?' }, k = 0;
+  // supports montés (clés USB, disques) : /proc/mounts
+  var mounts = [];
+  try {
+    String(fs.readFileSync('/proc/mounts')).split('\n').forEach(function (l) {
+      var f = l.split(' ');
+      if (/^\/dev\/sd|usb|fuse|exfat|ntfs|vfat/i.test(l)) { mounts.push(f[0] + ' ' + f[1] + ' ' + f[2]); if (f[1] && f[1].charAt(0) === '/') cands.push(f[1].replace(/\\040/g, ' ')); }
+    });
+  } catch (e) { mounts.push('lecture impossible : ' + (e.code || e.message)); }
+  var out = { dirs: {}, usb: usb, mounts: mounts, node: process.version, uid: process.getuid ? process.getuid() : '?' }, k = 0;
   (function next() {
     if (k >= cands.length) return message.respond({ returnValue: true, result: out });
     var d = cands[k++];
@@ -492,9 +500,15 @@ service.register('storage', function (message) {
 
 /* Serveur local : copie la vidéo de test dans un dossier inscriptible et la sert au lecteur de la TV */
 service.register('localServe', function (message) {
-  var p = message.payload || {}, src = p.src, dir = p.dir;
+  var p = message.payload || {}, dir = p.dir;
   var dst = pathLib.join(dir, 'koalatv-probe.mp4');
-  try { fs.writeFileSync(dst, fs.readFileSync(src)); } catch (e) { return message.respond({ returnValue: false, errorText: 'copie : ' + (e.code || e.message) }); }
+  // la vidéo de test est dans l'appli ; le service ne voit pas forcément le même chemin que la page
+  var srcs = [p.src, pathLib.join(__dirname, '..', '..', 'applications', 'com.koala.tv', 'probe.mp4')], data = null, tried = [];
+  for (var i = 0; i < srcs.length && !data; i++) {
+    try { data = fs.readFileSync(srcs[i]); } catch (e) { tried.push(srcs[i] + ' : ' + (e.code || e.message)); }
+  }
+  if (!data) return message.respond({ returnValue: false, errorText: 'vidéo de test introuvable (' + tried.join(' | ') + ')' });
+  try { fs.writeFileSync(dst, data); } catch (e) { return message.respond({ returnValue: false, errorText: 'copie vers ' + dir + ' : ' + (e.code || e.message) }); }
   try { if (probeServer) probeServer.close(); } catch (e) { /* déjà fermé */ }
   probeServer = http.createServer(function (req, res) {
     var size = fs.statSync(dst).size, m = /bytes=(\d+)-(\d*)/.exec(req.headers.range || ''), a = 0, b = size - 1;

@@ -41,6 +41,7 @@ object Presence {
     }
 
     fun start(title: String) {
+        current = title
         beat?.cancel()
         beat = Lists.scope.launch {
             while (true) {
@@ -50,7 +51,15 @@ object Presence {
         }
     }
 
+    /** Fin des téléchargements : la présence « Téléchargement » est retirée (pas celle d'une lecture). */
+    fun stopDownload() {
+        if (current.startsWith("Téléchargement")) stop()
+    }
+
+    private var current = ""
+
     fun stop() {
+        current = ""
         if (beat == null) return
         beat?.cancel()
         beat = null

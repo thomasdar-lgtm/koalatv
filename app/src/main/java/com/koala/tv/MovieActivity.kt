@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +25,8 @@ class MovieActivity : BaseActivity() {
     private lateinit var btnPlay: TextView
     private lateinit var btnRestart: TextView
     private lateinit var btnFav: ImageView
+    private lateinit var btnDl: TextView
+    private val dlRefresh: () -> Unit = { paintDownload() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +48,9 @@ class MovieActivity : BaseActivity() {
             toast(if (added) "Ajouté aux favoris" else "Retiré des favoris")
             paintFav()
         }
-        listOf(btnPlay, btnRestart, btnFav).forEach { it.focusZoom(1.05f) }
+        btnDl = findViewById(R.id.btn_download)
+        btnDl.setOnClickListener { download() }
+        listOf(btnPlay, btnRestart, btnFav, btnDl).forEach { it.focusZoom(1.05f) }
 
         // affichage immédiat avec ce qu'on connaît déjà, puis la fiche complète
         show(MovieInfo(name, icon, "", "", "", 0, "", rating.toDoubleOrNull()?.takeIf { it > 0 }?.let { String.format(java.util.Locale.FRANCE, "%.1f", it) } ?: "", "", "", ""))
@@ -67,6 +72,48 @@ class MovieActivity : BaseActivity() {
         super.onResume()
         paintButtons()
         paintFav()
+        paintDownload()
+        Downloads.listen(dlRefresh)
+    }
+
+    override fun onPause() {
+        Downloads.unlisten(dlRefresh)
+        super.onPause()
+    }
+
+    private fun item() = PlayItem(name, Xtream.movieUrl(id, ext), false, resumeKey, id, icon)
+
+    private fun paintDownload() {
+        val d = Downloads.get(resumeKey)
+        btnDl.text = when {
+            d == null -> "Télécharger"
+            d.state == Downloads.State.DONE -> "Téléchargé"
+            d.state == Downloads.State.FAILED -> "Échec du téléchargement"
+            d.state == Downloads.State.RUNNING -> "Téléchargement ${d.percent} %"
+            else -> "En attente de téléchargement"
+        }
+    }
+
+    private fun download() {
+        val d = Downloads.get(resumeKey)
+        if (d == null) {
+            Downloads.add(listOf(item()))
+            DownloadsActivity.askNotifications(this)
+            toast("Ajouté aux téléchargements")
+            paintDownload()
+            return
+        }
+        val opts = arrayListOf("Voir les téléchargements", if (d.state == Downloads.State.DONE) "Supprimer le téléchargement" else "Annuler le téléchargement")
+        if (d.state == Downloads.State.FAILED) opts.add(0, "Réessayer")
+        AlertDialog.Builder(this).setTitle(name)
+            .setItems(opts.toTypedArray()) { _, w ->
+                when (opts[w]) {
+                    "Réessayer" -> Downloads.retry(resumeKey)
+                    "Voir les téléchargements" -> startActivity(android.content.Intent(this, DownloadsActivity::class.java))
+                    else -> Downloads.remove(resumeKey)
+                }
+                paintDownload()
+            }.show()
     }
 
     private fun show(m: MovieInfo) {
@@ -111,7 +158,7 @@ class MovieActivity : BaseActivity() {
     }
 
     private fun play(fromStart: Boolean) {
-        val item = PlayItem(name, Xtream.movieUrl(id, ext), false, resumeKey, id, icon)
+        val item = item()
         val start = if (fromStart) 0L else Prefs.getPos(resumeKey)
         Nav.play(this, listOf(item), 0, startAt = start)
     }

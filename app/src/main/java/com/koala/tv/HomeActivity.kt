@@ -59,6 +59,7 @@ class HomeActivity : BaseActivity() {
         series.setOnClickListener { open(Kind.SERIES) }
         settings.setOnClickListener { showSettings() }
         findViewById<View?>(R.id.btn_search)?.setOnClickListener { startActivity(Intent(this, SearchActivity::class.java)) }
+        findViewById<View?>(R.id.btn_downloads)?.setOnClickListener { startActivity(Intent(this, DownloadsActivity::class.java)) }
         listOf(live, movies, series, settings).forEach { it.focusZoom(1.05f) }
 
         updateBar = findViewById(R.id.update_bar)
@@ -141,6 +142,8 @@ class HomeActivity : BaseActivity() {
 
     override fun onResume() {
         super.onResume()
+        // téléchargements interrompus (appli fermée, Wi-Fi revenu) : ils reprennent
+        Downloads.kick()
         if (!::updateBar.isInitialized) return
         refreshResume()
         loadRecent()

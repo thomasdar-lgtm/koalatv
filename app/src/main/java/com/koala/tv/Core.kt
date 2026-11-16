@@ -26,6 +26,7 @@ class App : Application() {
         Seen.init(this)
         Seen.backfill()
         Presence.init(this)
+        Downloads.init(this)
     }
 }
 
@@ -71,6 +72,13 @@ object Prefs {
     var externalPlayer: Boolean
         get() = sp.getBoolean("ext", false)
         set(v) = sp.edit().putBoolean("ext", v).apply()
+    /** Téléchargements : support choisi (vide = celui qui a le plus de place), données mobiles permises. */
+    var downloadDir: String
+        get() = str("dl_dir", "")
+        set(v) = put("dl_dir", v)
+    var downloadMobile: Boolean
+        get() = sp.getBoolean("dl_mobile", false)
+        set(v) = sp.edit().putBoolean("dl_mobile", v).apply()
 
     /** Décalage horaire du serveur en secondes (null = inconnu, on prend celui de l'appareil). */
     var tzOffset: Long?

@@ -44,4 +44,16 @@
         android:focusable="true"
         android:padding="12dp"
         android:src="@drawable/ic_search" />
+
+    <ImageView
+        android:id="@+id/btn_downloads"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="10dp"
+        android:background="@drawable/btn_bg"
+        android:clickable="true"
+        android:contentDescription="Téléchargements"
+        android:focusable="true"
+        android:padding="12dp"
+        android:src="@drawable/ic_download" />
 </LinearLayout>

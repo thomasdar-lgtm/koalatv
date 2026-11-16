@@ -263,7 +263,7 @@ class PlayerActivity : BaseActivity() {
 
     private fun initPlayer() {
         val http = OkHttpDataSource.Factory(Xtream.http).setUserAgent(Prefs.userAgent)
-        val dataSource = DefaultDataSource.Factory(this, http)
+        val dataSource = GrowingFileDataSource.Factory(DefaultDataSource.Factory(this, http))
         val extractors = DefaultExtractorsFactory()
             .setTsExtractorFlags(
                 DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES or
@@ -344,6 +344,7 @@ class PlayerActivity : BaseActivity() {
 
     private fun releasePlayer() {
         Presence.stop()
+        Downloads.hold(false)
         handler.removeCallbacks(saveLoop)
         handler.removeCallbacks(nextTick)
         handler.removeCallbacks(retryRunnable)
@@ -378,8 +379,18 @@ class PlayerActivity : BaseActivity() {
         applyLangs(p)
         val item = current
         tvStatus.visibility = View.GONE
+        // téléchargé : fichier local ; en cours de téléchargement : lecture du fichier qui se remplit
+        val dl = Downloads.get(item.resumeKey)?.takeIf { !item.live && it.state != Downloads.State.FAILED }
+        val uri = when {
+            dl == null -> item.url
+            dl.state == Downloads.State.DONE && dl.file.exists() -> android.net.Uri.fromFile(dl.file).toString()
+            else -> "ktvdl://${dl.key}"
+        }
+        // une seule connexion : le téléchargement attend pendant une lecture en ligne
+        Downloads.hold(dl == null)
+        if (dl != null && dl.state == Downloads.State.QUEUED) Downloads.kick()
         val b = MediaItem.Builder()
-            .setUri(item.url)
+            .setUri(uri)
             .setMediaMetadata(MediaMetadata.Builder().setTitle(item.title).build())
         when {
             item.url.endsWith(".m3u8", true) -> b.setMimeType(MimeTypes.APPLICATION_M3U8)

@@ -181,7 +181,7 @@ class ItemAdapter(
     }
 }
 
-class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
+class EpisodeAdapter(private val onClick: (Int) -> Unit, private val onLong: (Int) -> Unit = {}) : RecyclerView.Adapter<EpisodeAdapter.VH>() {
 
     var items: List<Episode> = emptyList()
         private set
@@ -216,7 +216,15 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         val title = episodeTitle(e, seriesName)
         val dur = if (e.durMin > 0) "${e.durMin} min" else ""
         // sans titre connu : « Épisode 3 » devient le titre, la durée reste au-dessus
-        h.num.text = if (title.isNotEmpty()) "Épisode ${e.num}" + (if (dur.isNotEmpty()) " · $dur" else "") else dur
+        val dl = Downloads.get("e${e.id}")
+        val dlText = when {
+            dl == null -> ""
+            dl.state == Downloads.State.DONE -> "Téléchargé"
+            dl.state == Downloads.State.FAILED -> "Échec du téléchargement"
+            dl.state == Downloads.State.RUNNING -> "Téléchargement ${dl.percent} %"
+            else -> "En attente de téléchargement"
+        }
+        h.num.text = listOf(if (title.isNotEmpty()) "Épisode ${e.num}" else "", dur, dlText).filter { it.isNotEmpty() }.joinToString(" · ")
         h.num.visibility = if (h.num.text.isEmpty()) View.GONE else View.VISIBLE
         h.name.text = title.ifEmpty { "Épisode ${e.num}" }
         h.big.text = e.num.toString()
@@ -244,6 +252,11 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit) : RecyclerView.Adapter<
         h.itemView.setOnClickListener {
             val p = h.bindingAdapterPosition
             if (p != RecyclerView.NO_POSITION) onClick(p)
+        }
+        h.itemView.setOnLongClickListener {
+            val p = h.bindingAdapterPosition
+            if (p != RecyclerView.NO_POSITION) onLong(p)
+            true
         }
     }
 }

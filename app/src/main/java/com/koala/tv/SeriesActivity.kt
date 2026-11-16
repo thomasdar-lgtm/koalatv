@@ -64,7 +64,7 @@ class SeriesActivity : BaseActivity() {
         rvSeasons.adapter = seasonAdapter
         rvSeasons.itemAnimator = null
 
-        epAdapter = EpisodeAdapter { pos -> playEpisode(pos) }
+        epAdapter = EpisodeAdapter({ pos -> playEpisode(pos) }, { pos -> episodeMenu(pos) })
         epAdapter.seriesName = seriesName
         rvEpisodes.layoutManager = LinearLayoutManager(this)
         rvEpisodes.adapter = epAdapter
@@ -79,8 +79,16 @@ class SeriesActivity : BaseActivity() {
         outState.putInt("season", seasonIdx)
     }
 
+    private val dlRefresh: () -> Unit = { if (::epAdapter.isInitialized) epAdapter.notifyDataSetChanged() }
+
+    override fun onPause() {
+        Downloads.unlisten(dlRefresh)
+        super.onPause()
+    }
+
     override fun onResume() {
         super.onResume()
+        Downloads.listen(dlRefresh)
         // retour (du lecteur notamment) : on se replace sur l'épisode à voir, progression à jour
         if (resumedOnce && episodes.isNotEmpty()) focusNext() else epAdapter.notifyDataSetChanged()
         resumedOnce = true
@@ -178,6 +186,35 @@ class SeriesActivity : BaseActivity() {
         tvHead.text = if (s <= 0) "Épisodes" else "Saison $s"
         tvCount.text = plural(list.size, "épisode", "épisodes")
         if (!sidePanel) rvSeasons.smoothScrollToPosition(pos)
+    }
+
+    /** Appui long sur un épisode : téléchargement (l'épisode, les 3 suivants, la saison) ou suppression. */
+    private fun episodeMenu(pos: Int) {
+        val e = epAdapter.items.getOrNull(pos) ?: return
+        val all = episodePlayList(seriesId, seriesName, cover, episodes)
+        val season = episodePlayList(seriesId, seriesName, cover, epAdapter.items)
+        val me = season[pos]
+        val d = Downloads.get(me.resumeKey)
+        val opts = ArrayList<Pair<String, () -> Unit>>()
+        if (d == null) {
+            opts.add("Télécharger l'épisode" to { add(listOf(me)) })
+            val from = all.indexOfFirst { it.resumeKey == me.resumeKey }.coerceAtLeast(0)
+            opts.add("Télécharger les 3 épisodes à partir de celui-ci" to { add(all.drop(from).take(3)) })
+            opts.add((if (e.season > 0) "Télécharger toute la saison ${e.season}" else "Télécharger tous les épisodes") to { add(season) })
+        } else {
+            if (d.state == Downloads.State.FAILED) opts.add("Réessayer le téléchargement" to { Downloads.retry(d.key) })
+            opts.add((if (d.state == Downloads.State.DONE) "Supprimer le téléchargement" else "Annuler le téléchargement") to { Downloads.remove(d.key) })
+        }
+        opts.add("Voir les téléchargements" to { startActivity(android.content.Intent(this, DownloadsActivity::class.java)) })
+        androidx.appcompat.app.AlertDialog.Builder(this).setTitle(me.title)
+            .setItems(opts.map { it.first }.toTypedArray()) { _, w -> opts[w].second(); epAdapter.notifyDataSetChanged() }
+            .show()
+    }
+
+    private fun add(items: List<PlayItem>) {
+        val n = Downloads.add(items)
+        DownloadsActivity.askNotifications(this)
+        toast(if (n == 0) "Déjà dans les téléchargements" else if (n == 1) "Ajouté aux téléchargements" else "$n épisodes ajoutés aux téléchargements")
     }
 
     private fun playEpisode(pos: Int) {

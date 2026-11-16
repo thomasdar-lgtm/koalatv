@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KoalaTV Relais</title>
+<link rel="icon" href="/icon.png">
+<style>
+  :root { --bg: #0E1116; --card: #161B23; --line: #232A35; --text: #EDEFF2; --muted: #8B95A3; --accent: #4C9AFF; --warn: #FFB454; --bad: #FF6B6B; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 60px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  header img { width: 52px; height: 52px; border-radius: 14px; }
+  h1 { font-size: 26px; margin: 0; font-weight: 700; }
+  h1 span { color: var(--accent); }
+  .ver { color: var(--muted); font-size: 13px; margin-left: auto; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px 22px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 0 0 12px; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .code { font: 700 46px/1.1 "Segoe UI", system-ui, sans-serif; letter-spacing: 6px; color: var(--accent); margin: 10px 0 14px; }
+  ol { margin: 0; padding-left: 20px; color: var(--muted); }
+  ol b { color: var(--text); font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .grow { flex: 1; min-width: 200px; }
+  button { background: #222A36; color: var(--text); border: 1px solid #2C3644; border-radius: 10px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0B1220; font-weight: 600; }
+  button.small { padding: 5px 10px; font-size: 13px; }
+  .state { font-weight: 600; }
+  .state.warn { color: var(--warn); }
+  .path { font-family: Consolas, monospace; background: #0F141B; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; word-break: break-all; }
+  .drives { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .item { display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .item:first-child { border-top: 0; }
+  .item img { width: 46px; height: 66px; object-fit: cover; border-radius: 6px; background: #0F141B; }
+  .item .t { font-weight: 600; }
+  .bar { height: 4px; background: #232A35; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); }
+  .item .err { color: var(--bad); }
+  .empty { color: var(--muted); padding: 6px 0; }
+  .switch { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .switch input { width: 18px; height: 18px; accent-color: var(--accent); }
+  input[type=text] { background: #0F141B; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; font: inherit; width: 100%; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <img src="/icon.png" alt="">
+    <h1>Koala<span>TV</span> Relais</h1>
+    <div class="ver" id="ver"></div>
+  </header>
+
+  <section id="pair" hidden>
+    <h2>Relier ce PC à ton compte</h2>
+    <div class="code" id="code">…</div>
+    <ol>
+      <li>Sur ton téléphone (ou un autre appareil connecté), ouvre <b>KoalaTV</b>.</li>
+      <li>Va dans <b>Réglages</b>, puis <b>Connecter un appareil</b>.</li>
+      <li>Saisis ce code. Le PC se relie tout seul en quelques secondes.</li>
+    </ol>
+  </section>
+
+  <div id="linked" hidden>
+    <section>
+      <div class="row">
+        <div class="grow">
+          <div class="state" id="st"></div>
+          <div class="muted" id="acc"></div>
+        </div>
+        <button id="pause"></button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Téléchargements</h2>
+      <div id="list"></div>
+      <div class="note">Les téléchargements se lancent depuis KoalaTV (téléphone, TV, boîtier) : « Télécharger sur le PC ». Ils se mettent en pause d'eux-mêmes quand un appareil lit en ligne, et reprennent ensuite.</div>
+    </section>
+
+    <section>
+      <h2>Dossier des vidéos</h2>
+      <div class="row">
+        <div class="grow path" id="dir"></div>
+        <button id="open">Ouvrir</button>
+        <button id="change">Changer</button>
+      </div>
+      <div class="muted" id="free" style="margin-top:6px"></div>
+      <div id="chooser" hidden>
+        <div class="drives" id="drives"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="custom" class="grow" placeholder="Ou un autre dossier, par exemple D:\Vidéos\KoalaTV">
+          <button class="primary" id="setdir">Utiliser ce dossier</button>
+        </div>
+        <div class="note">Les téléchargements déjà faits restent là où ils sont.</div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Options</h2>
+      <label class="switch"><input type="checkbox" id="auto"> Démarrer avec Windows (recommandé)</label>
+      <div class="note" id="net"></div>
+      <div style="margin-top:14px"><button class="small" id="unlink">Délier ce PC du compte</button></div>
+    </section>
+  </div>
+</main>
+<script>
+  var $ = function (id) { return document.getElementById(id); };
+  var S = null;
+  function post(p, body) {
+    return fetch('/api/' + p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json(); }).then(function (r) { refresh(); return r; });
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function stateText(it) {
+    switch (it.st) {
+      case 'fini': return 'Téléchargé · ' + it.size;
+      case 'cours': return 'Téléchargement · ' + it.pct + ' %' + (it.size ? ' de ' + it.size : '') + (it.pace ? ' · ' + it.pace : '');
+      case 'echec': return '<span class="err">Échec : ' + esc(it.err) + '</span>';
+      default: return S.pause ? 'En pause · ' + it.pct + ' %' : (it.pct ? 'En attente · ' + it.pct + ' %' : 'En attente');
+    }
+  }
+  function render() {
+    $('ver').textContent = 'version ' + S.v;
+    $('pair').hidden = S.linked;
+    $('linked').hidden = !S.linked;
+    if (!S.linked) { $('code').textContent = S.code || '…'; return; }
+    var st = $('st');
+    st.textContent = S.pause ? S.pause : (S.dl ? 'Téléchargement en cours' : 'Prêt');
+    st.className = 'state' + (S.pause ? ' warn' : '');
+    $('acc').textContent = 'Compte ' + S.user + ' · ' + S.server;
+    $('pause').textContent = S.manual ? 'Reprendre' : 'Mettre en pause';
+    $('dir').textContent = S.dir;
+    $('free').textContent = S.free ? S.free + ' libres sur ce disque' : '';
+    $('auto').checked = S.autostart;
+    $('net').textContent = S.ips && S.ips.length ? 'Les appareils de la maison trouvent ce PC à l\u2019adresse ' + S.ips.join(', ') + ' (port ' + S.port + '). Le PC doit être allumé pour télécharger et pour lire.' : 'Ce PC n\u2019est connecté à aucun réseau local.';
+    var h = '';
+    S.items.forEach(function (it) {
+      h += '<div class="item"><img src="' + esc(it.i) + '" onerror="this.style.visibility=\'hidden\'"><div><div class="t">' + esc(it.t) + '</div><div class="muted">' + stateText(it) + '</div>' +
+        (it.st === 'fini' ? '' : '<div class="bar"><i style="width:' + it.pct + '%"></i></div>') + '</div><div>' +
+        (it.st === 'echec' ? '<button class="small" data-retry="' + esc(it.k) + '">Réessayer</button> ' : '') +
+        '<button class="small" data-del="' + esc(it.k) + '">' + (it.st === 'fini' ? 'Supprimer' : 'Annuler') + '</button></div></div>';
+    });
+    $('list').innerHTML = h || '<div class="empty">Rien pour le moment.</div>';
+  }
+  function refresh() { return fetch('/api/state').then(function (r) { return r.json(); }).then(function (s) { S = s; render(); }).catch(function () {}); }
+  $('list').addEventListener('click', function (e) {
+    var k = e.target.getAttribute('data-del');
+    if (k && confirm('Supprimer ce téléchargement du PC ?')) post('remove', { k: k });
+    k = e.target.getAttribute('data-retry');
+    if (k) post('retry', { k: k });
+  });
+  $('pause').onclick = function () { post('pause', { on: S.manual ? '0' : '1' }); };
+  $('open').onclick = function () { post('open'); };
+  $('change').onclick = function () {
+    $('chooser').hidden = !$('chooser').hidden;
+    fetch('/api/drives').then(function (r) { return r.json(); }).then(function (d) {
+      $('drives').innerHTML = (d || []).map(function (x) { return '<button data-dir="' + esc(x.path) + '">' + esc(x.path) + ' · ' + esc(x.free) + ' libres</button>'; }).join('');
+    });
+  };
+  $('drives').addEventListener('click', function (e) { var d = e.target.getAttribute('data-dir'); if (d) setDir(d); });
+  $('setdir').onclick = function () { if ($('custom').value.trim()) setDir($('custom').value.trim()); };
+  function setDir(d) { post('dir', { dir: d }).then(function (r) { if (r.err) alert(r.err); else $('chooser').hidden = true; }); }
+  $('auto').onchange = function () { post('autostart', { on: $('auto').checked ? '1' : '0' }); };
+  $('unlink').onclick = function () { if (confirm('Délier ce PC ? Il ne recevra plus de demandes de téléchargement. Les vidéos déjà téléchargées restent dans le dossier.')) post('unlink'); };
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

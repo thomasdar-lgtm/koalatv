@@ -503,7 +503,7 @@ service.register('localServe', function (message) {
   var p = message.payload || {}, dir = p.dir;
   var dst = pathLib.join(dir, 'koalatv-probe.mp4');
   // la vidéo de test est dans l'appli ; le service ne voit pas forcément le même chemin que la page
-  var srcs = [p.src, pathLib.join(__dirname, '..', '..', 'applications', 'com.koala.tv', 'probe.mp4')], data = null, tried = [];
+  var srcs = [pathLib.join(__dirname, 'probe.mp4'), p.src], data = null, tried = [];
   for (var i = 0; i < srcs.length && !data; i++) {
     try { data = fs.readFileSync(srcs[i]); } catch (e) { tried.push(srcs[i] + ' : ' + (e.code || e.message)); }
   }

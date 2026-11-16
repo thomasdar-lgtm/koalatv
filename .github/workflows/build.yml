@@ -47,6 +47,7 @@ jobs:
           go test -race -count=1 -v ./... > ../relay-test.txt 2>&1 || echo "ECHEC des tests du relais" >> ../relay-test.txt
           go install github.com/tc-hib/go-winres@v0.3.3
           RV=$(grep -oP 'const version = "\K[^"]+' app.go)
+          echo "RV=$RV" >> $GITHUB_ENV
           ~/go/bin/go-winres simply --icon koalatv.ico --manifest gui --product-name "KoalaTV Relais" --file-description "KoalaTV Relais" --product-version "$RV" --file-version "$RV" --copyright "KoalaTV"
           GOOS=windows GOARCH=amd64 go build -trimpath -ldflags "-H windowsgui -s -w" -o "../KoalaTV-Relais.exe" .
           ls -la ../KoalaTV-Relais.exe
@@ -68,6 +69,7 @@ jobs:
         with:
           tag_name: v${{ env.VERSION }}
           name: KoalaTV ${{ env.VERSION }}
+          body: "Relais ${{ env.RV }}"
           files: |
             KoalaTV.apk
             KoalaTV-Relais.exe

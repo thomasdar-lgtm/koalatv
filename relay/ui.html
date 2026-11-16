@@ -125,7 +125,7 @@
     }
   }
   function render() {
-    $('ver').textContent = 'version ' + S.v;
+    $('ver').textContent = 'version ' + S.v + ' · mises à jour automatiques';
     $('pair').hidden = S.linked;
     $('linked').hidden = !S.linked;
     if (!S.linked) { $('code').textContent = S.code || '…'; return; }

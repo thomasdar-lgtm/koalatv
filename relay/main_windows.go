@@ -3,6 +3,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"io"
 	"net/http"
@@ -95,8 +96,17 @@ func main() {
 	if !strings.Contains(args, "--sur-place") && install(self) {
 		return
 	}
+	os.Remove(self + ".old") // reste d'une mise à jour
+	updated := strings.Contains(args, "--maj")
 	// une seule instance : la seconde ouvre simplement la page de réglages
-	_, _, e := pCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(u16("KoalaTVRelais.Instance"))))
+	var e error
+	if updated {
+		if !waitMutex("KoalaTVRelais.Instance", 30*time.Second) {
+			return
+		}
+	} else {
+		_, _, e = pCreateMutex.Call(0, 0, uintptr(unsafe.Pointer(u16("KoalaTVRelais.Instance"))))
+	}
 	if e == syscall.Errno(183) { // ERROR_ALREADY_EXISTS
 		if port := runningPort(); port != "" {
 			openBrowser("http://127.0.0.1:" + port + "/")
@@ -117,7 +127,7 @@ func main() {
 	} else if autostartOn() {
 		setAutostart(true) // chemin à jour
 	}
-	if !strings.Contains(args, "--demarrage") || !a.linked() {
+	if !updated && (!strings.Contains(args, "--demarrage") || !a.linked()) {
 		openBrowser(a.uiURL())
 	}
 	ico, _ := icoFile.ReadFile("koalatv.ico")
@@ -135,7 +145,8 @@ func main() {
 		},
 		onQuit: func() { cancel(); keepAwake(false) },
 	}
-	a.onQuit = func() { cancel(); keepAwake(false); os.Exit(0) }
+	a.onQuit = func() { t.remove(); cancel(); keepAwake(false); os.Exit(0) }
+	go updateLoop(context.Background(), a, self)
 	go tipLoop(a, t.SetTip)
 	t.run(nil, ico, data)
 }

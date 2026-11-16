@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const version = "1.0.3"
+const version = "1.0.4"
 
 type Config struct {
 	Server string `json:"server"`
@@ -42,6 +42,8 @@ type App struct {
 	stopLinked  context.CancelFunc
 	watching    []string // appareils qui lisent en ligne
 	manualPause bool
+	lastServe   int64 // fin de la dernière requête de lecture d'un appareil (unix ms), atomique
+	serving     int32 // requêtes de lecture en cours, atomique
 	readers     int
 	downloading string
 	pubDirty    bool

@@ -147,6 +147,11 @@ func (t *tray) run(iconPng []byte, ico []byte, dataDir string) {
 	pNotifyIcon.Call(nimDelete, uintptr(unsafe.Pointer(&t.nid)))
 }
 
+// remove : retire l'icône de la zone de notification (arrêt pour une mise à jour ou un remplacement).
+func (t *tray) remove() {
+	pNotifyIcon.Call(nimDelete, uintptr(unsafe.Pointer(&t.nid)))
+}
+
 func (t *tray) setTipLocked(s string) {
 	u, _ := syscall.UTF16FromString(s)
 	if len(u) > 127 {

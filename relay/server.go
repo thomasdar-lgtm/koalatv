@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 )
 
@@ -80,6 +81,8 @@ func (a *App) serveVideo(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "refusé", 403)
 		return
 	}
+	atomic.AddInt32(&a.serving, 1)
+	defer func() { atomic.AddInt32(&a.serving, -1); atomic.StoreInt64(&a.lastServe, time.Now().UnixMilli()) }()
 	key := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/v/"), filepath.Ext(r.URL.Path))
 	it := a.lib.Get(key)
 	if it == nil {

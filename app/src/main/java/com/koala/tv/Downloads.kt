@@ -225,6 +225,8 @@ object Downloads {
 
     // ---------------- transfert ----------------
 
+    class NoSpace(msg: String) : Exception(msg)
+
     /** Le transfert lui-même, indépendant du service (testable). */
     object Worker {
         @Volatile private var call: okhttp3.Call? = null
@@ -253,6 +255,11 @@ object Downloads {
                             save(); changed()
                             return true
                         }
+                    } catch (e: NoSpace) {
+                        d.state = State.FAILED
+                        d.error = e.message ?: "Pas assez de place"
+                        save(); changed()
+                        return false
                     } catch (e: IOException) {
                         if (stopFlag) break
                         if (++failures >= 6) {
@@ -284,6 +291,9 @@ object Downloads {
                     val total = it.header("Content-Range")?.substringAfter('/')?.toLongOrNull()
                         ?: if (it.code == 200) it.body?.contentLength() ?: -1 else -1
                     if (total <= 0) throw IOException("Taille inconnue")
+                    // place : le fichier entier, plus une marge
+                    val free = freeBytes(f.parentFile ?: f)
+                    if (free in 1 until total + (200L shl 20)) throw NoSpace("Pas assez de place : ${fmtSize(total)} nécessaires, ${fmtSize(free)} libres")
                     d.total = total
                     // la fin d'abord : 2 % du fichier, 24 Mo au plus
                     d.tailFrom = (total - minOf(TAIL_MAX, maxOf(1L shl 20, total / 50))).coerceAtLeast(0)

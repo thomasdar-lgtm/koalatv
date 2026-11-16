@@ -46,7 +46,8 @@ class DownloadsActivity : BaseActivity() {
         findViewById<View>(R.id.dl_empty).visibility = if (l.isEmpty()) View.VISIBLE else View.GONE
         val d = Downloads.dir()
         val used = l.filter { it.file.exists() }.sumOf { if (it.state == Downloads.State.DONE) it.total else it.done + if (it.tailDone) it.total - it.tailFrom else 0 }
-        findViewById<TextView>(R.id.dl_space).text = "Espace libre : ${fmtSize(Downloads.freeBytes(d))}" +
+        val free = Downloads.freeBytes(d)
+        findViewById<TextView>(R.id.dl_space).text = (if (free > 0) "Espace libre : ${fmtSize(free)}" else "Espace libre inconnu") +
             (if (used > 0) " · utilisé : ${fmtSize(used)}" else "") +
             (if (Downloads.isRemovable(d.parentFile ?: d)) " · support amovible" else "") +
             (if (!Prefs.downloadMobile) " · Wi-Fi uniquement" else "")

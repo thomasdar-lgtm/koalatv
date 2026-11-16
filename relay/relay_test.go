@@ -275,9 +275,9 @@ func TestEndToEnd(t *testing.T) {
 	t.Logf("page : lié=%v, éléments=%d", s["linked"], len(s["items"].([]any)))
 }
 
-// Serveur qui envoie le début de chaque requête vite, puis bride (comme celui de l'abonnement).
-func TestReopenWhenThrottled(t *testing.T) {
-	data := make([]byte, 40<<20)
+// Serveur qui envoie le début de chaque requête vite (8 Mo), puis bride à 300 ko/s, comme celui de l'abonnement.
+func throttled(size int, gap time.Duration, boost bool) (time.Duration, int, error) {
+	data := make([]byte, size)
 	for i := range data {
 		data[i] = byte(i*13 + i/5)
 	}
@@ -311,20 +311,42 @@ func TestReopenWhenThrottled(t *testing.T) {
 		}
 	}))
 	defer srv.Close()
-	tmp := t.TempDir()
+	tmp, _ := os.MkdirTemp("", "ktv")
+	defer os.RemoveAll(tmp)
 	l := newLib(filepath.Join(tmp, "lib.json"))
 	l.urlFor = func(*Item) string { return srv.URL + "/v" }
 	l.free = func(string) int64 { return 0 }
+	l.gap = gap
+	l.boost = func() bool { return boost }
 	it := &Item{Key: "e1", Path: filepath.Join(tmp, "e1.mkv")}
 	l.items[it.Key] = it
 	t0 := time.Now()
 	l.download(context.Background(), it)
+	d := time.Since(t0)
 	got, _ := os.ReadFile(it.Path)
-	t.Logf("40 Mo en %v, %d requêtes (sans relance : plus de 100 s)", time.Since(t0).Round(time.Millisecond), reqs)
 	if it.State != stDone || !bytes.Equal(got, data) {
-		t.Fatalf("état %v, %d octets, identiques %v", it.State, len(got), bytes.Equal(got, data))
+		return d, reqs, fmt.Errorf("état %v, %d octets, identiques %v", it.State, len(got), bytes.Equal(got, data))
 	}
-	if time.Since(t0) > 40*time.Second {
-		t.Fatal("trop lent : les relances ne marchent pas")
+	return d, reqs, nil
+}
+
+func TestReopenWhenThrottled(t *testing.T) {
+	d, n, err := throttled(40<<20, 0, true)
+	t.Logf("sans délai : 40 Mo en %v, %d requêtes (sans relance : plus de 100 s)", d.Round(time.Millisecond), n)
+	if err != nil || d > 40*time.Second {
+		t.Fatal("relances inefficaces", err)
+	}
+	// 3 requêtes sans relance : la taille, la fin du fichier (lue d'abord), puis le reste
+	// discret : pas plus d'une relance par intervalle
+	d, n, err = throttled(40<<20, 5*time.Second, true)
+	t.Logf("une relance toutes les 5 s : %v, %d requêtes", d.Round(time.Millisecond), n)
+	if err != nil || n > 3+int(d/(5*time.Second))+1 {
+		t.Fatal("trop de relances", err)
+	}
+	// désactivé : une seule requête (3 Mo après le départ rapide, ~10 s)
+	d, n, err = throttled(11<<20, 0, false)
+	t.Logf("désactivé : %v, %d requêtes", d.Round(time.Millisecond), n)
+	if err != nil || n != 3 {
+		t.Fatal("relance alors que c'est désactivé", err)
 	}
 }

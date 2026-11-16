@@ -77,6 +77,8 @@
     <section>
       <h2>Téléchargements</h2>
       <div id="list"></div>
+      <label class="switch" style="margin-top:14px"><input type="checkbox" id="boost"> Accélérer les téléchargements</label>
+      <div class="note">Le serveur envoie le début de chaque requête vite, puis ralentit : le PC relance la requête une fois par minute au plus. Désactive si tu préfères la vitesse normale du serveur.</div>
       <div class="note">Les téléchargements se lancent depuis KoalaTV (téléphone, TV, boîtier) : « Télécharger sur le PC ». Ils se mettent en pause d'eux-mêmes quand un appareil lit en ligne, et reprennent ensuite.</div>
     </section>
 
@@ -135,6 +137,7 @@
     $('dir').textContent = S.dir;
     $('free').textContent = S.free ? S.free + ' libres sur ce disque' : '';
     $('auto').checked = S.autostart;
+    $('boost').checked = S.boost;
     $('net').textContent = S.ips && S.ips.length ? 'Les appareils de la maison trouvent ce PC à l\u2019adresse ' + S.ips.join(', ') + ' (port ' + S.port + '). Le PC doit être allumé pour télécharger et pour lire.' : 'Ce PC n\u2019est connecté à aucun réseau local.';
     var h = '';
     S.items.forEach(function (it) {
@@ -163,6 +166,7 @@
   $('drives').addEventListener('click', function (e) { var d = e.target.getAttribute('data-dir'); if (d) setDir(d); });
   $('setdir').onclick = function () { if ($('custom').value.trim()) setDir($('custom').value.trim()); };
   function setDir(d) { post('dir', { dir: d }).then(function (r) { if (r.err) alert(r.err); else $('chooser').hidden = true; }); }
+  $('boost').onchange = function () { post('boost', { on: $('boost').checked ? '1' : '0' }); };
   $('auto').onchange = function () { post('autostart', { on: $('auto').checked ? '1' : '0' }); };
   $('unlink').onclick = function () { if (confirm('Délier ce PC ? Il ne recevra plus de demandes de téléchargement. Les vidéos déjà téléchargées restent dans le dossier.')) post('unlink'); };
   refresh();

@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-const version = "1.0.2"
+const version = "1.0.3"
 
 type Config struct {
 	Server string `json:"server"`
@@ -26,6 +26,8 @@ type Config struct {
 	Token  string `json:"token"`
 	ID     string `json:"id"`
 	Name   string `json:"name"`
+	// NoBoost : ne pas relancer la requête quand le serveur bride (accélération discrète désactivée)
+	NoBoost bool `json:"noboost"`
 }
 
 type App struct {
@@ -76,6 +78,7 @@ func newApp(ctx context.Context, dataDir string) *App {
 	a.lib = newLib(filepath.Join(dataDir, "bibliotheque.json"))
 	a.lib.dir = func() string { a.mu.Lock(); defer a.mu.Unlock(); return a.cfg.Dir }
 	a.lib.free = freeSpace
+	a.lib.boost = func() bool { a.mu.Lock(); defer a.mu.Unlock(); return !a.cfg.NoBoost }
 	a.lib.urlFor = func(it *Item) string {
 		a.mu.Lock()
 		defer a.mu.Unlock()
@@ -98,7 +101,11 @@ func (a *App) saveConfig() {
 	os.WriteFile(filepath.Join(a.dataDir, "config.json"), b, 0o600)
 }
 
-func (a *App) linked() bool { a.mu.Lock(); defer a.mu.Unlock(); return a.cfg.User != "" && a.pass != "" }
+func (a *App) linked() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.cfg.User != "" && a.pass != ""
+}
 
 // Start : serveur local, puis liaison au compte (code) ou travail normal.
 func (a *App) Start() error {
@@ -208,15 +215,15 @@ func (a *App) unlink() {
 // Demandes des applis : q/<clé> = {kind, id, ext, t, i, sid, sn} ; {del: 1} pour retirer.
 func (a *App) pullQueue() {
 	var q map[string]struct {
-		Kind string `json:"kind"`
-		ID   string `json:"id"`
-		Ext  string `json:"ext"`
-		T    string `json:"t"`
-		I    string `json:"i"`
-		Sid  string `json:"sid"`
-		Sn   string `json:"sn"`
-		Del  int    `json:"del"`
-		Retry int   `json:"retry"`
+		Kind  string `json:"kind"`
+		ID    string `json:"id"`
+		Ext   string `json:"ext"`
+		T     string `json:"t"`
+		I     string `json:"i"`
+		Sid   string `json:"sid"`
+		Sn    string `json:"sn"`
+		Del   int    `json:"del"`
+		Retry int    `json:"retry"`
 	}
 	if a.fb == nil || a.fb.Get("q", &q) != nil {
 		return
@@ -402,7 +409,7 @@ func (a *App) state() map[string]any {
 	return map[string]any{
 		"v": version, "linked": linked, "code": disp, "server": hostOnly(cfg.Server), "user": cfg.User,
 		"dir": cfg.Dir, "free": fmtSize(freeSpace(cfg.Dir)), "name": cfg.Name, "ips": lanIPs(), "port": cfg.Port,
-		"items": items, "pause": a.lib.PauseWhy(), "manual": manual, "watching": watching, "dl": dl, "autostart": autostartOn(),
+		"items": items, "pause": a.lib.PauseWhy(), "manual": manual, "watching": watching, "dl": dl, "autostart": autostartOn(), "boost": !cfg.NoBoost,
 	}
 }
 

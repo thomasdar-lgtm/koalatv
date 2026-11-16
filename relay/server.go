@@ -238,6 +238,12 @@ func (a *App) api(w http.ResponseWriter, r *http.Request) {
 		a.mu.Unlock()
 		a.updatePause()
 		writeJSON(w, map[string]any{"ok": 1})
+	case "boost":
+		a.mu.Lock()
+		a.cfg.NoBoost = in["on"] != "1"
+		a.mu.Unlock()
+		a.saveConfig()
+		writeJSON(w, map[string]any{"ok": 1})
 	case "autostart":
 		err := setAutostart(in["on"] == "1")
 		writeJSON(w, map[string]any{"ok": err == nil})

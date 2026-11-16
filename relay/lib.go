@@ -103,10 +103,13 @@ type Lib struct {
 	urlFor   func(it *Item) string
 	dir      func() string
 	free     func(string) int64
+	boost    func() bool   // relances autorisées (réglage de la page)
+	gap      time.Duration // délai minimal entre deux relances
+	lastRe   time.Time
 }
 
 func newLib(file string) *Lib {
-	l := &Lib{items: map[string]*Item{}, file: file, wake: make(chan struct{}, 1), changed: func() {}}
+	l := &Lib{items: map[string]*Item{}, file: file, wake: make(chan struct{}, 1), changed: func() {}, boost: func() bool { return true }, gap: time.Minute}
 	if b, err := os.ReadFile(file); err == nil {
 		var list []*Item
 		if json.Unmarshal(b, &list) == nil {
@@ -444,7 +447,8 @@ func min64(a, b int64) int64 {
 
 // Certains serveurs envoient le début de chaque requête à pleine vitesse, puis brident.
 // Quand la vitesse s'effondre par rapport au début de la requête, on la relance là où on en est
-// (toujours une seule connexion à la fois). Si la relance ne rend pas la vitesse, on n'insiste plus.
+// (toujours une seule connexion à la fois), au plus une fois par minute pour rester discret,
+// comme quelqu'un qui avance dans une vidéo. Si la relance ne rend pas la vitesse, on n'insiste plus.
 const (
 	reopenMinPeak = 3 << 20 // 3 Mo/s au début de la requête
 	reopenRatio   = 4       // vitesse tombée sous le quart du début
@@ -523,8 +527,16 @@ func (l *Lib) copyOnce(ctx context.Context, it *Item, from, to int64, mark func(
 				} else {
 					slow = 0
 				}
-				if slow >= 2 && pos < to {
-					return pos, errReopen
+				if slow >= 2 && pos < to && l.boost() {
+					l.mu.Lock()
+					ok := time.Since(l.lastRe) >= l.gap
+					if ok {
+						l.lastRe = time.Now()
+					}
+					l.mu.Unlock()
+					if ok {
+						return pos, errReopen
+					}
 				}
 			} else {
 				l.mu.Unlock()

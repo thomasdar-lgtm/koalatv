@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.20.0';
+  var VERSION = '1.20.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -550,6 +550,77 @@
   };
   Hidden.init();
   Seen.backfill();
+
+  /*
+   * Test de faisabilité du téléchargement sur la TV (une fois par version, 15 s après le lancement) :
+   * dossiers inscriptibles et place libre, clés USB, lecture d'une vidéo locale par le lecteur de la TV.
+   * Résultat dans le journal technique.
+   */
+  var StorageProbe = {
+    call: function (method, payload, cb) {
+      var done = false;
+      function fin(m) { if (!done) { done = true; cb(m); } }
+      setTimeout(function () { fin({ returnValue: false, errorText: 'délai dépassé' }); }, 20000);
+      try {
+        var b = new window.PalmServiceBridge();
+        bridges.push(b);
+        b.onservicecallback = function (raw) {
+          var i = bridges.indexOf(b), m = null;
+          if (i >= 0) bridges.splice(i, 1);
+          try { m = JSON.parse(raw); } catch (e) { m = { returnValue: false, errorText: 'réponse illisible' }; }
+          fin(m);
+        };
+        b.call('luna://com.koala.tv.service/' + method, JSON.stringify(payload || {}));
+      } catch (e) { fin({ returnValue: false, errorText: e.message }); }
+    },
+    /* Lecture d'une adresse par un lecteur caché, coupé : métadonnées reçues ou erreur */
+    tryPlay: function (src, cb) {
+      var v = document.createElement('video'), done = false;
+      v.muted = true;
+      v.style.cssText = 'position:absolute;left:-10px;top:-10px;width:2px;height:2px;opacity:0';
+      function fin(r) {
+        if (done) return;
+        done = true;
+        try { v.pause(); v.removeAttribute('src'); v.load(); document.body.removeChild(v); } catch (e) { /* ignoré */ }
+        cb(r);
+      }
+      v.addEventListener('loadedmetadata', function () { fin('ok, durée ' + Math.round(v.duration) + ' s'); });
+      v.addEventListener('error', function () { fin('erreur ' + (v.error ? v.error.code : '?')); });
+      setTimeout(function () { fin('délai dépassé'); }, 10000);
+      document.body.appendChild(v);
+      v.src = src;
+      v.load();
+    },
+    run: function () {
+      var self = this;
+      if (!window.PalmServiceBridge || load('probeStorage', '') === VERSION) return;
+      // jamais pendant une lecture : la TV n'a qu'un lecteur vidéo
+      if (cur === screens.player) { setTimeout(function () { self.run(); }, 60000); return; }
+      save('probeStorage', VERSION);
+      this.call('storage', {}, function (m) {
+        var res = m && m.result;
+        Dbg.log('stockage : dossiers', res ? res.dirs : m);
+        if (res) Dbg.log('stockage : usb', { usb: res.usb, node: res.node, uid: res.uid });
+        if (!res) return;
+        // dossier de test : une clé USB inscriptible d'abord, sinon le premier dossier inscriptible
+        var best = null, k, d;
+        for (k in res.dirs) if (res.dirs.hasOwnProperty(k)) {
+          d = res.dirs[k];
+          if (d && d.écriture === 'oui' && (!best || (/usb|sd[a-z]/i.test(k) && !/usb|sd[a-z]/i.test(best)))) best = k;
+        }
+        if (!best) return Dbg.log('stockage : aucun dossier inscriptible');
+        var here = decodeURIComponent(location.pathname.replace(/[^\/]*$/, '')) + 'probe.mp4';
+        self.call('localServe', { src: here, dir: best }, function (r) {
+          if (!r || r.returnValue === false) return Dbg.log('stockage : serveur local', { dossier: best, erreur: r && r.errorText });
+          self.tryPlay(r.url, function (a) {
+            Dbg.log('stockage : lecture par serveur local', { dossier: best, résultat: a });
+            self.tryPlay(r.file, function (b) { Dbg.log('stockage : lecture du fichier direct', { dossier: best, résultat: b }); });
+          });
+        });
+      });
+    }
+  };
+  setTimeout(function () { StorageProbe.run(); }, 15000);
   Presence.init();
 
   /** Liste de lecture d'une saison : les épisodes s'enchaînent. */

@@ -424,3 +424,90 @@ service.register('probe', function (message) {
 });
 
 module.exports = { findTracks: findTracks, readHeader: readHeader, readTags: readTags, readCues: readCues, readEvent: readEvent };
+
+/*
+ * Test de faisabilité du téléchargement sur la TV : où l'appli peut écrire, combien de place,
+ * clés USB visibles, et serveur local capable de servir une vidéo au lecteur de la TV.
+ * Rien n'est conservé : les fichiers de test sont effacés.
+ */
+var fs = require('fs');
+var pathLib = require('path');
+var probeServer = null;
+
+function freeSpace(dir, cb) {
+  try {
+    require('child_process').exec('df -k "' + dir.replace(/"/g, '') + '"', { timeout: 4000 }, function (err, out) {
+      if (err) return cb('df : ' + (err.code || err.message));
+      var lines = String(out).trim().split('\n'), f = lines[lines.length - 1].split(/\s+/);
+      cb(null, { total: Math.round(+f[1] / 1024), free: Math.round(+f[3] / 1024), fs: f[0], mount: f[5] });
+    });
+  } catch (e) { cb('df indisponible : ' + e.message); }
+}
+
+function tryWrite(dir, cb) {
+  var f = pathLib.join(dir, 'koalatv-test-' + Date.now() + '.bin'), buf = new Buffer(1024 * 1024);
+  buf.fill(7);
+  fs.writeFile(f, buf, function (err) {
+    if (err) return cb(err.code || err.message);
+    fs.readFile(f, function (err2, back) {
+      fs.unlink(f, function () {});
+      cb(err2 ? 'relecture : ' + (err2.code || err2.message) : (back.length === buf.length ? null : 'taille relue ' + back.length));
+    });
+  });
+}
+
+function listDir(dir) {
+  try { return fs.readdirSync(dir); } catch (e) { return null; }
+}
+
+service.register('storage', function (message) {
+  var cands = [__dirname, '/media/developer/temp', '/media/internal', '/tmp', '/var/tmp', '/media/cryptofs/apps/usr/palm/services'];
+  var usbRoots = ['/tmp/usb', '/mnt/usb', '/media/usb', '/run/media', '/media'];
+  var usb = {};
+  usbRoots.forEach(function (r) {
+    var l = listDir(r);
+    if (!l) return;
+    usb[r] = l.slice(0, 12);
+    l.forEach(function (d) {
+      var sub = listDir(pathLib.join(r, d));
+      if (sub && /usb|sd[a-z]/i.test(r + d)) sub.slice(0, 6).forEach(function (p) { cands.push(pathLib.join(r, d, p)); });
+      if (/^sd[a-z]\d*$/.test(d)) cands.push(pathLib.join(r, d));
+    });
+  });
+  var out = { dirs: {}, usb: usb, node: process.version, uid: process.getuid ? process.getuid() : '?' }, k = 0;
+  (function next() {
+    if (k >= cands.length) return message.respond({ returnValue: true, result: out });
+    var d = cands[k++];
+    var st;
+    try { st = fs.statSync(d); } catch (e) { out.dirs[d] = 'absent'; return next(); }
+    if (!st.isDirectory()) { out.dirs[d] = 'pas un dossier'; return next(); }
+    tryWrite(d, function (werr) {
+      freeSpace(d, function (ferr, sp) {
+        out.dirs[d] = { écriture: werr ? 'non (' + werr + ')' : 'oui', place: ferr || sp };
+        next();
+      });
+    });
+  })();
+});
+
+/* Serveur local : copie la vidéo de test dans un dossier inscriptible et la sert au lecteur de la TV */
+service.register('localServe', function (message) {
+  var p = message.payload || {}, src = p.src, dir = p.dir;
+  var dst = pathLib.join(dir, 'koalatv-probe.mp4');
+  try { fs.writeFileSync(dst, fs.readFileSync(src)); } catch (e) { return message.respond({ returnValue: false, errorText: 'copie : ' + (e.code || e.message) }); }
+  try { if (probeServer) probeServer.close(); } catch (e) { /* déjà fermé */ }
+  probeServer = http.createServer(function (req, res) {
+    var size = fs.statSync(dst).size, m = /bytes=(\d+)-(\d*)/.exec(req.headers.range || ''), a = 0, b = size - 1;
+    if (m) { a = +m[1]; if (m[2]) b = Math.min(+m[2], size - 1); }
+    res.writeHead(m ? 206 : 200, { 'Content-Type': 'video/mp4', 'Content-Length': b - a + 1, 'Accept-Ranges': 'bytes',
+      'Content-Range': 'bytes ' + a + '-' + b + '/' + size, 'Access-Control-Allow-Origin': '*' });
+    fs.createReadStream(dst, { start: a, end: b }).pipe(res);
+  });
+  probeServer.on('error', function (e) { message.respond({ returnValue: false, errorText: 'serveur : ' + (e.code || e.message) }); });
+  probeServer.listen(0, '127.0.0.1', function () {
+    var port = probeServer.address().port;
+    // le serveur s'arrête seul après une minute, le fichier est effacé
+    setTimeout(function () { try { probeServer.close(); fs.unlinkSync(dst); } catch (e) { /* ignoré */ } }, 60000);
+    message.respond({ returnValue: true, url: 'http://127.0.0.1:' + port + '/koalatv-probe.mp4', file: 'file://' + dst });
+  });
+});

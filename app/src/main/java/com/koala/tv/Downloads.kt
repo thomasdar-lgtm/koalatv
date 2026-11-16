@@ -395,9 +395,28 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Lecture en ligne sur un autre appareil du compte : le téléchargement attend (une seule connexion). */
+    @Volatile private var othersWatching = false
+
+    private fun watchOthers() = scope.launch {
+        while (isActive) {
+            val st = try { Presence.check(false) } catch (e: Exception) { null }
+            val now = st != null && st.others.isNotEmpty()
+            if (now && !othersWatching) Downloads.Worker.pauseNow()
+            othersWatching = now
+            delay(15_000)
+        }
+    }
+
     private suspend fun loop() {
+        val watcher = watchOthers()
         while (scope.isActive) {
             if (Downloads.heldByPlayback) break
+            if (othersWatching) {
+                manager().notify(1, note("En pause : lecture en cours sur un autre appareil", 0, true))
+                delay(15_000)
+                continue
+            }
             val d = Downloads.next() ?: break
             if (!Downloads.networkOk()) {
                 d.error = if (Prefs.downloadMobile) "Pas de connexion" else "En attente du Wi-Fi"
@@ -412,6 +431,7 @@ class DownloadService : Service() {
             if (!Downloads.heldByPlayback) Presence.stopDownload()
             delay(300)
         }
+        watcher.cancel()
         Presence.stopDownload()
         stopForegroundCompat()
         stopSelf()

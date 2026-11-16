@@ -374,20 +374,25 @@ class PlayerActivity : BaseActivity() {
     private fun playCurrent(askResume: Boolean) {
         val p = player ?: return
         hideNext(false)
-        Presence.start(current.title)
         langsApplied = false
         applyLangs(p)
         val item = current
         tvStatus.visibility = View.GONE
         // téléchargé : fichier local ; en cours de téléchargement : lecture du fichier qui se remplit
         val dl = Downloads.get(item.resumeKey)?.takeIf { !item.live && it.state != Downloads.State.FAILED }
+        // sur le PC de la maison (KoalaTV Relais) : lecture par le réseau local
+        val pc = if (item.live) null else Relay.playUrl(item.resumeKey)
         val uri = when {
-            dl == null -> item.url
-            dl.state == Downloads.State.DONE && dl.file.exists() -> android.net.Uri.fromFile(dl.file).toString()
-            else -> "ktvdl://${dl.key}"
+            dl != null && dl.state == Downloads.State.DONE && dl.file.exists() -> android.net.Uri.fromFile(dl.file).toString()
+            pc != null -> pc
+            dl != null -> "ktvdl://${dl.key}"
+            else -> item.url
         }
+        val online = dl == null && pc == null
+        // lecture en ligne : signalée aux autres appareils (et au PC, qui met ses téléchargements en pause)
+        Presence.start(item.title, local = !online)
         // une seule connexion : le téléchargement attend pendant une lecture en ligne
-        Downloads.hold(dl == null)
+        Downloads.hold(online)
         if (dl != null && dl.state == Downloads.State.QUEUED) Downloads.kick()
         val b = MediaItem.Builder()
             .setUri(uri)

@@ -40,12 +40,16 @@ object Presence {
         }?.takeIf { it.isNotBlank() } ?: Build.MODEL ?: "Android"
     }
 
-    fun start(title: String) {
+    /** local : lecture d'un fichier de l'appareil ou du PC de la maison (n'utilise pas l'abonnement). */
+    fun start(title: String, local: Boolean = false) {
         current = title
         beat?.cancel()
         beat = Lists.scope.launch {
             while (true) {
-                Sync.putRaw("p/$id", JSONObject().put("n", name).put("t", title).put("at", System.currentTimeMillis()).toString())
+                val o = JSONObject().put("n", name).put("t", title).put("at", System.currentTimeMillis())
+                if (local) o.put("l", 1)
+                if (title.startsWith("Téléchargement")) o.put("dl", 1)
+                Sync.putRaw("p/$id", o.toString())
                 delay(30_000)
             }
         }
@@ -75,11 +79,17 @@ object Presence {
         val ui = async { if (server) Xtream.userInfo(2500) else null }
         val o = pres.await()
         val others = ArrayList<Other>()
+        var pcDownloading = 0
         if (o != null) for (k in o.keys()) {
             val v = o.optJSONObject(k) ?: continue
-            if (k != id && System.currentTimeMillis() - v.optLong("at") < 75_000) others.add(Other(v.optString("n"), v.optString("t")))
+            if (k == id || System.currentTimeMillis() - v.optLong("at") >= 75_000) continue
+            // lectures locales : n'utilisent pas l'abonnement ; téléchargements (PC, autre appareil) : se mettent en pause
+            if (v.optInt("dl") == 1 || v.optString("t").startsWith("Téléchargement")) { pcDownloading++; continue }
+            if (v.optInt("l") == 1) continue
+            others.add(Other(v.optString("n"), v.optString("t")))
         }
         val u = ui.await()
-        State(others, u?.optString("active_cons")?.toIntOrNull() ?: 0, u?.optString("max_connections")?.toIntOrNull() ?: 0)
+        val cons = (u?.optString("active_cons")?.toIntOrNull() ?: 0) - pcDownloading
+        State(others, cons.coerceAtLeast(0), u?.optString("max_connections")?.toIntOrNull() ?: 0)
     }
 }

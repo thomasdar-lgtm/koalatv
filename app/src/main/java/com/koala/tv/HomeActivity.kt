@@ -144,6 +144,7 @@ class HomeActivity : BaseActivity() {
         super.onResume()
         // téléchargements interrompus (appli fermée, Wi-Fi revenu) : ils reprennent
         Downloads.kick()
+        Relay.refreshSoon()
         if (!::updateBar.isInitialized) return
         refreshResume()
         loadRecent()

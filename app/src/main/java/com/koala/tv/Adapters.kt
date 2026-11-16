@@ -217,7 +217,14 @@ class EpisodeAdapter(private val onClick: (Int) -> Unit, private val onLong: (In
         val dur = if (e.durMin > 0) "${e.durMin} min" else ""
         // sans titre connu : « Épisode 3 » devient le titre, la durée reste au-dessus
         val dl = Downloads.get("e${e.id}")
+        val pc = Relay.get("e${e.id}")
         val dlText = when {
+            dl == null && pc != null -> when (pc.state) {
+                "fini" -> "Sur le PC"
+                "cours" -> "Sur le PC ${pc.pct} %"
+                "echec" -> "Échec sur le PC"
+                else -> "En attente sur le PC"
+            }
             dl == null -> ""
             dl.state == Downloads.State.DONE -> "Téléchargé"
             dl.state == Downloads.State.FAILED -> "Échec du téléchargement"

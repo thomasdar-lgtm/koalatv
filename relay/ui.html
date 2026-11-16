@@ -139,7 +139,7 @@
     var h = '';
     S.items.forEach(function (it) {
       h += '<div class="item"><img src="' + esc(it.i) + '" onerror="this.style.visibility=\'hidden\'"><div><div class="t">' + esc(it.t) + '</div><div class="muted">' + stateText(it) + '</div>' +
-        (it.st === 'fini' ? '' : '<div class="bar"><i style="width:' + it.pct + '%"></i></div>') + '</div><div>' +
+        (it.st === 'fini' || it.st === 'echec' ? '' : '<div class="bar"><i style="width:' + it.pct + '%"></i></div>') + '</div><div>' +
         (it.st === 'echec' ? '<button class="small" data-retry="' + esc(it.k) + '">Réessayer</button> ' : '') +
         '<button class="small" data-del="' + esc(it.k) + '">' + (it.st === 'fini' ? 'Supprimer' : 'Annuler') + '</button></div></div>';
     });

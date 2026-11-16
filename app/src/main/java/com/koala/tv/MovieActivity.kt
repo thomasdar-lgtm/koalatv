@@ -74,6 +74,7 @@ class MovieActivity : BaseActivity() {
         paintFav()
         paintDownload()
         Downloads.listen(dlRefresh)
+        Relay.refreshSoon { paintDownload() }
     }
 
     override fun onPause() {
@@ -85,7 +86,14 @@ class MovieActivity : BaseActivity() {
 
     private fun paintDownload() {
         val d = Downloads.get(resumeKey)
+        val pc = Relay.get(resumeKey)
         btnDl.text = when {
+            d == null && pc != null -> when (pc.state) {
+                "fini" -> "Sur le PC"
+                "cours" -> "Sur le PC ${pc.pct} %"
+                "echec" -> "Échec sur le PC"
+                else -> "En attente sur le PC"
+            }
             d == null -> "Télécharger"
             d.state == Downloads.State.DONE -> "Téléchargé"
             d.state == Downloads.State.FAILED -> "Échec du téléchargement"
@@ -96,11 +104,23 @@ class MovieActivity : BaseActivity() {
 
     private fun download() {
         val d = Downloads.get(resumeKey)
+        val pc = Relay.get(resumeKey)
+        if (d == null && pc != null) {
+            val opts = arrayListOf("Voir les téléchargements", if (pc.state == "fini") "Supprimer du PC" else "Annuler le téléchargement sur le PC")
+            if (pc.state == "echec") opts.add(0, "Réessayer sur le PC")
+            AlertDialog.Builder(this).setTitle(name)
+                .setItems(opts.toTypedArray()) { _, w ->
+                    when (opts[w]) {
+                        "Réessayer sur le PC" -> Relay.retry(resumeKey)
+                        "Voir les téléchargements" -> startActivity(android.content.Intent(this, DownloadsActivity::class.java))
+                        else -> Relay.remove(resumeKey)
+                    }
+                    paintDownload()
+                }.show()
+            return
+        }
         if (d == null) {
-            Downloads.add(listOf(item()))
-            DownloadsActivity.askNotifications(this)
-            toast("Ajouté aux téléchargements")
-            paintDownload()
+            DownloadsActivity.chooseWhere(this, listOf(item())) { paintDownload() }
             return
         }
         val opts = arrayListOf("Voir les téléchargements", if (d.state == Downloads.State.DONE) "Supprimer le téléchargement" else "Annuler le téléchargement")

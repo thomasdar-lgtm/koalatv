@@ -89,6 +89,7 @@ class SeriesActivity : BaseActivity() {
     override fun onResume() {
         super.onResume()
         Downloads.listen(dlRefresh)
+        Relay.refreshSoon { if (::epAdapter.isInitialized) epAdapter.notifyDataSetChanged() }
         // retour (du lecteur notamment) : on se replace sur l'épisode à voir, progression à jour
         if (resumedOnce && episodes.isNotEmpty()) focusNext() else epAdapter.notifyDataSetChanged()
         resumedOnce = true
@@ -195,12 +196,27 @@ class SeriesActivity : BaseActivity() {
         val season = episodePlayList(seriesId, seriesName, cover, epAdapter.items)
         val me = season[pos]
         val d = Downloads.get(me.resumeKey)
+        val pc = Relay.get(me.resumeKey)
         val opts = ArrayList<Pair<String, () -> Unit>>()
+        val from = all.indexOfFirst { it.resumeKey == me.resumeKey }.coerceAtLeast(0)
+        val seasonLabel = if (e.season > 0) "toute la saison ${e.season}" else "tous les épisodes"
+        if (Relay.known) {
+            // sur le PC de la maison : il télécharge pendant que personne ne regarde
+            if (pc == null) {
+                opts.add("Sur le PC : cet épisode" to { sendPc(listOf(me)) })
+                opts.add("Sur le PC : 3 épisodes à partir de celui-ci" to { sendPc(all.drop(from).take(3)) })
+                opts.add("Sur le PC : $seasonLabel" to { sendPc(season) })
+                opts.add("Sur le PC : toute la série" to { sendPc(all) })
+            } else {
+                if (pc.state == "echec") opts.add("Réessayer sur le PC" to { Relay.retry(pc.key) })
+                opts.add((if (pc.state == "fini") "Supprimer du PC" else "Annuler sur le PC") to { Relay.remove(pc.key) })
+            }
+        }
         if (d == null) {
-            opts.add("Télécharger l'épisode" to { add(listOf(me)) })
-            val from = all.indexOfFirst { it.resumeKey == me.resumeKey }.coerceAtLeast(0)
-            opts.add("Télécharger les 3 épisodes à partir de celui-ci" to { add(all.drop(from).take(3)) })
-            opts.add((if (e.season > 0) "Télécharger toute la saison ${e.season}" else "Télécharger tous les épisodes") to { add(season) })
+            val here = if (Relay.known) "Sur cet appareil : " else "Télécharger "
+            opts.add(here + (if (Relay.known) "cet épisode" else "l'épisode") to { add(listOf(me)) })
+            opts.add(here + (if (Relay.known) "3 épisodes à partir de celui-ci" else "les 3 épisodes à partir de celui-ci") to { add(all.drop(from).take(3)) })
+            opts.add(here + seasonLabel to { add(season) })
         } else {
             if (d.state == Downloads.State.FAILED) opts.add("Réessayer le téléchargement" to { Downloads.retry(d.key) })
             opts.add((if (d.state == Downloads.State.DONE) "Supprimer le téléchargement" else "Annuler le téléchargement") to { Downloads.remove(d.key) })
@@ -209,6 +225,12 @@ class SeriesActivity : BaseActivity() {
         androidx.appcompat.app.AlertDialog.Builder(this).setTitle(me.title)
             .setItems(opts.map { it.first }.toTypedArray()) { _, w -> opts[w].second(); epAdapter.notifyDataSetChanged() }
             .show()
+    }
+
+    private fun sendPc(items: List<PlayItem>) {
+        val n = Relay.send(items)
+        toast(if (n == 0) "Déjà sur le PC" else if (n == 1) "Envoyé au PC" else "$n épisodes envoyés au PC")
+        epAdapter.notifyDataSetChanged()
     }
 
     private fun add(items: List<PlayItem>) {

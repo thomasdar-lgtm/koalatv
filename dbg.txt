@@ -1,0 +1,113 @@
+===== lgmwjilens 1.20.1 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:05:34 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É3 · FR- - Longtemps…","fini":false,"p":3787,"d":4538,"dernier":false,"episodes":16,"retirée":false}
+18:05:34 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É12","fini":false,"p":584,"d":1420,"dernier":false,"episodes":97,"retirée":false}
+18:05:34 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+18:05:50 stockage : dossiers {"/media/developer/apps/usr/palm/services/com.koala.tv.service":{"écriture":"non (EACCES)","place":{"total":5817,"free":3747,"fs":"/dev/mmcblk0p59","mount":"/media/internal"}},"/media/developer/temp":"absent","/media/internal":{"écriture":"oui","place":{"total":5817,"free":3747,"fs":"/dev/mmcblk0p59","mount":"/media/internal"}},"/tmp":{"écriture":"oui","place":{"total":952,"free":932,"fs":"tmpfs","mount":"/tmp"}},"/var/tmp":{"écriture":"oui","place":{"total":952,"free":932,"fs":"tmpfs","mount":"/tmp"}},"/media/cryptofs/apps/usr/palm/services":"absent"}
+18:05:50 stockage : usb {"usb":{"/media":["developer","internal"]},"node":"v20.12.2","uid":6807}
+18:05:50 stockage : serveur local {"dossier":"/media/internal","erreur":"copie : ENOENT"}
+18:05:59 pistes du fichier {"audio":2,"text":3,"dur":4539,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:11 st:lus 6 incomplet","17:fr:FR:S_TEXT/UTF8:520 st","17:en-US:ENG:S_TEXT/UTF8:587 st"]}
+18:05:59 abonnement {"mediaId":"_LPTDtGlLFKtQ9X"}
+18:05:59 media.subscribe → {"mediaId":"_LPTDtGlLFKtQ9X","subscribe":true}
+18:05:59 media.subscribe ← {"subscription":true}
+18:05:59 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LPTDtGlLFKtQ9X"}
+18:06:00 media.subscribe ← {"resourceInfo":{"context":"_LPTDtGlLFKtQ9X","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_LPTDtGlLFKtQ9X"}}
+
+18:06:00 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_LPTDtGlLFKtQ9X"}}
+
+18:06:00 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_LPTDtGlLFKtQ9X"}}
+
+18:06:00 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_LPTDtGlLFKtQ9X"}}
+
+18:06:00 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4538560,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_LPTDtGlLFKtQ9X"}}
+
+18:06:00 choix text {"index":0,"service":true,"appli":false}
+18:06:00 media.setSubtitleEnable → {"mediaId":"_LPTDtGlLFKtQ9X","enable":true}
+18:06:00 vidéo chargée {"bridge":true,"mediaId":"_LPTDtGlLFKtQ9X","textTracks":0,"audioTracks":2,"src":".mkv"}
+18:06:00 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LPTDtGlLFKtQ9X"}
+18:06:01 media.selectTrack → {"mediaId":"_LPTDtGlLFKtQ9X","type":"text","index":0}
+18:06:01 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LPTDtGlLFKtQ9X"}
+===== lgmwjisic7 1.20.1 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:11:05 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É12","fini":false,"p":584,"d":1420,"dernier":false,"episodes":97,"retirée":false}
+18:11:06 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+18:11:06 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É3 · FR- - Longtemps…","fini":false,"p":3784,"d":0,"dernier":false,"episodes":16,"retirée":false}
+18:11:35 pistes du fichier {"audio":2,"text":3,"dur":4539,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:11 st:lus 6 incomplet","17:fr:FR:S_TEXT/UTF8:520 st","17:en-US:ENG:S_TEXT/UTF8:587 st"]}
+18:11:35 abonnement {"mediaId":"_L45Cj44XLL7gdq"}
+18:11:35 media.subscribe → {"mediaId":"_L45Cj44XLL7gdq","subscribe":true}
+18:11:35 media.subscribe ← {"subscription":true}
+18:11:35 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L45Cj44XLL7gdq"}
+18:11:36 media.subscribe ← {"resourceInfo":{"context":"_L45Cj44XLL7gdq","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_L45Cj44XLL7gdq"}}
+
+18:11:36 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_L45Cj44XLL7gdq"}}
+
+18:11:36 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_L45Cj44XLL7gdq"}}
+
+18:11:36 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_L45Cj44XLL7gdq"}}
+
+18:11:36 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":4538560,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_L45Cj44XLL7gdq"}}
+
+18:11:36 choix text {"index":0,"service":true,"appli":false}
+18:11:36 media.setSubtitleEnable → {"mediaId":"_L45Cj44XLL7gdq","enable":true}
+18:11:36 vidéo chargée {"bridge":true,"mediaId":"_L45Cj44XLL7gdq","textTracks":0,"audioTracks":2,"src":".mkv"}
+18:11:36 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L45Cj44XLL7gdq"}
+18:11:36 media.selectTrack → {"mediaId":"_L45Cj44XLL7gdq","type":"text","index":0}
+18:11:36 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L45Cj44XLL7gdq"}
+18:11:38 media.subscribe ← {"serviceName":"com.webos.pipeline._L45Cj44XLL7gdq","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._L45Cj44XLL7gdq is not running."}
+18:12:31 pistes du fichier {"audio":1,"text":2,"dur":5851,"detail":["1:und:V_MPEG4/ISO/AVC","2:fre:French:A_AAC","17:fre:forced:FR Forced:S_TEXT/UTF8:18 st:lus 9 incomplet","17:fre:FULL FR:S_TEXT/UTF8:1354 st"]}
+18:12:31 media.unsubscribe → {"mediaId":"_L45Cj44XLL7gdq"}
+18:12:32 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_L45Cj44XLL7gdq"}
+18:12:32 abonnement {"mediaId":"_0iWWKA4QZfxjrA"}
+18:12:32 media.subscribe → {"mediaId":"_0iWWKA4QZfxjrA","subscribe":true}
+18:12:32 media.subscribe ← {"subscription":true}
+18:12:32 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0iWWKA4QZfxjrA"}
+18:12:32 media.subscribe ← {"resourceInfo":{"context":"_0iWWKA4QZfxjrA","resourceList":[{"type":"VDEC","portNumber":3},{"type":"ADEC","portNumber":0}],"mediaId":"_0iWWKA4QZfxjrA"}}
+
+18:12:33 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":12,"remainingTime":12,"percent":120,"mediaId":"_0iWWKA4QZfxjrA"}}
+
+18:12:33 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0iWWKA4QZfxjrA"}}
+
+18:12:33 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0iWWKA4QZfxjrA"}}
+
+18:12:33 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":true,"startDate":-1,"rotation":0,"programInfo":[{"duration":5850870,"numAudioTracks":1,"audioTrackInfo":[{"profile":"lc","level":4,"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"H264","trackId":-1,"width":1280,"height":544,"frameRate":90000,"level":4.1,"profile":"high","adaptationSetId":-1,"orgCodec":"H264","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_0iWWKA4QZfxjrA"}}
+
+18:12:33 choix text {"index":0,"service":true,"appli":false}
+18:12:33 media.setSubtitleEnable → {"mediaId":"_0iWWKA4QZfxjrA","enable":true}
+18:12:33 vidéo chargée {"bridge":true,"mediaId":"_0iWWKA4QZfxjrA","textTracks":0,"audioTracks":1,"src":".mkv"}
+18:12:33 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0iWWKA4QZfxjrA"}
+18:12:33 media.selectTrack → {"mediaId":"_0iWWKA4QZfxjrA","type":"text","index":0}
+18:12:33 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0iWWKA4QZfxjrA"}
+18:12:41 media.subscribe ← {"serviceName":"com.webos.pipeline._0iWWKA4QZfxjrA","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0iWWKA4QZfxjrA is not running."}
+18:13:23 pistes du fichier {"audio":3,"text":3,"dur":6666,"detail":["1:und:Le livre de la jungle.1994:V_MPEG4/ISO/AVC","2:fre:VFF 2.0:A_AC3","2:eng:VO 5.1:A_AC3","2:fre:VFQ 2.0:A_AC3","17:fre:forced:French forced:S_TEXT/UTF8:3 st:lus 2 incomplet","17:fre:French complet:S_TEXT/UTF8:699 st","17:eng:English complet:S_TEXT/UTF8:799 st"]}
+18:13:23 media.unsubscribe → {"mediaId":"_0iWWKA4QZfxjrA"}
+18:13:24 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0iWWKA4QZfxjrA"}
+18:13:24 abonnement {"mediaId":"_L94XGB4MgxF3il"}
+18:13:24 media.subscribe → {"mediaId":"_L94XGB4MgxF3il","subscribe":true}
+18:13:24 media.subscribe ← {"subscription":true}
+18:13:24 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L94XGB4MgxF3il"}
+18:13:24 media.subscribe ← {"resourceInfo":{"context":"_L94XGB4MgxF3il","resourceList":[{"type":"VDEC","portNumber":3},{"type":"ADEC","portNumber":0}],"mediaId":"_L94XGB4MgxF3il"}}
+
+18:13:24 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_L94XGB4MgxF3il"}}
+
+18:13:24 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":3,"remainingTime":3,"percent":30,"mediaId":"_L94XGB4MgxF3il"}}
+
+18:13:24 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_L94XGB4MgxF3il"}}
+
+18:13:24 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":true,"startDate":-1,"rotation":0,"programInfo":[{"duration":6665538,"numAudioTracks":3,"audioTrackInfo":[{"sampleRate":48,"channels":2,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"ac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"ac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1},{"sampleRate":48,"channels":2,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"ac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"H264","trackId":-1,"width":1920,"height":816,"frameRate":23.9760246,"level":4,"profile":"main","adaptationSetId":-1,"orgCodec":"H264","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_L94XGB4MgxF3il"}}
+
+18:13:24 choix text {"index":0,"service":true,"appli":false}
+18:13:24 media.setSubtitleEnable → {"mediaId":"_L94XGB4MgxF3il","enable":true}
+18:13:25 vidéo chargée {"bridge":true,"mediaId":"_L94XGB4MgxF3il","textTracks":0,"audioTracks":3,"src":".mkv"}
+18:13:25 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L94XGB4MgxF3il"}
+18:13:25 media.selectTrack → {"mediaId":"_L94XGB4MgxF3il","type":"text","index":0}
+18:13:25 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_L94XGB4MgxF3il"}
+18:13:31 media.subscribe ← {"serviceName":"com.webos.pipeline._L94XGB4MgxF3il","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._L94XGB4MgxF3il is not running."}
+===== lgmwjjc41y 1.20.2 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:26:20 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É3 · FR- - Longtemps…","fini":false,"p":3780,"d":4538,"dernier":false,"episodes":16,"retirée":false}
+18:26:20 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+18:26:20 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É12","fini":false,"p":584,"d":1420,"dernier":false,"episodes":97,"retirée":false}
+18:26:36 stockage : dossiers {"/media/developer/apps/usr/palm/services/com.koala.tv.service":{"écriture":"non (EACCES)","place":{"total":5817,"free":3747,"fs":"/dev/mmcblk0p59","mount":"/media/internal"}},"/media/developer/temp":"absent","/media/internal":{"écriture":"oui","place":{"total":5817,"free":3747,"fs":"/dev/mmcblk0p59","mount":"/media/internal"}},"/tmp":{"écriture":"oui","place":{"total":952,"free":930,"fs":"tmpfs","mount":"/tmp"}},"/var/tmp":{"écriture":"oui","place":{"total":952,"free":930,"fs":"tmpfs","mount":"/tmp"}},"/media/cryptofs/apps/usr/palm/services":"absent","/tmp/usb/sda/sda1":{"écriture":"non (EACCES)","place":{"total":952,"free":930,"fs":"tmpfs","mount":"/tmp"}},"/tmp/usb/sda":{"écriture":"non (EACCES)","place":{"total":952,"free":930,"fs":"tmpfs","mount":"/tmp"}}}
+18:26:36 stockage : usb {"usb":{"/tmp/usb":["sda"],"/media":["developer","internal"],"/mnt":["lg"]},"montages":[],"node":"v20.12.2","uid":6807}
+18:26:36 stockage : serveur local {"dossier":"/media/internal","erreur":"vidéo de test introuvable (/media/developer/apps/usr/palm/applications/com.koala.tv/probe.mp4 : ENOENT | /media/developer/apps/usr/palm/applications/com.koala.tv/probe.mp4 : ENOENT)"}
+===== lgmwjjd7n4 1.20.2 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:27:11 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É12","fini":false,"p":584,"d":1420,"dernier":false,"episodes":97,"retirée":false}
+18:27:12 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É3 · FR- - Longtemps…","fini":false,"p":3780,"d":4538,"dernier":false,"episodes":16,"retirée":false}
+18:27:12 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}

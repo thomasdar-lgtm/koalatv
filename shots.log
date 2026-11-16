@@ -1,0 +1,80 @@
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+RelayTest > downloadsScreenWithPc FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > seriesPhone FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > homeTv FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > homeTvResume FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > homePhoneLand FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > seriesTv FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+ScreenshotTest > homePhone FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+SearchTest > titleCore FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+SearchTest > singleLetterFindsH FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+SearchTest > watchedHistory FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+SeekFocusTest > seekThenStaysOnBar FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+SeekFocusTest > hidesAllAtOnce FAILED
+    java.lang.AssertionError at MavenArtifactFetcher.java:129
+        Caused by: java.util.concurrent.ExecutionException at AbstractFuture.java:596
+            Caused by: java.io.IOException at HttpURLConnection.java:2059
+
+19 tests completed, 19 failed
+
+> Task :app:testDebugUnitTest FAILED
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1794858466570.json
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testDebugUnitTest'.
+> There were failing tests. See the report at: file:///home/runner/work/koalatv/koalatv/app/build/reports/tests/testDebugUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 35s
+26 actionable tasks: 26 executed

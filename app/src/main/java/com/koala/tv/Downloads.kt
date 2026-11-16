@@ -294,12 +294,14 @@ object Downloads {
                     // place : le fichier entier, plus une marge
                     val free = freeBytes(f.parentFile ?: f)
                     if (free in 1 until total + (200L shl 20)) throw NoSpace("Pas assez de place : ${fmtSize(total)} nécessaires, ${fmtSize(free)} libres")
-                    d.total = total
+                    // le fichier existe avant que la taille soit connue du lecteur (lecture pendant le téléchargement)
+                    RandomAccessFile(f, "rw").use { raf -> raf.setLength(total) }
                     // la fin d'abord : 2 % du fichier, 24 Mo au plus
-                    d.tailFrom = (total - minOf(TAIL_MAX, maxOf(1L shl 20, total / 50))).coerceAtLeast(0)
-                    if (d.tailFrom == 0L) d.tailDone = true
+                    val tail = (total - minOf(TAIL_MAX, maxOf(1L shl 20, total / 50))).coerceAtLeast(0)
+                    d.tailFrom = tail
+                    if (tail == 0L) d.tailDone = true
+                    d.total = total
                 }
-                RandomAccessFile(f, "rw").use { it.setLength(d.total) }
                 save()
             }
             if (!d.tailDone) {

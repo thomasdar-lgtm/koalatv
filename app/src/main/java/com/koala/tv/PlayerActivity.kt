@@ -8,6 +8,10 @@ import android.os.Bundle
 import android.util.Rational
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.net.ConnectivityManager
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -76,6 +80,85 @@ class PlayerActivity : BaseActivity() {
     private var okDown = false
     private var okLong = false
     private val digitsRunnable = Runnable { commitDigits() }
+
+    // ---------- Chargement : état affiché, rechargement manuel (comme sur la LG) ----------
+    private lateinit var loadPanel: View
+    private lateinit var loadMsg: TextView
+    private lateinit var loadDet: TextView
+    private var loadSince = 0L
+    private var loadBuf = 0L
+    private var loadGrow = 0L
+    private var reloadKey = false
+    private val loadTick = object : Runnable {
+        override fun run() {
+            updateLoad()
+            handler.postDelayed(this, 1000)
+        }
+    }
+
+    private fun online(): Boolean = try {
+        (getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager).activeNetwork != null
+    } catch (e: Exception) {
+        true
+    }
+
+    /** Chaque seconde pendant un chargement : internet coupé · serveur qui ne répond pas · chargement lent. */
+    private fun updateLoad() {
+        val p = player
+        val on = p != null && p.playWhenReady && p.playbackState == Player.STATE_BUFFERING && !nextOn && items.isNotEmpty()
+        if (!on) {
+            loadSince = 0
+            loadPanel.visibility = View.GONE
+            return
+        }
+        val live = current.live
+        val now = SystemClock.elapsedRealtime()
+        val ahead = if (live) 0L else (p!!.bufferedPosition - p.currentPosition).coerceAtLeast(0)
+        if (loadSince == 0L) { loadSince = now; loadBuf = ahead; loadGrow = now }
+        if (ahead > loadBuf + 200) { loadBuf = ahead; loadGrow = now }
+        val waited = ((now - loadSince) / 1000).toInt()
+        loadMsg.text = when {
+            !online() -> "Connexion internet coupée"
+            waited < 4 -> "Chargement…"
+            now - loadGrow < 3000 -> "Chargement lent : la vidéo arrive doucement"
+            live -> "La chaîne ne répond pas"
+            else -> "Le serveur ne répond pas"
+        }
+        var det = "Attente $waited s"
+        if (!live) det += " · Mémoire tampon ${ahead / 1000} s"
+        if (waited >= 8) det += if (isTouch) " · Touche ici pour recharger" else " · OK pour recharger"
+        loadDet.text = det
+        loadPanel.visibility = View.VISIBLE
+    }
+
+    private fun canReloadNow() = loadSince > 0 && SystemClock.elapsedRealtime() - loadSince >= 8000
+
+    /** Rechargement manuel : on repart du même endroit. */
+    private fun reload() {
+        val p = player ?: return
+        if (items.isEmpty()) return
+        val at = if (current.live) 0L else if (p.currentPosition > 1000) p.currentPosition else lastPos
+        retries = 0
+        handler.removeCallbacks(retryRunnable)
+        tvStatus.visibility = View.GONE
+        loadSince = 0
+        loadPanel.visibility = View.GONE
+        p.stop()
+        playCurrent(askResume = false)
+        if (at > 0) p.seekTo(at)
+    }
+
+    /** Bouton « Recharger » dans la rangée des commandes (à côté des sous-titres et des réglages). */
+    private fun addReloadButton() {
+        val row = pv.findViewById<LinearLayout>(androidx.media3.ui.R.id.exo_basic_controls) ?: return
+        val ref = pv.findViewById<View>(androidx.media3.ui.R.id.exo_settings)
+        val b = ImageButton(this, null, 0, androidx.media3.ui.R.style.ExoStyledControls_Button_Bottom)
+        b.setImageResource(R.drawable.ic_reload)
+        b.contentDescription = "Recharger"
+        b.setOnClickListener { reload() }
+        val at = if (ref != null) row.indexOfChild(ref) else row.childCount
+        row.addView(b, at.coerceAtLeast(0), ref?.layoutParams?.let { LinearLayout.LayoutParams(it) } ?: LinearLayout.LayoutParams(row.height, row.height))
+    }
 
     private val items: List<PlayItem> get() = Playback.items
     private val current: PlayItem get() = items[index]
@@ -157,6 +240,11 @@ class PlayerActivity : BaseActivity() {
         ovEpg = findViewById(R.id.ov_epg)
         tvStatus = findViewById(R.id.tv_status)
         tvNumber = findViewById(R.id.tv_number)
+        loadPanel = findViewById(R.id.load_panel)
+        loadMsg = findViewById(R.id.load_msg)
+        loadDet = findViewById(R.id.load_det)
+        loadPanel.setOnClickListener { if (canReloadNow()) reload() }
+        addReloadButton()
         if (pipSupported) {
             findViewById<View>(R.id.btn_pip).apply {
                 visibility = View.VISIBLE
@@ -307,6 +395,8 @@ class PlayerActivity : BaseActivity() {
         handler.postDelayed(saveLoop, 10_000)
         handler.removeCallbacks(nextTick)
         handler.postDelayed(nextTick, 1000)
+        handler.removeCallbacks(loadTick)
+        handler.postDelayed(loadTick, 1000)
     }
 
     /** Boutons « épisode précédent / suivant » des commandes, actifs seulement entre deux épisodes d'une saison. */
@@ -347,6 +437,7 @@ class PlayerActivity : BaseActivity() {
         Downloads.hold(false)
         handler.removeCallbacks(saveLoop)
         handler.removeCallbacks(nextTick)
+        handler.removeCallbacks(loadTick)
         handler.removeCallbacks(retryRunnable)
         handler.removeCallbacks(zapRunnable)
         epgJob?.cancel()
@@ -787,6 +878,17 @@ class PlayerActivity : BaseActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (nextOn && event.keyCode != KeyEvent.KEYCODE_BACK) return super.dispatchKeyEvent(event)
+        val ok = event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER
+        // chargement bloqué depuis 8 s : OK recharge
+        if (ok && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && canReloadNow() && !pv.isControllerFullyVisible) {
+            reloadKey = true
+            reload()
+            return true
+        }
+        if (ok && event.action == KeyEvent.ACTION_UP && reloadKey) {
+            reloadKey = false
+            return true
+        }
         if (event.action == KeyEvent.ACTION_DOWN && ::pv.isInitialized && items.isNotEmpty()) {
             val controls = pv.isControllerFullyVisible
             when (event.keyCode) {

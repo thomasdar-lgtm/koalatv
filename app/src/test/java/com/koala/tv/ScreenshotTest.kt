@@ -141,6 +141,19 @@ class ScreenshotTest {
         login(tv = false, resume = true); shoot("home_phone_land")
     }
 
+    /** Autoradio de la Golf (Android 10, écran 1280×720 à 240 dpi, tactile). */
+    @Test
+    @Config(sdk = [29], qualifiers = "w853dp-h440dp-land-hdpi")
+    fun homeCar() {
+        login(tv = false, resume = true); shoot("home_car")
+    }
+
+    @Test
+    @Config(sdk = [29], qualifiers = "w853dp-h440dp-land-hdpi")
+    fun seriesCar() {
+        login(tv = false, resume = false); Prefs.server = fakeServer(); shootSeries("series_car")
+    }
+
     @Test
     @Config(sdk = [34], qualifiers = "w411dp-h891dp-port-xxhdpi")
     fun homePhone() {

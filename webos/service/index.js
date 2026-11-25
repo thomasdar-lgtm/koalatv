@@ -308,14 +308,21 @@ service.register('probe', function (message) {
   var p = message.payload || {}, url = p.url, max = p.maxBytes || 4 * 1024 * 1024, done = false, req = null;
   if (!url || !/^https?:\/\//i.test(url)) { message.respond({ returnValue: false, errorText: 'Adresse invalide' }); return; }
   var timer = setTimeout(function () { finish(new Error('Délai dépassé')); }, (p.seconds || 6) * 1000);
-  var head = null, finalUrl = url;
+  var head = null, finalUrl = url, redir = null;
+  /* Redirection du serveur (dépannage) : hôte changé, noms des paramètres, dates d'expiration éventuelles (secondes restantes) */
+  function describe(from, to) {
+    var a = urlLib.parse(from), b = urlLib.parse(to, true), names = Object.keys(b.query || {}), exp = {}, now = Date.now() / 1000;
+    names.forEach(function (k) { var v = String(b.query[k]); if (/^1[6-9]\d{8}$/.test(v)) exp[k] = Math.round(+v - now); });
+    (b.pathname || '').split('/').forEach(function (seg) { if (/^1[6-9]\d{8}$/.test(seg)) exp['chemin'] = Math.round(+seg - now); });
+    return { autreHote: a.hostname !== b.hostname, port: b.port || '', params: names, expire: exp, longueur: to.length };
+  }
   function finish(err, tracks) {
     if (done) return;
     done = true;
     clearTimeout(timer);
     try { if (req) req.abort(); } catch (e) { /* déjà fermé */ }
     if (err && !head) message.respond({ returnValue: false, errorText: err.message });
-    else message.respond({ returnValue: true, tracks: tracks || (head ? head.tracks : []), dur: head ? head.dur : 0 });
+    else message.respond({ returnValue: true, tracks: tracks || (head ? head.tracks : []), dur: head ? head.dur : 0, redir: redir });
   }
   /* Téléchargement d'une plage d'octets ; onData(tampon, fini) renvoie true pour arrêter */
   function range(u, from, len, redirects, onData) {
@@ -328,6 +335,7 @@ service.register('probe', function (message) {
       if (code >= 300 && code < 400 && res.headers.location && redirects < 5) {
         res.resume();
         finalUrl = urlLib.resolve(u, res.headers.location);
+        if (!redir) redir = describe(u, finalUrl);
         range(finalUrl, from, len, redirects + 1, onData);
         return;
       }

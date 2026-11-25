@@ -2,7 +2,7 @@
 (function () {
   'use strict';
 
-  var VERSION = '1.21.0';
+  var VERSION = '1.21.1';
   var SERVICE = 'luna://com.koala.tv.service/fetch';
 
   var K = {
@@ -792,7 +792,7 @@
       var t = new Date(), txt = what + (data === undefined ? '' : ' ' + (typeof data === 'string' ? data : JSON.stringify(data)));
       txt = txt.replace(/\/(live|movie|series|timeshift)\/[^\s"]+/g, '/$1/…').replace(/username=[^&\s"]*/g, 'username=…').replace(/password=[^&\s"]*/g, 'password=…');
       this.lines.push(pad2(t.getHours()) + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()) + ' ' + txt.substr(0, 3000));
-      if (this.lines.length > 80) this.lines.shift();
+      if (this.lines.length > 150) this.lines.shift();
       var self = this;
       clearTimeout(this.timer);
       this.timer = setTimeout(function () { self.flush(); }, 1500);
@@ -866,6 +866,7 @@
           try { m = JSON.parse(raw); } catch (e) { /* ignoré */ }
           if (!m || m.returnValue === false) { Dbg.log('pistes : erreur', m && m.errorText); return fin(null); }
           var out = { audio: [], text: [], dur: +m.dur || 0 }, k, t;
+          Dbg.log('redirection du serveur', m.redir || 'aucune');
           for (k = 0; k < (m.tracks || []).length; k++) {
             t = m.tracks[k];
             if (t.type === 2) out.audio.push(t); else if (t.type === 17) out.text.push(t);
@@ -3548,7 +3549,15 @@
         spinner(false);
         cls($('p-pause'), 'on', false);
       });
-      v.addEventListener('waiting', function () { if (self.active) spinner(true); });
+      v.addEventListener('waiting', function () {
+        if (!self.active) return;
+        spinner(true);
+        // dépannage des blocages en cours d'épisode : où, avec quelle réserve, combien de temps après le lancement
+        if (!self.cur().live && v.currentTime > 5) Dbg.log('attente', { t: Math.round(v.currentTime), dur: Math.round(v.duration || 0), réserve: Math.round(self.ahead()), depuis: Math.round((Date.now() - self.loadedAt) / 1000) });
+      });
+      v.addEventListener('stalled', function () {
+        if (self.active && !self.cur().live) Dbg.log('flux interrompu', { t: Math.round(v.currentTime), réserve: Math.round(self.ahead()), depuis: Math.round((Date.now() - self.loadedAt) / 1000) });
+      });
       v.addEventListener('play', function () { self.paintCtl(); });
       v.addEventListener('pause', function () { self.paintCtl(); });
       // boutons à la souris (télécommande à pointeur)
@@ -3820,6 +3829,7 @@
       this.timers.retry = null;
       this.startAt = at || 0;
       this.lastPos = at || 0;
+      this.loadedAt = Date.now();
       this.stuck = 0;
       this.lastT = -1;
       spinner(true);
@@ -3870,9 +3880,13 @@
     watchdog: function () {
       var v = this.v;
       if (!this.active || Dialog.open || this.timers.retry || v.paused || v.seeking) return;
+      if (!this.cur().live && Date.now() - (this.beatAt || 0) > 300000) {
+        this.beatAt = Date.now();
+        Dbg.log('lecture', { t: Math.round(v.currentTime), réserve: Math.round(this.ahead()), depuis: Math.round((Date.now() - this.loadedAt) / 1000) });
+      }
       if (v.currentTime === this.lastT) {
         this.stuck += 2;
-        if (this.stuck >= 16) this.fail();
+        if (this.stuck >= 16) { Dbg.log('bloqué 16 s : relance', { t: Math.round(v.currentTime), réserve: Math.round(this.ahead()) }); this.fail(); }
       } else {
         this.stuck = 0;
         this.lastT = v.currentTime;

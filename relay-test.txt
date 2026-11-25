@@ -1,0 +1,18 @@
+=== RUN   TestPairingCompatible
+--- PASS: TestPairingCompatible (0.00s)
+=== RUN   TestEndToEnd
+    relay_test.go:211: adresse publiée : port 36003, jeton true
+    relay_test.go:231: lecture pendant le téléchargement : 206 bytes 1000000-8999999/9000000, 8000000 octets en 1.673s
+    relay_test.go:240: fichier : /Vidéos/Séries/Série l'essai/Série · S1 É1 [e101].mkv
+    relay_test.go:261: pause : En pause : lecture en cours sur LG OLED
+    relay_test.go:275: page : lié=true, éléments=1
+--- PASS: TestEndToEnd (10.54s)
+=== RUN   TestReopenWhenThrottled
+    relay_test.go:335: sans délai : 40 Mo en 13.267s, 7 requêtes (sans relance : plus de 100 s)
+    relay_test.go:342: une relance toutes les 5 s : 19.82s, 7 requêtes
+    relay_test.go:348: désactivé : 6.825s, 3 requêtes
+--- PASS: TestReopenWhenThrottled (41.91s)
+=== RUN   TestUpdateCheck
+--- PASS: TestUpdateCheck (0.00s)
+PASS
+ok  	koalatv/relay	53.484s

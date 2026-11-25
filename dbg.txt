@@ -1,0 +1,293 @@
+===== lgmws55245 1.21.0 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:58:52 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É6 · FR- - Parenté","fini":false,"p":3181,"d":0,"dernier":false,"episodes":16,"retirée":false}
+18:58:52 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+18:58:52 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É12","fini":false,"p":584,"d":1420,"dernier":false,"episodes":97,"retirée":false}
+18:58:52 reprendre : série {"sn":"|FR| H (1998)","ep":"|FR| H (1998) · S3 É4","fini":false,"p":942,"d":1426,"dernier":false,"episodes":71,"retirée":false}
+18:59:09 pistes du fichier {"audio":2,"text":4,"dur":1420,"detail":["1:mul:E12 - 1080p:V_MPEG4/ISO/AVC","2:fre:Français:A_AAC","2:jpn:Japonais:A_AAC","17:fre:FR Forced {ASS}:S_TEXT/UTF8:4 st:lus 4 incomplet","17:fre:FR Forced {SRT}:S_TEXT/UTF8:4 st:lus 0 incomplet","17:fre:FR Full {ASS}:S_TEXT/UTF8:340 st","17:fre:FR Full {SRT}:S_TEXT/UTF8:340 st"]}
+18:59:09 abonnement {"mediaId":"_0yxt9WS0oAkLvQ"}
+18:59:09 media.subscribe → {"mediaId":"_0yxt9WS0oAkLvQ","subscribe":true}
+18:59:09 media.subscribe ← {"subscription":true}
+18:59:09 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0yxt9WS0oAkLvQ"}
+18:59:10 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_0yxt9WS0oAkLvQ"}}
+
+18:59:10 media.subscribe ← {"resourceInfo":{"context":"_0yxt9WS0oAkLvQ","resourceList":[{"type":"VDEC","portNumber":3},{"type":"ADEC","portNumber":0}],"mediaId":"_0yxt9WS0oAkLvQ"}}
+
+18:59:10 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0yxt9WS0oAkLvQ"}}
+
+18:59:10 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0yxt9WS0oAkLvQ"}}
+
+18:59:10 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":true,"startDate":-1,"rotation":0,"programInfo":[{"duration":1420154,"numAudioTracks":2,"audioTrackInfo":[{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"ja","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"H264","trackId":-1,"width":1920,"height":1080,"frameRate":25,"level":4,"profile":"high","adaptationSetId":-1,"orgCodec":"H264","periodStart":-1}],"numSubtitleTracks":4,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":3,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_0yxt9WS0oAkLvQ"}}
+
+18:59:10 choix text {"index":0,"service":true,"appli":false}
+18:59:10 media.setSubtitleEnable → {"mediaId":"_0yxt9WS0oAkLvQ","enable":true}
+18:59:10 vidéo chargée {"bridge":true,"mediaId":"_0yxt9WS0oAkLvQ","textTracks":0,"audioTracks":2,"src":".mkv"}
+18:59:10 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0yxt9WS0oAkLvQ"}
+18:59:11 media.selectTrack → {"mediaId":"_0yxt9WS0oAkLvQ","type":"text","index":0}
+18:59:11 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0yxt9WS0oAkLvQ"}
+19:11:38 media.subscribe ← {"serviceName":"com.webos.pipeline._0yxt9WS0oAkLvQ","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0yxt9WS0oAkLvQ is not running."}
+19:11:39 pistes du fichier {"audio":2,"text":4,"dur":1420,"detail":["1:mul:E13 - 1080p:V_MPEG4/ISO/AVC","2:fre:Français:A_AAC","2:jpn:Japonais:A_AAC","17:fre:FR Forced {ASS}:S_TEXT/UTF8:2 st:lus 2 incomplet","17:fre:FR Forced {SRT}:S_TEXT/UTF8:2 st:lus 0 incomplet","17:fre:FR Full {ASS}:S_TEXT/UTF8:284 st","17:fre:FR Full {SRT}:S_TEXT/UTF8:284 st"]}
+19:11:39 media.unsubscribe → {"mediaId":"_0yxt9WS0oAkLvQ"}
+19:11:39 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0yxt9WS0oAkLvQ"}
+19:11:39 abonnement {"mediaId":"_Lx81Bf13Ub9X46"}
+19:11:39 media.subscribe → {"mediaId":"_Lx81Bf13Ub9X46","subscribe":true}
+19:11:39 media.subscribe ← {"subscription":true}
+19:11:39 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lx81Bf13Ub9X46"}
+19:11:40 media.subscribe ← {"resourceInfo":{"context":"_Lx81Bf13Ub9X46","resourceList":[{"type":"VDEC","portNumber":3},{"type":"ADEC","portNumber":0}],"mediaId":"_Lx81Bf13Ub9X46"}}
+
+19:11:40 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_Lx81Bf13Ub9X46"}}
+
+19:11:40 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":4,"remainingTime":4,"percent":40,"mediaId":"_Lx81Bf13Ub9X46"}}
+
+19:11:40 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_Lx81Bf13Ub9X46"}}
+
+19:11:40 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":true,"startDate":-1,"rotation":0,"programInfo":[{"duration":1420016,"numAudioTracks":2,"audioTrackInfo":[{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"ja","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"H264","trackId":-1,"width":1920,"height":1080,"frameRate":25,"level":4,"profile":"high","adaptationSetId":-1,"orgCodec":"H264","periodStart":-1}],"numSubtitleTracks":4,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":3,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_Lx81Bf13Ub9X46"}}
+
+19:11:40 choix text {"index":0,"service":true,"appli":false}
+19:11:40 media.setSubtitleEnable → {"mediaId":"_Lx81Bf13Ub9X46","enable":true}
+19:11:40 vidéo chargée {"bridge":true,"mediaId":"_Lx81Bf13Ub9X46","textTracks":0,"audioTracks":2,"src":".mkv"}
+19:11:40 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lx81Bf13Ub9X46"}
+19:11:40 media.selectTrack → {"mediaId":"_Lx81Bf13Ub9X46","type":"text","index":0}
+19:11:41 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lx81Bf13Ub9X46"}
+19:33:30 media.subscribe ← {"serviceName":"com.webos.pipeline._Lx81Bf13Ub9X46","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._Lx81Bf13Ub9X46 is not running."}
+19:33:32 pistes du fichier {"audio":2,"text":4,"dur":1420,"detail":["1:mul:E14 - 1080p:V_MPEG4/ISO/AVC","2:fre:Français:A_AAC","2:jpn:Japonais:A_AAC","17:fre:FR Forced {ASS}:S_TEXT/UTF8:3 st:lus 3 incomplet","17:fre:FR Forced {SRT}:S_TEXT/UTF8:3 st:lus 0 incomplet","17:fre:FR Full {ASS}:S_TEXT/UTF8:262 st","17:fre:FR Full {SRT}:S_TEXT/UTF8:262 st"]}
+19:33:32 media.unsubscribe → {"mediaId":"_Lx81Bf13Ub9X46"}
+19:33:32 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_Lx81Bf13Ub9X46"}
+19:33:32 abonnement {"mediaId":"_LV9Ogs1DJcb5pK"}
+19:33:32 media.subscribe → {"mediaId":"_LV9Ogs1DJcb5pK","subscribe":true}
+19:33:32 media.subscribe ← {"subscription":true}
+19:33:32 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LV9Ogs1DJcb5pK"}
+19:33:32 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_LV9Ogs1DJcb5pK"}}
+
+19:33:32 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_LV9Ogs1DJcb5pK"}}
+
+19:33:33 media.subscribe ← {"resourceInfo":{"context":"_LV9Ogs1DJcb5pK","resourceList":[{"type":"VDEC","portNumber":3},{"type":"ADEC","portNumber":0}],"mediaId":"_LV9Ogs1DJcb5pK"}}
+
+19:33:33 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_LV9Ogs1DJcb5pK"}}
+
+19:33:33 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":true,"startDate":-1,"rotation":0,"programInfo":[{"duration":1420062,"numAudioTracks":2,"audioTrackInfo":[{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"profile":"lc","level":2,"sampleRate":44.0999985,"channels":2,"language":"ja","pid":-1,"ctag":-1,"audioType":0,"codec":"aac","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"H264","trackId":-1,"width":1920,"height":1080,"frameRate":25,"level":4,"profile":"high","adaptationSetId":-1,"orgCodec":"H264","periodStart":-1}],"numSubtitleTracks":4,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":3,"language":"fr","type":"text","periodStart":0,"languageName":"French"}]}],"mediaId":"_LV9Ogs1DJcb5pK"}}
+
+19:33:33 choix text {"index":0,"service":true,"appli":false}
+19:33:33 media.setSubtitleEnable → {"mediaId":"_LV9Ogs1DJcb5pK","enable":true}
+19:33:33 vidéo chargée {"bridge":true,"mediaId":"_LV9Ogs1DJcb5pK","textTracks":0,"audioTracks":2,"src":".mkv"}
+19:33:33 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LV9Ogs1DJcb5pK"}
+19:33:33 media.selectTrack → {"mediaId":"_LV9Ogs1DJcb5pK","type":"text","index":0}
+19:33:33 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LV9Ogs1DJcb5pK"}
+===== lgmwt8kejg 1.21.0 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+13:22:33 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+13:22:33 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É6 · FR- - Parenté","fini":false,"p":3181,"d":0,"dernier":false,"episodes":16,"retirée":false}
+13:22:33 reprendre : série {"sn":"|FR| H (1998)","ep":"|FR| H (1998) · S3 É4","fini":false,"p":942,"d":1426,"dernier":false,"episodes":71,"retirée":false}
+13:22:33 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É14","fini":true,"p":0,"d":0,"dernier":false,"episodes":97,"retirée":false}
+13:22:33 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É17","fini":true,"p":0,"d":0,"dernier":false,"episodes":97,"retirée":false}
+13:23:59 pistes du fichier {"audio":2,"text":3,"dur":3527,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:20 st:lus 10 incomplet","17:fr:FR:S_TEXT/UTF8:665 st","17:en-US:ENG:S_TEXT/UTF8:713 st"]}
+13:24:00 abonnement {"mediaId":"_0F9K9g47gLlK4L"}
+13:24:00 media.subscribe → {"mediaId":"_0F9K9g47gLlK4L","subscribe":true}
+13:24:00 media.subscribe ← {"subscription":true}
+13:24:00 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0F9K9g47gLlK4L"}
+13:24:00 media.subscribe ← {"resourceInfo":{"context":"_0F9K9g47gLlK4L","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_0F9K9g47gLlK4L"}}
+
+13:24:00 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":2,"remainingTime":2,"percent":20,"mediaId":"_0F9K9g47gLlK4L"}}
+
+13:24:00 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0F9K9g47gLlK4L"}}
+
+13:24:00 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0F9K9g47gLlK4L"}}
+
+13:24:00 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3527168,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_0F9K9g47gLlK4L"}}
+
+13:24:00 choix text {"index":0,"service":true,"appli":false}
+13:24:00 media.setSubtitleEnable → {"mediaId":"_0F9K9g47gLlK4L","enable":true}
+13:24:00 vidéo chargée {"bridge":true,"mediaId":"_0F9K9g47gLlK4L","textTracks":0,"audioTracks":2,"src":".mkv"}
+13:24:00 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0F9K9g47gLlK4L"}
+13:24:01 media.selectTrack → {"mediaId":"_0F9K9g47gLlK4L","type":"text","index":0}
+13:24:01 media.selectTrack ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0F9K9g47gLlK4L"}
+13:29:21 media.subscribe ← {"serviceName":"com.webos.pipeline._0F9K9g47gLlK4L","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0F9K9g47gLlK4L is not running."}
+13:29:22 pistes du fichier {"audio":2,"text":3,"dur":3326,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr-FR:VFF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr-FR:forced:FR  Forced:S_TEXT/UTF8:2 st:lus 1","17:fr-FR:FR:S_TEXT/UTF8:563 st","17:en-US:ENG:S_TEXT/UTF8:597 st"]}
+13:29:22 media.unsubscribe → {"mediaId":"_0F9K9g47gLlK4L"}
+13:29:22 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0F9K9g47gLlK4L"}
+13:29:22 abonnement {"mediaId":"_Lj6pS2v4e6AoC7"}
+13:29:22 media.subscribe → {"mediaId":"_Lj6pS2v4e6AoC7","subscribe":true}
+13:29:22 media.subscribe ← {"subscription":true}
+13:29:22 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lj6pS2v4e6AoC7"}
+13:29:23 media.subscribe ← {"resourceInfo":{"context":"_Lj6pS2v4e6AoC7","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_Lj6pS2v4e6AoC7"}}
+
+13:29:23 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_Lj6pS2v4e6AoC7"}}
+
+13:29:23 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_Lj6pS2v4e6AoC7"}}
+
+13:29:23 media.subscribe ← {"videoInfo":{"vdec_ch":0,"width":3840,"height":2160,"frameRate":23.976023976023978,"mode3D":"2d","parWidth":1,"parHeight":1,"scanType":"progressive","path":"network","LRType":-1,"bitRate":4277848,"afd":16,"rotation":0,"codec":"video\/x-h265","userData":"(null)","storeDemo8k":0,"aspectRatio":"16:9","pixelAspectRatio":"1:1","scalerFeedingFrameRate":-1,"captionExist":false,"actual3D":"2d","hdrType":"DolbyVision","mediaId":"_Lj6pS2v4e6AoC7"}}
+
+13:29:23 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3326432,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_Lj6pS2v4e6AoC7"}}
+
+13:29:23 choix text {"index":0,"service":true,"appli":true}
+13:29:23 media.setSubtitleEnable → {"mediaId":"_Lj6pS2v4e6AoC7","enable":false}
+13:29:23 vidéo chargée {"bridge":true,"mediaId":"_Lj6pS2v4e6AoC7","textTracks":0,"audioTracks":2,"src":".mkv"}
+13:29:23 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lj6pS2v4e6AoC7"}
+14:24:51 pistes du fichier {"audio":2,"text":3,"dur":3050,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1   640kbps:A_EAC3","2:en:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR  Forced:S_TEXT/UTF8:1 st:lus 1","17:fr:FR:S_TEXT/UTF8:410 st","17:en:ENG:S_TEXT/UTF8:445 st"]}
+14:24:51 media.unsubscribe → {"mediaId":"_Lj6pS2v4e6AoC7"}
+14:24:51 media.unsubscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lj6pS2v4e6AoC7"}
+14:24:51 abonnement {"mediaId":"_0Clop71uNgoEq1"}
+14:24:51 media.subscribe → {"mediaId":"_0Clop71uNgoEq1","subscribe":true}
+14:24:51 media.subscribe ← {"subscription":true}
+14:24:51 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Clop71uNgoEq1"}
+14:24:52 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_0Clop71uNgoEq1"}}
+
+14:24:52 media.subscribe ← {"resourceInfo":{"context":"_0Clop71uNgoEq1","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_0Clop71uNgoEq1"}}
+
+14:24:52 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_0Clop71uNgoEq1"}}
+
+14:24:52 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_0Clop71uNgoEq1"}}
+
+14:24:52 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3050080,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_0Clop71uNgoEq1"}}
+
+14:24:52 choix text {"index":0,"service":true,"appli":true}
+14:24:52 media.setSubtitleEnable → {"mediaId":"_0Clop71uNgoEq1","enable":false}
+14:24:52 vidéo chargée {"bridge":true,"mediaId":"_0Clop71uNgoEq1","textTracks":0,"audioTracks":2,"src":".mkv"}
+14:24:52 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_0Clop71uNgoEq1"}
+14:24:58 media.subscribe ← {"serviceName":"com.webos.pipeline._0Clop71uNgoEq1","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._0Clop71uNgoEq1 is not running."}
+19:17:18 media.unsubscribe → {"mediaId":"_0Clop71uNgoEq1"}
+19:17:18 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_0Clop71uNgoEq1"}
+19:17:18 abonnement {"mediaId":"_fy0kJ31GI60MFL"}
+19:17:18 media.subscribe → {"mediaId":"_fy0kJ31GI60MFL","subscribe":true}
+19:17:18 media.subscribe ← {"subscription":true}
+19:17:18 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fy0kJ31GI60MFL"}
+19:17:19 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_fy0kJ31GI60MFL"}}
+
+19:17:19 media.subscribe ← {"resourceInfo":{"context":"_fy0kJ31GI60MFL","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_fy0kJ31GI60MFL"}}
+
+19:17:19 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fy0kJ31GI60MFL"}}
+
+19:17:19 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_fy0kJ31GI60MFL"}}
+
+19:17:19 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3050080,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_fy0kJ31GI60MFL"}}
+
+19:17:19 choix text {"index":0,"service":true,"appli":true}
+19:17:19 media.setSubtitleEnable → {"mediaId":"_fy0kJ31GI60MFL","enable":false}
+19:17:19 vidéo chargée {"bridge":true,"mediaId":"_fy0kJ31GI60MFL","textTracks":0,"audioTracks":2,"src":".mkv"}
+19:17:19 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fy0kJ31GI60MFL"}
+20:08:12 pistes du fichier {"audio":2,"text":3,"dur":2620,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR Forced:S_TEXT/UTF8:2 st:lus 1","17:fr:FR:S_TEXT/UTF8:338 st","17:en-US:ENG:S_TEXT/UTF8:362 st"]}
+20:08:12 media.unsubscribe → {"mediaId":"_fy0kJ31GI60MFL"}
+20:08:12 media.unsubscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fy0kJ31GI60MFL"}
+20:08:12 abonnement {"mediaId":"_07j3lv51ZMK7a8"}
+20:08:12 media.subscribe → {"mediaId":"_07j3lv51ZMK7a8","subscribe":true}
+20:08:12 media.subscribe ← {"subscription":true}
+20:08:12 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_07j3lv51ZMK7a8"}
+20:08:13 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_07j3lv51ZMK7a8"}}
+
+===== lgmwv017ww 1.21.0 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+18:59:13 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S1 É8 · FR- - Quand on est dans le besoin","fini":true,"p":0,"d":0,"dernier":false,"episodes":16,"retirée":false}
+18:59:14 reprendre : série {"sn":"|FR| H (1998)","ep":"|FR| H (1998) · S3 É4","fini":false,"p":942,"d":1426,"dernier":false,"episodes":71,"retirée":false}
+18:59:17 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É17","fini":true,"p":0,"d":0,"dernier":false,"episodes":97,"retirée":false}
+18:59:17 reprendre : série {"sn":"|FR-4K DV| Game of Thrones (2011)","ep":"|FR-4K DV| Game of Thrones (2011) · S6 É10","fini":true,"p":0,"d":0,"dernier":false,"episodes":73,"retirée":false}
+18:59:19 pistes du fichier {"audio":2,"text":3,"dur":2620,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:VF  DDP 5.1  640kbps:A_EAC3","2:en-US:VO  DDP 5.1  Atmos:A_EAC3","17:fr:forced:FR Forced:S_TEXT/UTF8:2 st:lus 1","17:fr:FR:S_TEXT/UTF8:338 st","17:en-US:ENG:S_TEXT/UTF8:362 st"]}
+18:59:20 abonnement {"mediaId":"_fjy69CLiAz2tgk"}
+18:59:20 media.subscribe → {"mediaId":"_fjy69CLiAz2tgk","subscribe":true}
+18:59:20 media.subscribe ← {"subscription":true}
+18:59:20 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fjy69CLiAz2tgk"}
+18:59:20 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_fjy69CLiAz2tgk"}}
+
+18:59:20 media.subscribe ← {"resourceInfo":{"context":"_fjy69CLiAz2tgk","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_fjy69CLiAz2tgk"}}
+
+18:59:20 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fjy69CLiAz2tgk"}}
+
+18:59:21 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":3,"remainingTime":3,"percent":30,"mediaId":"_fjy69CLiAz2tgk"}}
+
+18:59:21 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":2620352,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":3,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":2,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_fjy69CLiAz2tgk"}}
+
+18:59:21 choix text {"index":0,"service":true,"appli":true}
+18:59:21 media.setSubtitleEnable → {"mediaId":"_fjy69CLiAz2tgk","enable":false}
+18:59:21 vidéo chargée {"bridge":true,"mediaId":"_fjy69CLiAz2tgk","textTracks":0,"audioTracks":2,"src":".mkv"}
+18:59:21 media.setSubtitleEnable ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fjy69CLiAz2tgk"}
+19:42:22 media.subscribe ← {"serviceName":"com.webos.pipeline._fjy69CLiAz2tgk","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._fjy69CLiAz2tgk is not running."}
+19:42:25 pistes du fichier {"audio":2,"text":2,"dur":3531,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","2:en:English:A_EAC3","17:fr:French Full:S_TEXT/UTF8:581 st","17:en:English SDH:S_TEXT/UTF8:886 st"]}
+19:42:25 media.unsubscribe → {"mediaId":"_fjy69CLiAz2tgk"}
+19:42:25 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_fjy69CLiAz2tgk"}
+19:42:25 abonnement {"mediaId":"_fOA6VasrX0uswX"}
+19:42:25 media.subscribe → {"mediaId":"_fOA6VasrX0uswX","subscribe":true}
+19:42:25 media.subscribe ← {"subscription":true}
+19:42:25 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_fOA6VasrX0uswX"}
+19:42:26 media.subscribe ← {"resourceInfo":{"context":"_fOA6VasrX0uswX","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_fOA6VasrX0uswX"}}
+
+19:42:26 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_fOA6VasrX0uswX"}}
+
+19:42:26 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_fOA6VasrX0uswX"}}
+
+19:42:26 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_fOA6VasrX0uswX"}}
+
+19:42:26 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3530720,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_fOA6VasrX0uswX"}}
+
+19:42:26 vidéo chargée {"bridge":true,"mediaId":"_fOA6VasrX0uswX","textTracks":0,"audioTracks":2,"src":".mkv"}
+===== lgmww59dzd 1.21.0 Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.6834.207 Safari/537.36 WebAppManager
+14:13:18 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S2 É1 · FR- - Future Days","fini":false,"p":2845,"d":3530,"dernier":false,"episodes":16,"retirée":false}
+14:13:19 reprendre : série {"sn":"|FR| Moi, quand je me réincarne en Slime (2018)","ep":"|FR| Moi, quand je me réincarne en Slime (2018) · S1 É17","fini":true,"p":0,"d":0,"dernier":false,"episodes":97,"retirée":false}
+14:13:19 reprendre : série {"sn":"|FR| H (1998)","ep":"|FR| H (1998) · S3 É4","fini":false,"p":942,"d":1426,"dernier":false,"episodes":71,"retirée":false}
+14:13:47 pistes du fichier {"audio":2,"text":2,"dur":3531,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","2:en:English:A_EAC3","17:fr:French Full:S_TEXT/UTF8:581 st","17:en:English SDH:S_TEXT/UTF8:886 st"]}
+14:13:47 abonnement {"mediaId":"_Lvf895cajVA6FV"}
+14:13:47 media.subscribe → {"mediaId":"_Lvf895cajVA6FV","subscribe":true}
+14:13:47 media.subscribe ← {"subscription":true}
+14:13:47 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_Lvf895cajVA6FV"}
+14:13:48 media.subscribe ← {"resourceInfo":{"context":"_Lvf895cajVA6FV","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_Lvf895cajVA6FV"}}
+
+14:13:48 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":1,"remainingTime":1,"percent":10,"mediaId":"_Lvf895cajVA6FV"}}
+
+14:13:48 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_Lvf895cajVA6FV"}}
+
+14:13:48 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_Lvf895cajVA6FV"}}
+
+14:13:49 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3530720,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_Lvf895cajVA6FV"}}
+
+14:13:49 vidéo chargée {"bridge":true,"mediaId":"_Lvf895cajVA6FV","textTracks":0,"audioTracks":2,"src":".mkv"}
+14:24:03 media.subscribe ← {"serviceName":"com.webos.pipeline._Lvf895cajVA6FV","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._Lvf895cajVA6FV is not running."}
+14:24:03 pistes du fichier {"audio":2,"text":2,"dur":3375,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","2:en:English:A_EAC3","17:fr:French Full:S_TEXT/UTF8:470 st","17:en:English Full:S_TEXT/UTF8:507 st"]}
+14:24:03 media.unsubscribe → {"mediaId":"_Lvf895cajVA6FV"}
+14:24:03 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_Lvf895cajVA6FV"}
+14:24:03 abonnement {"mediaId":"_LLkfJBoqDzmxgF"}
+14:24:03 media.subscribe → {"mediaId":"_LLkfJBoqDzmxgF","subscribe":true}
+14:24:03 media.subscribe ← {"subscription":true}
+14:24:03 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LLkfJBoqDzmxgF"}
+14:24:04 media.subscribe ← {"resourceInfo":{"context":"_LLkfJBoqDzmxgF","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_LLkfJBoqDzmxgF"}}
+
+14:24:04 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_LLkfJBoqDzmxgF"}}
+
+14:24:04 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_LLkfJBoqDzmxgF"}}
+
+14:24:04 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_LLkfJBoqDzmxgF"}}
+
+14:24:04 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3375424,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_LLkfJBoqDzmxgF"}}
+
+14:24:04 vidéo chargée {"bridge":true,"mediaId":"_LLkfJBoqDzmxgF","textTracks":0,"audioTracks":2,"src":".mkv"}
+15:18:33 media.subscribe ← {"serviceName":"com.webos.pipeline._LLkfJBoqDzmxgF","returnValue":false,"errorCode":-1,"errorText":"com.webos.pipeline._LLkfJBoqDzmxgF is not running."}
+15:18:40 reprendre : série {"sn":"|FR-4K DV| The Last of Us (2023)","ep":"|FR-4K DV| The Last of Us (2023) · S2 É2 · FR- - À travers la vallée","fini":true,"p":0,"d":0,"dernier":false,"episodes":16,"retirée":false}
+19:55:26 pistes du fichier {"audio":2,"text":2,"dur":3370,"detail":["1:und:V_MPEGH/ISO/HEVC","2:fr:French:A_EAC3","2:en:English:A_EAC3","17:fr:French Full:S_TEXT/UTF8:573 st","17:en:English Full:S_TEXT/UTF8:583 st"]}
+19:55:26 media.unsubscribe → {"mediaId":"_LLkfJBoqDzmxgF"}
+19:55:26 media.unsubscribe ← {"errorCode":0,"returnValue":false,"errorText":"No Error","mediaId":"_LLkfJBoqDzmxgF"}
+19:55:26 abonnement {"mediaId":"_LZYSYMZp03kZ90"}
+19:55:26 media.subscribe → {"mediaId":"_LZYSYMZp03kZ90","subscribe":true}
+19:55:26 media.subscribe ← {"subscription":true}
+19:55:26 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LZYSYMZp03kZ90"}
+19:55:27 media.subscribe ← {"resourceInfo":{"context":"_LZYSYMZp03kZ90","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_LZYSYMZp03kZ90"}}
+
+19:55:27 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_LZYSYMZp03kZ90"}}
+
+19:55:27 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_LZYSYMZp03kZ90"}}
+
+19:55:27 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_LZYSYMZp03kZ90"}}
+
+19:55:27 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3370432,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_LZYSYMZp03kZ90"}}
+
+19:55:27 vidéo chargée {"bridge":true,"mediaId":"_LZYSYMZp03kZ90","textTracks":0,"audioTracks":2,"src":".mkv"}
+20:38:27 media.unsubscribe → {"mediaId":"_LZYSYMZp03kZ90"}
+20:38:27 media.unsubscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_LZYSYMZp03kZ90"}
+20:38:27 abonnement {"mediaId":"_f3cpws5zvMNTpn"}
+20:38:27 media.subscribe → {"mediaId":"_f3cpws5zvMNTpn","subscribe":true}
+20:38:27 media.subscribe ← {"subscription":true}
+20:38:27 media.subscribe ← {"errorCode":0,"returnValue":true,"errorText":"No Error","mediaId":"_f3cpws5zvMNTpn"}
+20:38:28 media.subscribe ← {"resourceInfo":{"context":"_f3cpws5zvMNTpn","resourceList":[{"type":"VDEC","portNumber":0},{"type":"ADEC","portNumber":0}],"mediaId":"_f3cpws5zvMNTpn"}}
+
+20:38:28 media.subscribe ← {"bufferRange":{"beginTime":0,"endTime":0,"remainingTime":0,"percent":0,"mediaId":"_f3cpws5zvMNTpn"}}
+
+20:38:28 media.subscribe ← {"audioInfo":{"track":0,"dualMono":false,"mediaId":"_f3cpws5zvMNTpn"}}
+
+20:38:28 media.subscribe ← {"audioInfo":{"track":0,"immersive":"none","mediaId":"_f3cpws5zvMNTpn"}}
+
+20:38:28 media.subscribe ← {"sourceInfo":{"numPrograms":1,"container":"mkv","seekable":true,"trickable":false,"startDate":-1,"rotation":0,"programInfo":[{"duration":3370432,"numAudioTracks":2,"audioTrackInfo":[{"sampleRate":48,"channels":6,"language":"fr","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"immersive":"none","periodStart":-1,"depth":-1},{"sampleRate":48,"channels":6,"language":"en","pid":-1,"ctag":-1,"audioType":0,"codec":"eac3","trackId":-1,"bitRate":0,"adaptationSetId":-1,"periodStart":-1,"depth":-1}],"numVideoTracks":1,"videoTrackInfo":[{"angleNumber":0,"ctag":-1,"pid":-1,"codec":"HEVC","trackId":-1,"width":3840,"height":2160,"frameRate":23.9760246,"level":5.1,"profile":"main-10","adaptationSetId":-1,"orgCodec":"HEVC","periodStart":-1}],"numSubtitleTracks":2,"subtitleTrackInfo":[{"trackNum":0,"language":"fr","type":"text","periodStart":0,"languageName":"French"},{"trackNum":1,"language":"en","type":"text","periodStart":0,"languageName":"English"}]}],"mediaId":"_f3cpws5zvMNTpn"}}
+
+20:38:28 vidéo chargée {"bridge":true,"mediaId":"_f3cpws5zvMNTpn","textTracks":0,"audioTracks":2,"src":".mkv"}

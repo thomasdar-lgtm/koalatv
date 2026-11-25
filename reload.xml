@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.ReloadTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-25T19:42:35" hostname="runnervm0hi8g" time="4.474">
+  <properties/>
+  <testcase name="loadPanelAndReload" classname="com.koala.tv.ReloadTest" time="4.474"/>
+  <system-out><![CDATA[panneau : visible=true · Le serveur ne répond pas · Attente 11 s · Mémoire tampon 0 s · OK pour recharger · requêtes=1
+requêtes avant OK : 1 · après : 2
+bouton Recharger : true visible=true taille=96x96
+clic sur Recharger : requêtes 2 -> 3
+]]></system-out>
+  <system-err><![CDATA[android.os.ServiceManager$ServiceNotFoundException: No service published for: media_metrics
+	at android.os.ServiceManager.getServiceOrThrow(ServiceManager.java:166)
+	at android.app.SystemServiceRegistry$129.createService(SystemServiceRegistry.java:1501)
+	at android.app.SystemServiceRegistry$129.createService(SystemServiceRegistry.java:1496)
+	at android.app.SystemServiceRegistry$CachedServiceFetcher.getService(SystemServiceRegistry.java:1971)
+	at android.app.SystemServiceRegistry.getSystemService(SystemServiceRegistry.java:1645)
+	at android.app.ContextImpl.getSystemService(ContextImpl.java:2212)
+	at jdk.internal.reflect.GeneratedMethodAccessor26.invoke(Unknown Source)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at org.robolectric.shadows.ShadowContextImpl$_ContextImpl_$$Reflector5.getSystemService(Unknown Source)
+	at org.robolectric.shadows.ShadowContextImpl.getSystemService(ShadowContextImpl.java:84)
+	at android.app.ContextImpl.getSystemService(ContextImpl.java)
+	at android.content.ContextWrapper.getSystemService(ContextWrapper.java:934)
+	at androidx.media3.exoplayer.analytics.MediaMetricsListener.create(MediaMetricsListener.java:107)
+	at androidx.media3.exoplayer.ExoPlayerImpl$Api31.lambda$registerMediaMetricsListener$0(ExoPlayerImpl.java:3317)
+	at android.os.Handler.handleCallback(Handler.java:958)
+	at android.os.Handler.dispatchMessage(Handler.java:99)
+	at android.os.Looper.loopOnce(Looper.java:205)
+	at android.os.Looper.loop(Looper.java:294)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at org.robolectric.shadows.ShadowPausedLooper$LooperReflector$$Reflector1.loop(Unknown Source)
+	at org.robolectric.shadows.ShadowPausedLooper.loop(ShadowPausedLooper.java:472)
+	at android.os.Looper.loop(Looper.java)
+	at android.os.HandlerThread.run(HandlerThread.java:67)
+Nov 25, 2026 7:42:37 PM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[60781] connection from /127.0.0.1 didn't make a request
+Nov 25, 2026 7:42:38 PM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[60781] connection from /127.0.0.1 didn't make a request
+Nov 25, 2026 7:42:39 PM okhttp3.mockwebserver.MockWebServer$SocketHandler handle
+WARNING: MockWebServer[60781] connection from /127.0.0.1 didn't make a request
+]]></system-err>
+</testsuite>

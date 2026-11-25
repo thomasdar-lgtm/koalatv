@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.DownloadTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-25T19:42:26" hostname="runnervm0hi8g" time="4.159">
+  <properties/>
+  <testcase name="downloadsWithResumeAfterCut" classname="com.koala.tv.DownloadTest" time="2.158"/>
+  <testcase name="readWhileDownloading" classname="com.koala.tv.DownloadTest" time="1.57"/>
+  <testcase name="downloadsScreen" classname="com.koala.tv.DownloadTest" time="0.43"/>
+  <system-out><![CDATA[plages demandées : [0-0, 4951424-5999999, 4951424-5999999, 0-4951423] · état DONE 
+lecture pendant le téléchargement : 6000000 octets sur 6000000, premiers octets après 305 ms, fin après 1511 ms
+états : [Téléchargé · 3,9 Go, Téléchargement · 35 % de 3,7 Go · 12 Mo/s · encore 3 min, En attente]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

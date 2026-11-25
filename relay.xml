@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.koala.tv.RelayTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-25T19:42:30" hostname="runnervm0hi8g" time="4.595">
+  <properties/>
+  <testcase name="readsPcAndSendsRequests" classname="com.koala.tv.RelayTest" time="2.097"/>
+  <testcase name="downloadsScreenWithPc" classname="com.koala.tv.RelayTest" time="2.498"/>
+  <system-out><![CDATA[états : [Sur le PC · 3,9 Go, Téléchargement sur le PC · 35 % de 3,7 Go · 12,0 Mo/s, En attente sur le PC]
+écritures : [q/e1003.json {"kind":"series","id":"1003","ext":"mkv","t":"Game of Thrones · S6 É3","i":"","sid":"9","sn":"Game of Thrones","at":1795635752101}]
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
